@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useRoomStore } from '../../src/store/roomStore';
 import { Colors, Radii } from '../../src/constants/theme';
 import { TicketCard } from '../../src/components/TicketCard';
@@ -17,9 +18,17 @@ import { Badge } from '../../src/components/Badge';
 
 export default function RoomHomeScreen() {
   const router = useRouter();
-  const { currentRoom, members, items } = useRoomStore();
+  const { currentRoom, members } = useRoomStore();
 
   const totalSpendCents = 31000; // $310.00 from Figma
+
+  const triggerHaptic = () => {
+    try {
+      Haptics.selectionAsync();
+    } catch {
+      // Fallback
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -75,7 +84,10 @@ export default function RoomHomeScreen() {
           <TouchableOpacity
             style={styles.inviteButton}
             activeOpacity={0.85}
-            onPress={() => router.push('/join')}
+            onPress={() => {
+              triggerHaptic();
+              router.push('/join');
+            }}
           >
             <Text style={styles.qrIcon}>⚏</Text>
             <Text style={styles.inviteButtonText}>Invite to Room via QR</Text>
@@ -91,7 +103,13 @@ export default function RoomHomeScreen() {
         {/* Live Items Section */}
         <View style={[styles.sectionHeaderRow, { marginTop: 20 }]}>
           <Text style={styles.sectionTitle}>Live items</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/items')}>
+          <TouchableOpacity
+            onPress={() => {
+              triggerHaptic();
+              router.push('/(tabs)/items');
+            }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
             <Text style={styles.seeAllText}>See all</Text>
           </TouchableOpacity>
         </View>
@@ -99,7 +117,10 @@ export default function RoomHomeScreen() {
         {/* Ticket Item 1: Truffle Burger x2 */}
         <TouchableOpacity
           activeOpacity={0.9}
-          onPress={() => router.push('/claim')}
+          onPress={() => {
+            triggerHaptic();
+            router.push('/claim');
+          }}
         >
           <TicketCard
             childrenTop={
@@ -136,7 +157,10 @@ export default function RoomHomeScreen() {
         {/* Ticket Item 2: Garlic Fries */}
         <TouchableOpacity
           activeOpacity={0.9}
-          onPress={() => router.push('/claim')}
+          onPress={() => {
+            triggerHaptic();
+            router.push('/claim');
+          }}
         >
           <TicketCard
             childrenTop={
@@ -171,7 +195,10 @@ export default function RoomHomeScreen() {
         <TouchableOpacity
           style={styles.settleShortcutButton}
           activeOpacity={0.85}
-          onPress={() => router.push('/settle')}
+          onPress={() => {
+            triggerHaptic();
+            router.push('/settle');
+          }}
         >
           <Text style={styles.settleShortcutText}>Go to Settlement ($52.50) →</Text>
         </TouchableOpacity>
@@ -285,7 +312,7 @@ const styles = StyleSheet.create({
   inviteButton: {
     backgroundColor: '#FFFFFF',
     borderRadius: Radii.pill,
-    paddingVertical: 14,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -360,7 +387,8 @@ const styles = StyleSheet.create({
   settleShortcutButton: {
     backgroundColor: '#FFFFFF',
     borderRadius: Radii.pill,
-    paddingVertical: 14,
+    minHeight: 48,
+    justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,

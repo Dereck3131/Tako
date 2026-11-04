@@ -8,8 +8,9 @@ export const Colors = {
   primary: '#2F65F6', // Cobalt Blue
   primaryLight: '#EEF3FF',
 
-  // Status & Badges
+  // Status & Badges (WCAG AA Compliant)
   amber: '#FFA800', // Warning, Pending, NEW, Pay Now CTA
+  amberText: '#B45309', // Darker amber for text contrast >= 4.5:1
   amberLight: '#FFF8EC',
   emerald: '#10B981', // Paid, Connected, Live dot
   emeraldLight: '#E7F9F3',
@@ -30,6 +31,7 @@ export const Radii = {
   md: 12,
   lg: 16,
   card: 24,
+  sheet: 32,
   pill: 9999,
 };
 
@@ -40,4 +42,8 @@ export const Spacing = {
   lg: 16,
   xl: 20,
   xxl: 24,
+};
+
+export const TouchTarget = {
+  minSize: 48, // 48x48px Impeccable accessible touch target minimum
 };

@@ -13,7 +13,8 @@ export const Badge: React.FC<BadgeProps> = ({ label, variant = 'amber' }) => {
       case 'emerald':
         return { bg: Colors.emeraldLight, text: Colors.emerald };
       case 'amber':
-        return { bg: Colors.amberLight, text: Colors.amber };
+        // Impeccable contrast fix: use #B45309 for WCAG AA >= 4.5:1
+        return { bg: Colors.amberLight, text: Colors.amberText };
       case 'blue':
         return { bg: Colors.primaryLight, text: Colors.primary };
       case 'gray':
@@ -33,14 +34,14 @@ export const Badge: React.FC<BadgeProps> = ({ label, variant = 'amber' }) => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: Radii.pill,
     alignSelf: 'flex-start',
   },
   text: {
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
 });

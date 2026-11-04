@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useRoomStore } from '../../src/store/roomStore';
 import { Colors, Radii } from '../../src/constants/theme';
 import { Badge } from '../../src/components/Badge';
@@ -17,6 +18,16 @@ export default function ItemsScreen() {
   const router = useRouter();
   const { items, members } = useRoomStore();
   const [filter, setFilter] = useState<'All' | 'Unclaimed' | 'Mine'>('All');
+  const [claimedDishes, setClaimedDishes] = useState<Record<string, boolean>>({});
+
+  const handleQuickClaim = (dishName: string) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {
+      // Fallback
+    }
+    setClaimedDishes((prev) => ({ ...prev, [dishName]: true }));
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -40,7 +51,14 @@ export default function ItemsScreen() {
               <TouchableOpacity
                 key={tab}
                 style={[styles.filterPill, isActive && styles.filterPillActive]}
-                onPress={() => setFilter(tab)}
+                onPress={() => {
+                  try {
+                    Haptics.selectionAsync();
+                  } catch {
+                    // Fallback
+                  }
+                  setFilter(tab);
+                }}
               >
                 <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
                   {tab}
@@ -56,7 +74,10 @@ export default function ItemsScreen() {
             <Text style={styles.summarySubtitle}>12 items · Friday Night Dinner</Text>
             <Text style={styles.summaryTotal}>$310.00</Text>
           </View>
-          <Badge label="2 unclaimed" variant="amber" />
+          <Badge
+            label={claimedDishes['pizza'] && claimedDishes['tiramisu'] ? 'All claimed 🎉' : '2 unclaimed'}
+            variant={claimedDishes['pizza'] && claimedDishes['tiramisu'] ? 'emerald' : 'amber'}
+          />
         </View>
 
         {/* Item Cards List */}
@@ -86,7 +107,7 @@ export default function ItemsScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Item 2 */}
+          {/* Item 2: Margherita Pizza with Quick-Claim Action */}
           <TouchableOpacity
             style={styles.itemCard}
             onPress={() => router.push('/claim')}
@@ -95,11 +116,23 @@ export default function ItemsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.itemName}>Margherita Pizza</Text>
               <Text style={styles.itemAuthor}>Added by Aly</Text>
-              <Text style={styles.nobodyText}>Nobody yet</Text>
+              {claimedDishes['pizza'] ? (
+                <Text style={styles.claimedSelfText}>Claimed by You (100%)</Text>
+              ) : (
+                <TouchableOpacity
+                  style={styles.quickClaimPill}
+                  onPress={() => handleQuickClaim('pizza')}
+                >
+                  <Text style={styles.quickClaimText}>+ Claim 100%</Text>
+                </TouchableOpacity>
+              )}
             </View>
             <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
               <Text style={styles.itemPrice}>$24.00</Text>
-              <Badge label="Unclaimed" variant="amber" />
+              <Badge
+                label={claimedDishes['pizza'] ? 'Claimed' : 'Unclaimed'}
+                variant={claimedDishes['pizza'] ? 'emerald' : 'amber'}
+              />
             </View>
           </TouchableOpacity>
 
@@ -153,7 +186,7 @@ export default function ItemsScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Item 5 */}
+          {/* Item 5: Tiramisu with Quick-Claim Action */}
           <TouchableOpacity
             style={styles.itemCard}
             onPress={() => router.push('/claim')}
@@ -162,11 +195,23 @@ export default function ItemsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.itemName}>Tiramisu</Text>
               <Text style={styles.itemAuthor}>Added by Ken</Text>
-              <Text style={styles.nobodyText}>Nobody yet</Text>
+              {claimedDishes['tiramisu'] ? (
+                <Text style={styles.claimedSelfText}>Claimed by You (100%)</Text>
+              ) : (
+                <TouchableOpacity
+                  style={styles.quickClaimPill}
+                  onPress={() => handleQuickClaim('tiramisu')}
+                >
+                  <Text style={styles.quickClaimText}>+ Claim 100%</Text>
+                </TouchableOpacity>
+              )}
             </View>
             <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
               <Text style={styles.itemPrice}>$12.00</Text>
-              <Badge label="Unclaimed" variant="amber" />
+              <Badge
+                label={claimedDishes['tiramisu'] ? 'Claimed' : 'Unclaimed'}
+                variant={claimedDishes['tiramisu'] ? 'emerald' : 'amber'}
+              />
             </View>
           </TouchableOpacity>
         </View>
@@ -199,8 +244,10 @@ const styles = StyleSheet.create({
   addItemButton: {
     backgroundColor: Colors.primary,
     borderRadius: Radii.pill,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 18,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addItemText: {
     color: '#FFFFFF',
@@ -216,7 +263,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: Radii.pill,
     paddingHorizontal: 18,
-    paddingVertical: 8,
+    minHeight: 40,
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -253,7 +301,7 @@ const styles = StyleSheet.create({
   },
   summaryTotal: {
     color: '#FFFFFF',
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '900',
     letterSpacing: -0.5,
   },
@@ -282,10 +330,22 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginBottom: 8,
   },
-  nobodyText: {
+  quickClaimPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EEF3FF',
+    borderRadius: Radii.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  quickClaimText: {
     fontSize: 12,
-    color: Colors.amber,
-    fontWeight: '600',
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  claimedSelfText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.emerald,
   },
   avatarRow: {
     flexDirection: 'row',
@@ -296,7 +356,7 @@ const styles = StyleSheet.create({
     borderRadius: 11,
   },
   itemPrice: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     color: Colors.textPrimary,
     marginBottom: 8,

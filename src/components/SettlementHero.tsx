@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Colors, Radii } from '../constants/theme';
 
 interface SettlementHeroProps {
@@ -15,6 +16,15 @@ export const SettlementHero: React.FC<SettlementHeroProps> = ({
   roomTitle,
   onPayNow,
 }) => {
+  const handlePress = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {
+      // Haptics fallback for web
+    }
+    onPayNow();
+  };
+
   return (
     <View style={styles.card}>
       <Text style={styles.sublabel}>Your share to pay</Text>
@@ -25,7 +35,7 @@ export const SettlementHero: React.FC<SettlementHeroProps> = ({
       <TouchableOpacity
         style={styles.payButton}
         activeOpacity={0.85}
-        onPress={onPayNow}
+        onPress={handlePress}
       >
         <Text style={styles.payButtonText}>Pay Now</Text>
       </TouchableOpacity>
@@ -39,9 +49,9 @@ const styles = StyleSheet.create({
     borderRadius: Radii.card,
     padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
     elevation: 4,
   },
   sublabel: {
@@ -52,7 +62,7 @@ const styles = StyleSheet.create({
   },
   currency: {
     color: Colors.textWhite,
-    fontSize: 42,
+    fontSize: 44,
     fontWeight: '900',
     letterSpacing: -1.2,
     marginBottom: 8,
@@ -66,7 +76,7 @@ const styles = StyleSheet.create({
   payButton: {
     backgroundColor: Colors.amber,
     borderRadius: Radii.pill,
-    paddingVertical: 16,
+    minHeight: 52, // >= 48px touch target
     alignItems: 'center',
     justifyContent: 'center',
   },

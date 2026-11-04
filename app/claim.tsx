@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useRoomStore } from '../src/store/roomStore';
 import { Colors, Radii } from '../src/constants/theme';
 import { TicketCard } from '../src/components/TicketCard';
@@ -17,7 +18,6 @@ export default function ClaimAndAdjustModal() {
   const router = useRouter();
   const { members } = useRoomStore();
 
-  // 4 sliders sharing the $120 Burgers item equally (25% / $30.00 each)
   const [shares, setShares] = useState([
     { id: 'you', name: 'You', pct: 25, amount: 30.0, avatar: members[0]?.avatarUrl },
     { id: 'mia', name: 'Mia', pct: 25, amount: 30.0, avatar: members[1]?.avatarUrl },
@@ -26,6 +26,12 @@ export default function ClaimAndAdjustModal() {
   ]);
 
   const adjustShare = (index: number, newPct: number) => {
+    try {
+      Haptics.selectionAsync();
+    } catch {
+      // Haptics web fallback
+    }
+
     const clamped = Math.max(0, Math.min(100, newPct));
     const delta = clamped - shares[index].pct;
     const othersCount = shares.length - 1;
@@ -53,6 +59,15 @@ export default function ClaimAndAdjustModal() {
     );
   };
 
+  const handleConfirm = () => {
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      // Fallback
+    }
+    router.back();
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -62,10 +77,10 @@ export default function ClaimAndAdjustModal() {
             <Text style={styles.backChevron}>‹</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Claim & adjust</Text>
-          <View style={{ width: 32 }} />
+          <View style={{ width: 48 }} />
         </View>
 
-        {/* Receipt Ticket Card with Barcode */}
+        {/* Receipt Ticket Card with Compact Barcode */}
         <TicketCard
           childrenTop={
             <View>
@@ -97,7 +112,7 @@ export default function ClaimAndAdjustModal() {
           }
           childrenBottom={
             <View style={styles.barcodeContainer}>
-              {/* Simulated Retail Barcode Lines */}
+              {/* Compact Barcode Lines */}
               <View style={styles.barcodeLines}>
                 {[2, 4, 1, 3, 5, 2, 6, 1, 4, 2, 5, 3, 2, 4, 1, 6, 3, 2, 5, 1, 4, 2].map(
                   (width, idx) => (
@@ -124,7 +139,7 @@ export default function ClaimAndAdjustModal() {
           </View>
         </View>
 
-        {/* Sliders Container */}
+        {/* Sliders Container with Un-occluded Thumb Targets */}
         <View style={styles.slidersCard}>
           {shares.map((person, idx) => (
             <View key={person.id} style={styles.sliderPersonRow}>
@@ -139,17 +154,17 @@ export default function ClaimAndAdjustModal() {
                 </View>
               </View>
 
-              {/* Interactive Visual Slider Track */}
+              {/* Slider Track with Floating Indicator & 48px Touch Area */}
               <View style={styles.sliderTrackWrapper}>
                 <View style={styles.trackBackground}>
-                  <View
-                    style={[styles.trackFill, { width: `${person.pct}%` }]}
-                  />
+                  <View style={[styles.trackFill, { width: `${person.pct}%` }]} />
                   <TouchableOpacity
                     style={[styles.sliderThumb, { left: `${person.pct}%` }]}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                     onPress={() => {
-                      // Toggle slider demo step: 25% -> 50% -> 25%
-                      adjustShare(idx, person.pct === 25 ? 50 : 25);
+                      // Snapping toggle between 25%, 33%, 50%
+                      const next = person.pct === 25 ? 50 : person.pct === 50 ? 33 : 25;
+                      adjustShare(idx, next);
                     }}
                   >
                     <View style={styles.innerThumbCircle} />
@@ -164,7 +179,7 @@ export default function ClaimAndAdjustModal() {
         <TouchableOpacity
           style={styles.confirmButton}
           activeOpacity={0.85}
-          onPress={() => router.back()}
+          onPress={handleConfirm}
         >
           <Text style={styles.confirmButtonText}>Confirm split</Text>
         </TouchableOpacity>
@@ -186,16 +201,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
     paddingTop: 8,
   },
   backButton: {
-    width: 32,
-    height: 32,
+    width: 48,
+    height: 48,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   backChevron: {
-    fontSize: 28,
+    fontSize: 30,
     color: Colors.textPrimary,
     fontWeight: '600',
   },
@@ -207,7 +223,7 @@ const styles = StyleSheet.create({
   receiptTopHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   receiptLabel: {
     fontSize: 12,
@@ -223,15 +239,15 @@ const styles = StyleSheet.create({
   receiptItemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 5,
   },
   itemTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.primary,
   },
   itemPrice: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.textPrimary,
   },
@@ -239,28 +255,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginTop: 14,
-    paddingTop: 12,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   totalLabel: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.textSecondary,
   },
   totalAmount: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '900',
     color: Colors.textPrimary,
   },
   barcodeContainer: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   barcodeLines: {
     flexDirection: 'row',
-    height: 38,
+    height: 26,
     alignItems: 'center',
   },
   barcodeBar: {
@@ -271,8 +287,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 14,
+    marginTop: 10,
+    marginBottom: 12,
   },
   sharingTitle: {
     fontSize: 18,
@@ -298,20 +314,20 @@ const styles = StyleSheet.create({
   slidersCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: Radii.card,
-    padding: 20,
-    marginBottom: 24,
+    padding: 18,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
   },
   sliderPersonRow: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   personInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   personAvatar: {
     width: 38,
@@ -341,7 +357,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   sliderTrackWrapper: {
-    height: 24,
+    height: 28,
     justifyContent: 'center',
   },
   trackBackground: {
@@ -358,15 +374,15 @@ const styles = StyleSheet.create({
   },
   sliderThumb: {
     position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: -12,
+    marginLeft: -13,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -382,7 +398,7 @@ const styles = StyleSheet.create({
   confirmButton: {
     backgroundColor: Colors.primary,
     borderRadius: Radii.pill,
-    paddingVertical: 18,
+    minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Colors.primary,

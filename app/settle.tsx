@@ -7,9 +7,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useRoomStore } from '../src/store/roomStore';
 import { Colors, Radii } from '../src/constants/theme';
 import { TicketCard } from '../src/components/TicketCard';
@@ -22,13 +22,13 @@ export default function SettleUpScreen() {
   const [hasPaidSelf, setHasPaidSelf] = useState(false);
 
   const handlePayNow = () => {
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      // Fallback
+    }
     setHasPaidSelf(true);
     markMemberPaid('member-you');
-    Alert.alert(
-      'Settlement Initiated',
-      'Opening Venmo deep link with prefilled $52.50 to host Alex. Marked as Paid!',
-      [{ text: 'OK' }]
-    );
   };
 
   return (
@@ -45,6 +45,13 @@ export default function SettleUpScreen() {
             <Text style={styles.roomCountText}>4 in room</Text>
           </View>
         </View>
+
+        {/* Celebration Banner when Paid */}
+        {hasPaidSelf && (
+          <View style={styles.celebrationBanner}>
+            <Text style={styles.celebrationText}>🎉 Your share of $52.50 is settled!</Text>
+          </View>
+        )}
 
         {/* Breakdown Ticket Card */}
         <TicketCard
@@ -93,7 +100,7 @@ export default function SettleUpScreen() {
                 <Badge label="Paid" variant="emerald" />
               </View>
 
-              {/* Aly */}
+              {/* Aly / You */}
               <View style={styles.memberStatusRow}>
                 <View style={styles.memberInfo}>
                   <Image
@@ -136,16 +143,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     paddingTop: 8,
   },
   backButton: {
-    width: 32,
-    height: 32,
+    width: 48,
+    height: 48,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   backChevron: {
-    fontSize: 28,
+    fontSize: 30,
     color: Colors.textPrimary,
     fontWeight: '600',
   },
@@ -169,6 +177,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: Colors.textSecondary,
+  },
+  celebrationBanner: {
+    backgroundColor: Colors.emeraldLight,
+    borderRadius: Radii.md,
+    padding: 14,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  celebrationText: {
+    color: Colors.emerald,
+    fontSize: 15,
+    fontWeight: '800',
   },
   cardSectionLabel: {
     fontSize: 12,
@@ -203,9 +223,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarImg: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     marginRight: 10,
   },
   memberName: {
