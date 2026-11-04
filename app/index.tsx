@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors, Radii } from '../src/constants/theme';
+import { Colors } from '../src/constants/theme';
+import { MemojiAvatar } from '../src/components/MemojiAvatar';
 
 export default function SplashScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    // Automatically transition to Room Home or Onboarding after 1.8s
     const timer = setTimeout(() => {
       router.replace('/(tabs)');
     }, 1800);
@@ -20,33 +20,21 @@ export default function SplashScreen() {
       <View style={styles.circleTopLeft} />
       <View style={styles.circleBottomRight} />
 
-      {/* Floating Memoji Avatars */}
+      {/* Floating Memoji Avatars matching Page 8 */}
       <View style={[styles.floatingAvatar, { top: 120, left: 40 }]}>
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80' }}
-          style={styles.avatarImg}
-        />
+        <MemojiAvatar id="mia" size={54} />
       </View>
       <View style={[styles.floatingAvatar, { top: 200, right: 35 }]}>
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80' }}
-          style={styles.avatarImg}
-        />
+        <MemojiAvatar id="jonas" size={54} />
       </View>
       <View style={[styles.floatingAvatar, { bottom: 220, left: 50 }]}>
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80' }}
-          style={styles.avatarImg}
-        />
+        <MemojiAvatar id="you" size={54} />
       </View>
       <View style={[styles.floatingAvatar, { bottom: 160, right: 45 }]}>
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&q=80' }}
-          style={styles.avatarImg}
-        />
+        <MemojiAvatar id="aly" size={54} />
       </View>
 
-      {/* Center Brand Squircle */}
+      {/* Center Brand Squircle matching Page 8 */}
       <View style={styles.centerContent}>
         <View style={styles.logoSquircle}>
           <View style={styles.coinBlue} />
@@ -93,17 +81,14 @@ const styles = StyleSheet.create({
   },
   floatingAvatar: {
     position: 'absolute',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#FFE4E6',
     borderWidth: 3,
     borderColor: 'rgba(255, 255, 255, 0.4)',
+    borderRadius: 30,
     overflow: 'hidden',
-  },
-  avatarImg: {
-    width: '100%',
-    height: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
   centerContent: {
     alignItems: 'center',
@@ -146,7 +131,7 @@ const styles = StyleSheet.create({
   brandSubtitle: {
     color: 'rgba(255, 255, 255, 0.85)',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   bottomDots: {
     position: 'absolute',

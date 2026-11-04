@@ -5,12 +5,12 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, Radii } from '../src/constants/theme';
 import { TicketCard } from '../src/components/TicketCard';
 import { Badge } from '../src/components/Badge';
+import { MemojiAvatar } from '../src/components/MemojiAvatar';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -56,7 +56,7 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Card illustration area */}
+        {/* Card illustration area matching Figma Pages 9, 10, 11 */}
         <View style={styles.illustrationArea}>
           {slide === 0 && (
             <View style={{ width: '100%' }}>
@@ -77,9 +77,15 @@ export default function OnboardingScreen() {
                   <View style={styles.ticketBottomRow}>
                     <Text style={styles.splitWays}>Split 3 ways</Text>
                     <View style={styles.avatarMiniStack}>
-                      {[1, 2, 3].map((_, i) => (
-                        <View key={i} style={[styles.miniDot, { marginLeft: i > 0 ? -6 : 0 }]} />
-                      ))}
+                      <View style={[styles.miniWrap, { zIndex: 3 }]}>
+                        <MemojiAvatar id="mia" size={24} />
+                      </View>
+                      <View style={[styles.miniWrap, { marginLeft: -6, zIndex: 2 }]}>
+                        <MemojiAvatar id="jonas" size={24} />
+                      </View>
+                      <View style={[styles.miniWrap, { marginLeft: -6, zIndex: 1 }]}>
+                        <MemojiAvatar id="aly" size={24} />
+                      </View>
                     </View>
                   </View>
                 }
@@ -99,7 +105,10 @@ export default function OnboardingScreen() {
               </View>
               <View style={styles.sliderBox}>
                 <View style={styles.sliderHeader}>
-                  <Text style={styles.sliderName}>You</Text>
+                  <View style={styles.sliderUserRow}>
+                    <MemojiAvatar id="you" size={28} />
+                    <Text style={styles.sliderName}>You</Text>
+                  </View>
                   <Text style={styles.sliderPercent}>25%  $30.00</Text>
                 </View>
                 <View style={styles.sliderBar}>
@@ -108,7 +117,10 @@ export default function OnboardingScreen() {
               </View>
               <View style={styles.sliderBox}>
                 <View style={styles.sliderHeader}>
-                  <Text style={styles.sliderName}>Mia</Text>
+                  <View style={styles.sliderUserRow}>
+                    <MemojiAvatar id="mia" size={28} />
+                    <Text style={styles.sliderName}>Mia</Text>
+                  </View>
                   <Text style={styles.sliderPercent}>25%  $30.00</Text>
                 </View>
                 <View style={styles.sliderBar}>
@@ -128,11 +140,17 @@ export default function OnboardingScreen() {
                 </View>
               </View>
               <View style={styles.paidMockRow}>
-                <Text style={styles.mockName}>Mia</Text>
+                <View style={styles.paidUserRow}>
+                  <MemojiAvatar id="mia" size={28} />
+                  <Text style={styles.mockName}>Mia</Text>
+                </View>
                 <Badge label="Paid" variant="emerald" />
               </View>
               <View style={styles.paidMockRow}>
-                <Text style={styles.mockName}>Jonas</Text>
+                <View style={styles.paidUserRow}>
+                  <MemojiAvatar id="jonas" size={28} />
+                  <Text style={styles.mockName}>Jonas</Text>
+                </View>
                 <Badge label="Paid" variant="emerald" />
               </View>
             </View>
@@ -241,13 +259,10 @@ const styles = StyleSheet.create({
   avatarMiniStack: {
     flexDirection: 'row',
   },
-  miniDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#FFE4E6',
+  miniWrap: {
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
+    borderRadius: 13,
   },
   pillBanner: {
     backgroundColor: '#FFFFFF',
@@ -257,10 +272,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowColor: '#2F65F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    marginTop: -8,
   },
   greenLiveDot: {
     width: 8,
@@ -278,8 +294,12 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 16,
+    padding: 18,
     gap: 12,
+    shadowColor: '#2F65F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
   },
   sliderItemHeader: {
     flexDirection: 'row',
@@ -300,13 +320,19 @@ const styles = StyleSheet.create({
   },
   sliderBox: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 12,
   },
   sliderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  sliderUserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   sliderName: {
     fontSize: 15,
@@ -336,6 +362,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cardMidnight,
     borderRadius: 20,
     padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
   },
   darkSubtext: {
     color: '#94A3B8',
@@ -344,19 +374,20 @@ const styles = StyleSheet.create({
   },
   darkPrice: {
     color: '#FFFFFF',
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '900',
     marginVertical: 8,
   },
   amberBtnMock: {
     backgroundColor: Colors.amber,
     borderRadius: Radii.pill,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   amberBtnText: {
     color: Colors.textPrimary,
     fontWeight: '800',
+    fontSize: 15,
   },
   paidMockRow: {
     backgroundColor: '#FFFFFF',
@@ -366,6 +397,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    shadowColor: '#2F65F6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+  },
+  paidUserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   mockName: {
     fontSize: 15,
@@ -381,6 +421,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: 38,
     marginBottom: 10,
+    letterSpacing: -0.5,
   },
   mainSubtitle: {
     fontSize: 16,
@@ -407,8 +448,14 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: Colors.primary,
     borderRadius: Radii.pill,
-    paddingVertical: 16,
+    minHeight: 52,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    elevation: 4,
   },
   primaryButtonText: {
     color: '#FFFFFF',

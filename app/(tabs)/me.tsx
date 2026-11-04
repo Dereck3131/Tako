@@ -6,9 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Image,
 } from 'react-native';
 import { Colors, Radii } from '../../src/constants/theme';
+import { MemojiAvatar } from '../../src/components/MemojiAvatar';
 
 export default function MeScreen() {
   return (
@@ -16,13 +16,10 @@ export default function MeScreen() {
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <Text style={styles.headerTitle}>Me</Text>
 
-        {/* Profile Card */}
+        {/* Profile Card matching Page 4 */}
         <View style={styles.profileCard}>
           <View style={styles.avatarCircle}>
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80' }}
-              style={styles.avatarImg}
-            />
+            <MemojiAvatar id="you" size={88} />
           </View>
           <Text style={styles.profileName}>Alex Santos</Text>
           <Text style={styles.profileEmail}>alex@email.com</Text>
@@ -32,7 +29,7 @@ export default function MeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Settings Menu Card */}
+        {/* Settings Menu Card matching Page 4 */}
         <View style={styles.menuCard}>
           <TouchableOpacity style={styles.menuRow}>
             <Text style={styles.menuLabel}>Payment methods</Text>
@@ -78,7 +75,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '900',
     color: Colors.textPrimary,
     marginBottom: 20,
     paddingTop: 8,
@@ -89,25 +86,20 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: '#2F65F6',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
     elevation: 2,
   },
   avatarCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#FFE4E6',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#FCE7F3',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  avatarImg: {
-    width: 90,
-    height: 90,
+    marginBottom: 14,
   },
   profileName: {
     fontSize: 22,
@@ -118,10 +110,10 @@ const styles = StyleSheet.create({
   profileEmail: {
     fontSize: 14,
     color: Colors.textSecondary,
-    marginBottom: 16,
+    marginBottom: 18,
   },
   editProfileButton: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     paddingVertical: 10,
     borderRadius: Radii.pill,
     borderWidth: 1.5,
@@ -130,14 +122,14 @@ const styles = StyleSheet.create({
   editProfileText: {
     color: Colors.primary,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   menuCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: Radii.card,
     paddingHorizontal: 20,
     marginBottom: 24,
-    shadowColor: '#000',
+    shadowColor: '#2F65F6',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -164,7 +156,7 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   logoutText: {
     color: '#EF4444',

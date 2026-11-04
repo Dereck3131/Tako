@@ -5,11 +5,12 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, Radii } from '../src/constants/theme';
 import { Badge } from '../src/components/Badge';
+import { MemojiAvatar } from '../src/components/MemojiAvatar';
+import { QRCodeVector } from '../src/components/QRCodeVector';
 
 export default function JoinQRModal() {
   const router = useRouter();
@@ -23,31 +24,9 @@ export default function JoinQRModal() {
         <Text style={styles.title}>Point your phone to join this bill</Text>
         <Text style={styles.subtitle}>Scan the code or enter the PIN</Text>
 
-        {/* Custom Stylized QR Code Graphic Container */}
-        <View style={styles.qrCard}>
-          <View style={styles.qrCornerTL} />
-          <View style={styles.qrCornerTR} />
-          <View style={styles.qrCornerBL} />
-          <View style={styles.qrCornerBR} />
-
-          {/* Grid pattern mock */}
-          <View style={styles.qrCenterGraphic}>
-            <View style={styles.qrPatternRow}>
-              <View style={[styles.qrBox, styles.qrBoxLarge]} />
-              <View style={styles.qrBox} />
-              <View style={[styles.qrBox, styles.qrBoxLarge]} />
-            </View>
-            <View style={styles.qrPatternRow}>
-              <View style={styles.qrBox} />
-              <View style={[styles.qrBox, styles.qrBoxBlue]} />
-              <View style={styles.qrBox} />
-            </View>
-            <View style={styles.qrPatternRow}>
-              <View style={[styles.qrBox, styles.qrBoxLarge]} />
-              <View style={styles.qrBox} />
-              <View style={[styles.qrBox, styles.qrBoxLarge]} />
-            </View>
-          </View>
+        {/* Clean Vector Stylized QR Code with Blue Corner Finders */}
+        <View style={styles.qrWrapper}>
+          <QRCodeVector size={210} />
         </View>
 
         {/* PIN Badge Block */}
@@ -55,7 +34,7 @@ export default function JoinQRModal() {
           <Text style={styles.pinText}>PIN: 4821</Text>
         </View>
 
-        {/* In the room Live Guest List */}
+        {/* In the room Live Guest List matching Figma Page 5 */}
         <View style={styles.guestListSection}>
           <View style={styles.guestHeaderRow}>
             <Text style={styles.guestSectionTitle}>In the room</Text>
@@ -65,12 +44,11 @@ export default function JoinQRModal() {
             </View>
           </View>
 
-          {/* Guest 1 */}
+          {/* Guest 1: You */}
           <View style={styles.guestRow}>
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }}
-              style={styles.guestAvatar}
-            />
+            <View style={styles.avatarWrap}>
+              <MemojiAvatar id="you" size={42} />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.guestName}>You</Text>
               <Text style={styles.guestDevice}>Host · iPhone</Text>
@@ -78,12 +56,11 @@ export default function JoinQRModal() {
             <Badge label="Connected" variant="emerald" />
           </View>
 
-          {/* Guest 2 */}
+          {/* Guest 2: Mia */}
           <View style={styles.guestRow}>
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80' }}
-              style={styles.guestAvatar}
-            />
+            <View style={styles.avatarWrap}>
+              <MemojiAvatar id="mia" size={42} />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.guestName}>Mia</Text>
               <Text style={styles.guestDevice}>Just joined</Text>
@@ -91,12 +68,11 @@ export default function JoinQRModal() {
             <Badge label="Connected" variant="emerald" />
           </View>
 
-          {/* Guest 3 */}
+          {/* Guest 3: Aly */}
           <View style={styles.guestRow}>
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&q=80' }}
-              style={styles.guestAvatar}
-            />
+            <View style={styles.avatarWrap}>
+              <MemojiAvatar id="aly" size={42} />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.guestName}>Aly</Text>
               <Text style={styles.guestDevice}>Scanning code…</Text>
@@ -105,7 +81,7 @@ export default function JoinQRModal() {
           </View>
         </View>
 
-        {/* Close button */}
+        {/* Close Button */}
         <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
           <Text style={styles.closeButtonText}>Done</Text>
         </TouchableOpacity>
@@ -117,7 +93,7 @@ export default function JoinQRModal() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B1530', // Dark overlay presentation
+    backgroundColor: '#0B1530',
   },
   sheetContainer: {
     flex: 1,
@@ -137,97 +113,20 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '900',
     color: Colors.textPrimary,
     textAlign: 'center',
+    letterSpacing: -0.4,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
     color: Colors.textSecondary,
     fontWeight: '500',
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  qrCard: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 16,
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
+  qrWrapper: {
     marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#F1F5F9',
-  },
-  qrCornerTL: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    width: 24,
-    height: 24,
-    borderTopWidth: 4,
-    borderLeftWidth: 4,
-    borderColor: Colors.primary,
-    borderRadius: 4,
-  },
-  qrCornerTR: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderTopWidth: 4,
-    borderRightWidth: 4,
-    borderColor: Colors.primary,
-    borderRadius: 4,
-  },
-  qrCornerBL: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    width: 24,
-    height: 24,
-    borderBottomWidth: 4,
-    borderLeftWidth: 4,
-    borderColor: Colors.primary,
-    borderRadius: 4,
-  },
-  qrCornerBR: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderBottomWidth: 4,
-    borderRightWidth: 4,
-    borderColor: Colors.primary,
-    borderRadius: 4,
-  },
-  qrCenterGraphic: {
-    width: 130,
-    height: 130,
-    justifyContent: 'space-between',
-  },
-  qrPatternRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  qrBox: {
-    width: 24,
-    height: 24,
-    backgroundColor: Colors.textPrimary,
-    borderRadius: 4,
-  },
-  qrBoxLarge: {
-    width: 38,
-    height: 38,
-    backgroundColor: Colors.textPrimary,
-    borderRadius: 6,
-  },
-  qrBoxBlue: {
-    backgroundColor: Colors.primary,
   },
   pinPill: {
     backgroundColor: '#EEF3FF',
@@ -244,13 +143,13 @@ const styles = StyleSheet.create({
   },
   guestListSection: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   guestHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   guestSectionTitle: {
     fontSize: 16,
@@ -280,10 +179,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F8FAFC',
   },
-  guestAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  avatarWrap: {
     marginRight: 12,
   },
   guestName: {
@@ -299,12 +195,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     borderRadius: Radii.pill,
     width: '100%',
-    paddingVertical: 14,
+    minHeight: 50,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   closeButtonText: {
     color: Colors.textPrimary,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

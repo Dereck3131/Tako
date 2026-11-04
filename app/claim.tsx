@@ -6,23 +6,22 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useRoomStore } from '../src/store/roomStore';
 import { Colors, Radii } from '../src/constants/theme';
 import { TicketCard } from '../src/components/TicketCard';
+import { MemojiAvatar } from '../src/components/MemojiAvatar';
+import { BarcodeVector } from '../src/components/BarcodeVector';
 
 export default function ClaimAndAdjustModal() {
   const router = useRouter();
-  const { members } = useRoomStore();
 
   const [shares, setShares] = useState([
-    { id: 'you', name: 'You', pct: 25, amount: 30.0, avatar: members[0]?.avatarUrl },
-    { id: 'mia', name: 'Mia', pct: 25, amount: 30.0, avatar: members[1]?.avatarUrl },
-    { id: 'jonas', name: 'Jonas', pct: 25, amount: 30.0, avatar: members[2]?.avatarUrl },
-    { id: 'aly', name: 'Aly', pct: 25, amount: 30.0, avatar: members[3]?.avatarUrl },
+    { id: 'you', name: 'You', pct: 25, amount: 30.0 },
+    { id: 'mia', name: 'Mia', pct: 25, amount: 30.0 },
+    { id: 'jonas', name: 'Jonas', pct: 25, amount: 30.0 },
+    { id: 'aly', name: 'Aly', pct: 25, amount: 30.0 },
   ]);
 
   const adjustShare = (index: number, newPct: number) => {
@@ -80,7 +79,7 @@ export default function ClaimAndAdjustModal() {
           <View style={{ width: 48 }} />
         </View>
 
-        {/* Receipt Ticket Card with Compact Barcode */}
+        {/* Receipt Ticket Card with Authentic Barcode matching Page 6 */}
         <TicketCard
           childrenTop={
             <View>
@@ -111,21 +110,8 @@ export default function ClaimAndAdjustModal() {
             </View>
           }
           childrenBottom={
-            <View style={styles.barcodeContainer}>
-              {/* Compact Barcode Lines */}
-              <View style={styles.barcodeLines}>
-                {[2, 4, 1, 3, 5, 2, 6, 1, 4, 2, 5, 3, 2, 4, 1, 6, 3, 2, 5, 1, 4, 2].map(
-                  (width, idx) => (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.barcodeBar,
-                        { width, marginRight: (idx % 3) + 2 },
-                      ]}
-                    />
-                  )
-                )}
-              </View>
+            <View style={styles.barcodeSection}>
+              <BarcodeVector height={32} />
             </View>
           }
         />
@@ -139,12 +125,14 @@ export default function ClaimAndAdjustModal() {
           </View>
         </View>
 
-        {/* Sliders Container with Un-occluded Thumb Targets */}
+        {/* Per-Person Sliders with Memoji Avatars matching Figma Page 6 */}
         <View style={styles.slidersCard}>
           {shares.map((person, idx) => (
             <View key={person.id} style={styles.sliderPersonRow}>
               <View style={styles.personInfoRow}>
-                <Image source={{ uri: person.avatar }} style={styles.personAvatar} />
+                <View style={styles.personAvatarWrap}>
+                  <MemojiAvatar id={person.id} size={38} />
+                </View>
                 <Text style={styles.personName}>{person.name}</Text>
                 <View style={styles.shareStats}>
                   <Text style={styles.sharePct}>{person.pct}%</Text>
@@ -154,7 +142,7 @@ export default function ClaimAndAdjustModal() {
                 </View>
               </View>
 
-              {/* Slider Track with Floating Indicator & 48px Touch Area */}
+              {/* Slider Track with Custom Thumb */}
               <View style={styles.sliderTrackWrapper}>
                 <View style={styles.trackBackground}>
                   <View style={[styles.trackFill, { width: `${person.pct}%` }]} />
@@ -162,7 +150,6 @@ export default function ClaimAndAdjustModal() {
                     style={[styles.sliderThumb, { left: `${person.pct}%` }]}
                     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                     onPress={() => {
-                      // Snapping toggle between 25%, 33%, 50%
                       const next = person.pct === 25 ? 50 : person.pct === 50 ? 33 : 25;
                       adjustShare(idx, next);
                     }}
@@ -211,7 +198,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backChevron: {
-    fontSize: 30,
+    fontSize: 32,
     color: Colors.textPrimary,
     fontWeight: '600',
   },
@@ -270,18 +257,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: Colors.textPrimary,
   },
-  barcodeContainer: {
+  barcodeSection: {
     alignItems: 'center',
-    paddingVertical: 4,
-  },
-  barcodeLines: {
-    flexDirection: 'row',
-    height: 26,
-    alignItems: 'center',
-  },
-  barcodeBar: {
-    height: '100%',
-    backgroundColor: '#0F172A',
+    paddingVertical: 2,
   },
   sharingHeaderRow: {
     flexDirection: 'row',
@@ -314,12 +292,12 @@ const styles = StyleSheet.create({
   slidersCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: Radii.card,
-    padding: 18,
+    padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowColor: '#2F65F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
   },
   sliderPersonRow: {
     marginBottom: 18,
@@ -329,10 +307,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  personAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  personAvatarWrap: {
     marginRight: 10,
   },
   personName: {
@@ -374,15 +349,15 @@ const styles = StyleSheet.create({
   },
   sliderThumb: {
     position: 'absolute',
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: -13,
+    marginLeft: -12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,

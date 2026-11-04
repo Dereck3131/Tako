@@ -5,14 +5,23 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
-  Image,
 } from 'react-native';
 import { useRoomStore } from '../../src/store/roomStore';
 import { Colors, Radii } from '../../src/constants/theme';
 import { Badge } from '../../src/components/Badge';
+import { MemojiAvatar, MemojiId } from '../../src/components/MemojiAvatar';
 
 export default function ActivityScreen() {
   const { activities } = useRoomStore();
+
+  const getMemojiId = (name: string): MemojiId => {
+    const lower = name.toLowerCase();
+    if (lower.includes('mia')) return 'mia';
+    if (lower.includes('jonas')) return 'jonas';
+    if (lower.includes('aly')) return 'aly';
+    if (lower.includes('ken')) return 'ken';
+    return 'you';
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -26,7 +35,7 @@ export default function ActivityScreen() {
           </View>
         </View>
 
-        {/* Settlement Progress Card */}
+        {/* Settlement Progress Card matching Page 3 */}
         <View style={styles.settlementCard}>
           <View style={styles.settlementTopRow}>
             <Text style={styles.settlementLabel}>SETTLEMENT</Text>
@@ -36,38 +45,44 @@ export default function ActivityScreen() {
             <Text style={styles.boldAmount}>$105.00</Text>
             <Text style={styles.totalAmount}> of $210.00</Text>
           </View>
-          {/* Progress Bar (50% progress) */}
+          {/* Dual-color Progress Bar */}
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: '50%' }]} />
           </View>
         </View>
 
-        {/* Timeline Section */}
+        {/* Section Today matching Page 3 */}
         <Text style={styles.sectionHeader}>Today</Text>
         <View style={styles.feedCard}>
-          {activities.map((act, idx) => (
-            <View
-              key={act.id}
-              style={[
-                styles.eventRow,
-                idx < activities.length - 1 && styles.eventBorder,
-              ]}
-            >
-              <Image source={{ uri: act.actorAvatar }} style={styles.actorAvatar} />
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.eventTitle}>{act.title}</Text>
-                {act.subtitle && (
-                  <Text style={styles.eventSubtitle}>{act.subtitle}</Text>
-                )}
+          {activities.map((act, idx) => {
+            const memojiId = getMemojiId(act.actorName);
+
+            return (
+              <View
+                key={act.id}
+                style={[
+                  styles.eventRow,
+                  idx < activities.length - 1 && styles.eventBorder,
+                ]}
+              >
+                <View style={styles.avatarWrapper}>
+                  <MemojiAvatar id={memojiId} size={44} />
+                </View>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={styles.eventTitle}>{act.title}</Text>
+                  {act.subtitle && (
+                    <Text style={styles.eventSubtitle}>{act.subtitle}</Text>
+                  )}
+                </View>
+                <View style={styles.badgeTimeCol}>
+                  {act.badge && (
+                    <Badge label={act.badge.label} variant={act.badge.variant} />
+                  )}
+                  <Text style={styles.timeText}>{act.relativeTime}</Text>
+                </View>
               </View>
-              <View style={styles.badgeTimeCol}>
-                {act.badge && (
-                  <Badge label={act.badge.label} variant={act.badge.variant} />
-                )}
-                <Text style={styles.timeText}>{act.relativeTime}</Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -92,7 +107,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '900',
     color: Colors.textPrimary,
   },
   liveBadge: {
@@ -108,7 +123,7 @@ const styles = StyleSheet.create({
   },
   liveText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.emerald,
   },
   settlementCard: {
@@ -116,7 +131,7 @@ const styles = StyleSheet.create({
     borderRadius: Radii.card,
     padding: 20,
     marginBottom: 24,
-    shadowColor: '#000',
+    shadowColor: '#2F65F6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
@@ -169,9 +184,9 @@ const styles = StyleSheet.create({
   feedCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: Radii.card,
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 16,
-    shadowColor: '#000',
+    shadowColor: '#2F65F6',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -183,12 +198,9 @@ const styles = StyleSheet.create({
   },
   eventBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F8FAFC',
   },
-  actorAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  avatarWrapper: {
     marginRight: 12,
   },
   eventTitle: {

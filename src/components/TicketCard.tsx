@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
+import Svg, { Line, Path } from 'react-native-svg';
 import { Colors, Radii } from '../constants/theme';
 
 interface TicketCardProps {
@@ -14,16 +15,38 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   style,
 }) => {
   return (
-    <View style={[styles.card, style]}>
-      <View style={styles.contentTop}>{childrenTop}</View>
+    <View style={[styles.cardContainer, style]}>
+      {/* Top Ticket Content */}
+      <View style={styles.topContent}>{childrenTop}</View>
+
       {childrenBottom && (
         <>
-          <View style={styles.perforationRow}>
+          {/* Perforation Separator with Realistic Notches */}
+          <View style={styles.separatorRow}>
+            {/* Left Circular Bite */}
             <View style={styles.notchLeft} />
-            <View style={styles.dashedLine} />
+
+            {/* Dashed Vector Line */}
+            <View style={styles.dashedLineContainer}>
+              <Svg height="2" width="100%">
+                <Line
+                  x1="0"
+                  y1="1"
+                  x2="100%"
+                  y2="1"
+                  stroke={Colors.borderDashed}
+                  strokeWidth="2"
+                  strokeDasharray="6, 5"
+                />
+              </Svg>
+            </View>
+
+            {/* Right Circular Bite */}
             <View style={styles.notchRight} />
           </View>
-          <View style={styles.contentBottom}>{childrenBottom}</View>
+
+          {/* Bottom Ticket Content */}
+          <View style={styles.bottomContent}>{childrenBottom}</View>
         </>
       )}
     </View>
@@ -31,52 +54,49 @@ export const TicketCard: React.FC<TicketCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  card: {
+  cardContainer: {
     backgroundColor: Colors.card,
     borderRadius: Radii.card,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
+    shadowColor: '#2F65F6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 3,
     marginBottom: 16,
   },
-  contentTop: {
+  topContent: {
     padding: 18,
+    paddingBottom: 14,
   },
-  perforationRow: {
+  separatorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 20,
-    marginVertical: -10,
-    overflow: 'hidden',
+    height: 22,
+    marginVertical: -11,
+    zIndex: 10,
   },
   notchLeft: {
     width: 14,
-    height: 20,
+    height: 22,
     backgroundColor: Colors.background,
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
+    borderTopRightRadius: 11,
+    borderBottomRightRadius: 11,
   },
-  dashedLine: {
+  dashedLineContainer: {
     flex: 1,
-    height: 1,
-    borderWidth: 1,
-    borderColor: Colors.borderDashed,
-    borderStyle: 'dashed',
-    marginHorizontal: 8,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
   },
   notchRight: {
     width: 14,
-    height: 20,
+    height: 22,
     backgroundColor: Colors.background,
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
+    borderTopLeftRadius: 11,
+    borderBottomLeftRadius: 11,
   },
-  contentBottom: {
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 16,
+  bottomContent: {
+    padding: 18,
+    paddingTop: 14,
   },
 });

@@ -6,15 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { QrSmallIcon } from '../../src/components/Icons';
 import { useRoomStore } from '../../src/store/roomStore';
 import { Colors, Radii } from '../../src/constants/theme';
 import { TicketCard } from '../../src/components/TicketCard';
 import { PeopleCarousel } from '../../src/components/PeopleCarousel';
 import { Badge } from '../../src/components/Badge';
+import { MemojiAvatar } from '../../src/components/MemojiAvatar';
 
 export default function RoomHomeScreen() {
   const router = useRouter();
@@ -41,7 +42,10 @@ export default function RoomHomeScreen() {
           <View>
             <View style={styles.titleRow}>
               <Text style={styles.roomTitle}>{currentRoom.title}</Text>
-              <Text style={styles.chevron}>▾</Text>
+              {/* Orange Triangle Down Chevron matching Figma */}
+              <View style={styles.orangeChevron}>
+                <Text style={styles.orangeChevronText}>▼</Text>
+              </View>
             </View>
             <View style={styles.liveCountRow}>
               <View style={styles.greenDot} />
@@ -49,19 +53,21 @@ export default function RoomHomeScreen() {
             </View>
           </View>
 
-          {/* Top-Right Avatar Stack */}
+          {/* Top-Right Memoji Avatar Stack matching Figma */}
           <View style={styles.avatarStack}>
-            {members.slice(0, 3).map((m, idx) => (
-              <Image
-                key={m.id}
-                source={{ uri: m.avatarUrl }}
-                style={[styles.smallAvatar, { marginLeft: idx > 0 ? -12 : 0 }]}
-              />
-            ))}
+            <View style={[styles.avatarStackItem, { zIndex: 3 }]}>
+              <MemojiAvatar id="mia" size={34} />
+            </View>
+            <View style={[styles.avatarStackItem, { marginLeft: -12, zIndex: 2 }]}>
+              <MemojiAvatar id="jonas" size={34} />
+            </View>
+            <View style={[styles.avatarStackItem, { marginLeft: -12, zIndex: 1 }]}>
+              <MemojiAvatar id="aly" size={34} />
+            </View>
           </View>
         </View>
 
-        {/* Hero Card: Total Spend ($310.00) */}
+        {/* Hero Spend Card ($310.00) matching Figma Page 1 */}
         <View style={styles.heroCard}>
           <Text style={styles.heroSubtext}>Total spend</Text>
           <Text style={styles.heroCurrency}>
@@ -71,12 +77,16 @@ export default function RoomHomeScreen() {
           <View style={styles.splitWithRow}>
             <Text style={styles.splitWithLabel}>Split with</Text>
             <View style={styles.splitAvatars}>
-              {members.map((m, idx) => (
-                <Image
-                  key={m.id}
-                  source={{ uri: m.avatarUrl }}
-                  style={[styles.splitAvatar, { marginLeft: idx > 0 ? -10 : 0 }]}
-                />
+              {['you', 'mia', 'jonas', 'aly', 'ken'].map((id, idx) => (
+                <View
+                  key={id}
+                  style={[
+                    styles.splitAvatarBorder,
+                    { marginLeft: idx > 0 ? -10 : 0, zIndex: 10 - idx },
+                  ]}
+                >
+                  <MemojiAvatar id={id} size={32} />
+                </View>
               ))}
             </View>
           </View>
@@ -89,19 +99,21 @@ export default function RoomHomeScreen() {
               router.push('/join');
             }}
           >
-            <Text style={styles.qrIcon}>⚏</Text>
+            <View style={{ marginRight: 8 }}>
+              <QrSmallIcon size={18} color={Colors.primary} strokeWidth={2.2} />
+            </View>
             <Text style={styles.inviteButtonText}>Invite to Room via QR</Text>
           </TouchableOpacity>
         </View>
 
-        {/* In the Room Now Carousel */}
+        {/* In the Room Now Section */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>In the Room Now</Text>
         </View>
         <PeopleCarousel members={members} />
 
         {/* Live Items Section */}
-        <View style={[styles.sectionHeaderRow, { marginTop: 20 }]}>
+        <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
           <Text style={styles.sectionTitle}>Live items</Text>
           <TouchableOpacity
             onPress={() => {
@@ -124,16 +136,14 @@ export default function RoomHomeScreen() {
         >
           <TicketCard
             childrenTop={
-              <View>
-                <View style={styles.itemRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.itemTitle}>Truffle Burger ×2</Text>
-                    <Text style={styles.itemSubtitle}>Added by Mia · just now</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.itemPrice}>$36.00</Text>
-                    <Badge label="NEW" variant="amber" />
-                  </View>
+              <View style={styles.itemRow}>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={styles.itemTitle}>Truffle Burger ×2</Text>
+                  <Text style={styles.itemSubtitle}>Added by Mia · just now</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.itemPrice}>$36.00</Text>
+                  <Badge label="NEW" variant="amber" />
                 </View>
               </View>
             }
@@ -141,13 +151,15 @@ export default function RoomHomeScreen() {
               <View style={styles.splitRow}>
                 <Text style={styles.splitWaysText}>Split 3 ways</Text>
                 <View style={styles.avatarMiniStack}>
-                  {members.slice(0, 3).map((m, idx) => (
-                    <Image
-                      key={m.id}
-                      source={{ uri: m.avatarUrl }}
-                      style={[styles.miniAvatar, { marginLeft: idx > 0 ? -8 : 0 }]}
-                    />
-                  ))}
+                  <View style={[styles.miniAvatarWrap, { zIndex: 3 }]}>
+                    <MemojiAvatar id="mia" size={26} />
+                  </View>
+                  <View style={[styles.miniAvatarWrap, { marginLeft: -8, zIndex: 2 }]}>
+                    <MemojiAvatar id="jonas" size={26} />
+                  </View>
+                  <View style={[styles.miniAvatarWrap, { marginLeft: -8, zIndex: 1 }]}>
+                    <MemojiAvatar id="aly" size={26} />
+                  </View>
                 </View>
               </View>
             }
@@ -164,27 +176,24 @@ export default function RoomHomeScreen() {
         >
           <TicketCard
             childrenTop={
-              <View>
-                <View style={styles.itemRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.itemTitle}>Garlic Fries</Text>
-                    <Text style={styles.itemSubtitle}>Added by Jonas · 2m ago</Text>
-                  </View>
-                  <Text style={styles.itemPrice}>$9.50</Text>
+              <View style={styles.itemRow}>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={styles.itemTitle}>Garlic Fries</Text>
+                  <Text style={styles.itemSubtitle}>Added by Jonas · 2m ago</Text>
                 </View>
+                <Text style={styles.itemPrice}>$9.50</Text>
               </View>
             }
             childrenBottom={
               <View style={styles.splitRow}>
                 <Text style={styles.splitWaysText}>Split 2 ways</Text>
                 <View style={styles.avatarMiniStack}>
-                  {members.slice(1, 3).map((m, idx) => (
-                    <Image
-                      key={m.id}
-                      source={{ uri: m.avatarUrl }}
-                      style={[styles.miniAvatar, { marginLeft: idx > 0 ? -8 : 0 }]}
-                    />
-                  ))}
+                  <View style={[styles.miniAvatarWrap, { zIndex: 2 }]}>
+                    <MemojiAvatar id="jonas" size={26} />
+                  </View>
+                  <View style={[styles.miniAvatarWrap, { marginLeft: -8, zIndex: 1 }]}>
+                    <MemojiAvatar id="you" size={26} />
+                  </View>
                 </View>
               </View>
             }
@@ -229,13 +238,17 @@ const styles = StyleSheet.create({
   },
   roomTitle: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '900',
     color: Colors.textPrimary,
+    letterSpacing: -0.4,
   },
-  chevron: {
-    fontSize: 16,
-    color: Colors.amber,
+  orangeChevron: {
     marginLeft: 6,
+    justifyContent: 'center',
+  },
+  orangeChevronText: {
+    fontSize: 12,
+    color: '#F97316', // Orange chevron matching Figma
   },
   liveCountRow: {
     flexDirection: 'row',
@@ -256,13 +269,12 @@ const styles = StyleSheet.create({
   },
   avatarStack: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
-  smallAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  avatarStackItem: {
     borderWidth: 2,
     borderColor: '#FFFFFF',
+    borderRadius: 18,
   },
   heroCard: {
     backgroundColor: Colors.primary,
@@ -270,22 +282,22 @@ const styles = StyleSheet.create({
     padding: 24,
     marginBottom: 24,
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 6,
   },
   heroSubtext: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.85)',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
   },
   heroCurrency: {
     color: '#FFFFFF',
-    fontSize: 42,
+    fontSize: 44,
     fontWeight: '900',
-    letterSpacing: -1,
+    letterSpacing: -1.2,
     marginBottom: 16,
   },
   splitWithRow: {
@@ -301,27 +313,25 @@ const styles = StyleSheet.create({
   },
   splitAvatars: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
-  splitAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  splitAvatarBorder: {
     borderWidth: 2,
     borderColor: Colors.primary,
+    borderRadius: 17,
   },
   inviteButton: {
     backgroundColor: '#FFFFFF',
     borderRadius: Radii.pill,
-    minHeight: 48,
+    minHeight: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  qrIcon: {
-    fontSize: 16,
-    marginRight: 8,
-    color: Colors.primary,
-    fontWeight: '800',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
   },
   inviteButtonText: {
     color: Colors.primary,
@@ -378,11 +388,12 @@ const styles = StyleSheet.create({
   },
   avatarMiniStack: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
-  miniAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  miniAvatarWrap: {
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    borderRadius: 14,
   },
   settleShortcutButton: {
     backgroundColor: '#FFFFFF',
@@ -393,6 +404,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
   },
   settleShortcutText: {
     color: Colors.textPrimary,

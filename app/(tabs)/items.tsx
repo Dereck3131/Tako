@@ -6,17 +6,15 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useRoomStore } from '../../src/store/roomStore';
 import { Colors, Radii } from '../../src/constants/theme';
 import { Badge } from '../../src/components/Badge';
+import { MemojiAvatar } from '../../src/components/MemojiAvatar';
 
 export default function ItemsScreen() {
   const router = useRouter();
-  const { items, members } = useRoomStore();
   const [filter, setFilter] = useState<'All' | 'Unclaimed' | 'Mine'>('All');
   const [claimedDishes, setClaimedDishes] = useState<Record<string, boolean>>({});
 
@@ -32,7 +30,7 @@ export default function ItemsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Top Header */}
+        {/* Top Header matching Page 2 */}
         <View style={styles.headerRow}>
           <Text style={styles.title}>Items</Text>
           <TouchableOpacity
@@ -68,7 +66,7 @@ export default function ItemsScreen() {
           })}
         </View>
 
-        {/* Blue Summary Hero Card */}
+        {/* Blue Summary Hero Card matching Page 2 */}
         <View style={styles.summaryCard}>
           <View>
             <Text style={styles.summarySubtitle}>12 items · Friday Night Dinner</Text>
@@ -80,9 +78,9 @@ export default function ItemsScreen() {
           />
         </View>
 
-        {/* Item Cards List */}
+        {/* Item Cards List matching Page 2 */}
         <View style={styles.itemList}>
-          {/* Item 1 */}
+          {/* Item 1: Truffle Burger x2 */}
           <TouchableOpacity
             style={styles.itemCard}
             onPress={() => router.push('/claim')}
@@ -92,13 +90,15 @@ export default function ItemsScreen() {
               <Text style={styles.itemName}>Truffle Burger ×2</Text>
               <Text style={styles.itemAuthor}>Added by Mia</Text>
               <View style={styles.avatarRow}>
-                {members.slice(0, 3).map((m, idx) => (
-                  <Image
-                    key={m.id}
-                    source={{ uri: m.avatarUrl }}
-                    style={[styles.miniAvatar, { marginLeft: idx > 0 ? -6 : 0 }]}
-                  />
-                ))}
+                <View style={[styles.avatarStackItem, { zIndex: 3 }]}>
+                  <MemojiAvatar id="mia" size={24} />
+                </View>
+                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 2 }]}>
+                  <MemojiAvatar id="jonas" size={24} />
+                </View>
+                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 1 }]}>
+                  <MemojiAvatar id="aly" size={24} />
+                </View>
               </View>
             </View>
             <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
@@ -107,7 +107,7 @@ export default function ItemsScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Item 2: Margherita Pizza with Quick-Claim Action */}
+          {/* Item 2: Margherita Pizza */}
           <TouchableOpacity
             style={styles.itemCard}
             onPress={() => router.push('/claim')}
@@ -123,7 +123,7 @@ export default function ItemsScreen() {
                   style={styles.quickClaimPill}
                   onPress={() => handleQuickClaim('pizza')}
                 >
-                  <Text style={styles.quickClaimText}>+ Claim 100%</Text>
+                  <Text style={styles.quickClaimText}>Nobody yet · Claim</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -136,7 +136,7 @@ export default function ItemsScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Item 3 */}
+          {/* Item 3: Iced Tea x4 */}
           <TouchableOpacity
             style={styles.itemCard}
             onPress={() => router.push('/claim')}
@@ -146,13 +146,18 @@ export default function ItemsScreen() {
               <Text style={styles.itemName}>Iced Tea ×4</Text>
               <Text style={styles.itemAuthor}>Added by Jonas</Text>
               <View style={styles.avatarRow}>
-                {members.slice(0, 4).map((m, idx) => (
-                  <Image
-                    key={m.id}
-                    source={{ uri: m.avatarUrl }}
-                    style={[styles.miniAvatar, { marginLeft: idx > 0 ? -6 : 0 }]}
-                  />
-                ))}
+                <View style={[styles.avatarStackItem, { zIndex: 4 }]}>
+                  <MemojiAvatar id="you" size={24} />
+                </View>
+                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 3 }]}>
+                  <MemojiAvatar id="mia" size={24} />
+                </View>
+                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 2 }]}>
+                  <MemojiAvatar id="jonas" size={24} />
+                </View>
+                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 1 }]}>
+                  <MemojiAvatar id="aly" size={24} />
+                </View>
               </View>
             </View>
             <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
@@ -161,7 +166,7 @@ export default function ItemsScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Item 4 */}
+          {/* Item 4: Garlic Fries */}
           <TouchableOpacity
             style={styles.itemCard}
             onPress={() => router.push('/claim')}
@@ -171,13 +176,12 @@ export default function ItemsScreen() {
               <Text style={styles.itemName}>Garlic Fries</Text>
               <Text style={styles.itemAuthor}>Added by Jonas</Text>
               <View style={styles.avatarRow}>
-                {members.slice(1, 3).map((m, idx) => (
-                  <Image
-                    key={m.id}
-                    source={{ uri: m.avatarUrl }}
-                    style={[styles.miniAvatar, { marginLeft: idx > 0 ? -6 : 0 }]}
-                  />
-                ))}
+                <View style={[styles.avatarStackItem, { zIndex: 2 }]}>
+                  <MemojiAvatar id="jonas" size={24} />
+                </View>
+                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 1 }]}>
+                  <MemojiAvatar id="you" size={24} />
+                </View>
               </View>
             </View>
             <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
@@ -186,7 +190,7 @@ export default function ItemsScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Item 5: Tiramisu with Quick-Claim Action */}
+          {/* Item 5: Tiramisu */}
           <TouchableOpacity
             style={styles.itemCard}
             onPress={() => router.push('/claim')}
@@ -202,7 +206,7 @@ export default function ItemsScreen() {
                   style={styles.quickClaimPill}
                   onPress={() => handleQuickClaim('tiramisu')}
                 >
-                  <Text style={styles.quickClaimText}>+ Claim 100%</Text>
+                  <Text style={styles.quickClaimText}>Nobody yet · Claim</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -238,7 +242,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '900',
     color: Colors.textPrimary,
   },
   addItemButton: {
@@ -248,11 +252,15 @@ const styles = StyleSheet.create({
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   addItemText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   filterRow: {
     flexDirection: 'row',
@@ -291,7 +299,8 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
-    shadowRadius: 12,
+    shadowRadius: 14,
+    elevation: 3,
   },
   summarySubtitle: {
     color: 'rgba(255, 255, 255, 0.85)',
@@ -313,8 +322,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     flexDirection: 'row',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#2F65F6',
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
@@ -349,11 +358,12 @@ const styles = StyleSheet.create({
   },
   avatarRow: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
-  miniAvatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+  avatarStackItem: {
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    borderRadius: 13,
   },
   itemPrice: {
     fontSize: 18,

@@ -6,7 +6,6 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -15,10 +14,11 @@ import { Colors, Radii } from '../src/constants/theme';
 import { TicketCard } from '../src/components/TicketCard';
 import { Badge } from '../src/components/Badge';
 import { SettlementHero } from '../src/components/SettlementHero';
+import { MemojiAvatar } from '../src/components/MemojiAvatar';
 
 export default function SettleUpScreen() {
   const router = useRouter();
-  const { members, markMemberPaid } = useRoomStore();
+  const { markMemberPaid } = useRoomStore();
   const [hasPaidSelf, setHasPaidSelf] = useState(false);
 
   const handlePayNow = () => {
@@ -34,7 +34,7 @@ export default function SettleUpScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header */}
+        {/* Header matching Page 7 */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backChevron}>‹</Text>
@@ -53,7 +53,7 @@ export default function SettleUpScreen() {
           </View>
         )}
 
-        {/* Breakdown Ticket Card */}
+        {/* Breakdown Ticket Card matching Page 7 */}
         <TicketCard
           childrenTop={
             <View>
@@ -79,10 +79,9 @@ export default function SettleUpScreen() {
               {/* Mia */}
               <View style={styles.memberStatusRow}>
                 <View style={styles.memberInfo}>
-                  <Image
-                    source={{ uri: members[1]?.avatarUrl }}
-                    style={styles.avatarImg}
-                  />
+                  <View style={styles.avatarWrap}>
+                    <MemojiAvatar id="mia" size={38} />
+                  </View>
                   <Text style={styles.memberName}>Mia</Text>
                 </View>
                 <Badge label="Paid" variant="emerald" />
@@ -91,22 +90,20 @@ export default function SettleUpScreen() {
               {/* Jonas */}
               <View style={styles.memberStatusRow}>
                 <View style={styles.memberInfo}>
-                  <Image
-                    source={{ uri: members[2]?.avatarUrl }}
-                    style={styles.avatarImg}
-                  />
+                  <View style={styles.avatarWrap}>
+                    <MemojiAvatar id="jonas" size={38} />
+                  </View>
                   <Text style={styles.memberName}>Jonas</Text>
                 </View>
                 <Badge label="Paid" variant="emerald" />
               </View>
 
-              {/* Aly / You */}
+              {/* Aly */}
               <View style={styles.memberStatusRow}>
                 <View style={styles.memberInfo}>
-                  <Image
-                    source={{ uri: members[3]?.avatarUrl }}
-                    style={styles.avatarImg}
-                  />
+                  <View style={styles.avatarWrap}>
+                    <MemojiAvatar id="aly" size={38} />
+                  </View>
                   <Text style={styles.memberName}>Aly</Text>
                 </View>
                 <Badge
@@ -118,7 +115,7 @@ export default function SettleUpScreen() {
           }
         />
 
-        {/* Midnight Navy Hero Card with Amber Pay Now button */}
+        {/* Midnight Navy Hero Card with Amber Pay Now button matching Page 7 */}
         <SettlementHero
           amountCents={5250}
           splitCount={4}
@@ -153,7 +150,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backChevron: {
-    fontSize: 30,
+    fontSize: 32,
     color: Colors.textPrimary,
     fontWeight: '600',
   },
@@ -200,7 +197,7 @@ const styles = StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 7,
   },
   itemName: {
     fontSize: 16,
@@ -222,10 +219,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  avatarImg: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  avatarWrap: {
     marginRight: 10,
   },
   memberName: {
