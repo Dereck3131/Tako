@@ -1,166 +1,318 @@
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  Pressable,
   ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { Colors, Radii } from '../../src/constants/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import Svg, { Path } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
+import {
+  Border,
+  Colors,
+  Motion,
+  Radii,
+  Spacing,
+  TouchTarget,
+  Typography,
+} from '../../src/constants/theme';
+import { DotGridBackground } from '../../src/components/DotGridBackground';
+import { NeoButton, NeoCard } from '../../src/components/NeoUI';
 import { MemojiAvatar } from '../../src/components/MemojiAvatar';
+import { StaggerItem } from '../../src/components/MotionPrimitives';
+import { useRoomStore } from '../../src/store/roomStore';
+
+const ANIMALS = ['bear', 'fox', 'panda', 'frog', 'cat'] as const;
+
+function ChevronRight() {
+  return (
+    <Svg
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={Colors.ink}
+      strokeWidth={3}
+    >
+      <Path d="m9 5 7 7-7 7" />
+    </Svg>
+  );
+}
 
 export default function MeScreen() {
+  const router = useRouter();
+  const { selectedAnimal, setSelectedAnimal } = useRoomStore();
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <Text style={styles.headerTitle}>Me</Text>
+    <DotGridBackground>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <Text style={styles.headerTitle}>Me</Text>
 
-        {/* Profile Card matching Page 4 */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatarCircle}>
-            <MemojiAvatar id="you" size={88} />
+          {/* Profile Card */}
+          <StaggerItem index={0} distance={8}>
+            <NeoCard
+              style={{ marginTop: Spacing.lg }}
+              borderRadius={Radii.card}
+              contentStyle={styles.profileContent}
+            >
+              <MemojiAvatar id={selectedAnimal} size={88} />
+              <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">
+                Alex Santos
+              </Text>
+              <Text style={styles.profileEmail} numberOfLines={1} ellipsizeMode="middle">
+                alex@email.com
+              </Text>
+              <View style={{ marginTop: Spacing.md }}>
+                <NeoButton
+                  label="Edit profile"
+                  onPress={() => {}}
+                  backgroundColor="#FFFFFF"
+                  textColor={Colors.ink}
+                  shadowOffset={2}
+                  height={TouchTarget.minSize}
+                  fontSize={14}
+                />
+              </View>
+            </NeoCard>
+          </StaggerItem>
+
+          {/* YOUR ANIMAL Selector */}
+          <StaggerItem index={1} distance={8}>
+            <NeoCard
+              style={{ marginTop: Spacing.lg }}
+              borderRadius={Radii.card}
+              contentStyle={styles.animalCardContent}
+            >
+              <Text style={styles.sectionCap}>YOUR ANIMAL</Text>
+              <View style={styles.animalRow}>
+                {ANIMALS.map((animal) => {
+                  const isSelected = selectedAnimal === animal;
+                  return (
+                    <Pressable
+                      key={animal}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={`Select ${animal} avatar`}
+                      onPress={() => {
+                        try {
+                          Haptics.selectionAsync();
+                        } catch {
+                          // Fallback
+                        }
+                        setSelectedAnimal(animal);
+                      }}
+                      style={({ pressed }) => [
+                        styles.animalRing,
+                        isSelected && styles.animalRingSelected,
+                        pressed && { transform: [{ scale: Motion.pressScale }] },
+                      ]}
+                    >
+                      <MemojiAvatar id={animal} size={44} />
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </NeoCard>
+          </StaggerItem>
+
+          {/* Settings Menu Card */}
+          <StaggerItem index={2} distance={8}>
+            <NeoCard
+              style={{ marginTop: Spacing.lg }}
+              borderRadius={Radii.card}
+              contentStyle={styles.menuCardContent}
+            >
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.menuRow,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={styles.menuLabel} numberOfLines={1}>
+                  Payment methods
+                </Text>
+                <View style={styles.menuRight}>
+                  <Text style={styles.menuValue} numberOfLines={1}>
+                    Apple Pay
+                  </Text>
+                  <ChevronRight />
+                </View>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.menuRow,
+                  styles.menuRowBorder,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={styles.menuLabel} numberOfLines={1}>
+                  Notifications
+                </Text>
+                <View style={styles.menuRight}>
+                  <Text style={styles.menuValue} numberOfLines={1}>
+                    On
+                  </Text>
+                  <ChevronRight />
+                </View>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.menuRow,
+                  styles.menuRowBorder,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={styles.menuLabel} numberOfLines={1}>
+                  Currency
+                </Text>
+                <View style={styles.menuRight}>
+                  <Text style={styles.menuValue} numberOfLines={1}>
+                    USD $
+                  </Text>
+                  <ChevronRight />
+                </View>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.menuRow,
+                  styles.menuRowBorder,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={styles.menuLabel} numberOfLines={1}>
+                  Help & support
+                </Text>
+                <View style={styles.menuRight}>
+                  <ChevronRight />
+                </View>
+              </Pressable>
+            </NeoCard>
+          </StaggerItem>
+
+          {/* Log out */}
+          <View style={{ marginTop: 18 }}>
+            <NeoButton
+              label="Log out"
+              onPress={() => router.replace('/login' as never)}
+              backgroundColor="#FFFFFF"
+              textColor={Colors.danger}
+              height={48}
+              fontSize={15}
+            />
           </View>
-          <Text style={styles.profileName}>Alex Santos</Text>
-          <Text style={styles.profileEmail}>alex@email.com</Text>
-
-          <TouchableOpacity style={styles.editProfileButton}>
-            <Text style={styles.editProfileText}>Edit profile</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Settings Menu Card matching Page 4 */}
-        <View style={styles.menuCard}>
-          <TouchableOpacity style={styles.menuRow}>
-            <Text style={styles.menuLabel}>Payment methods</Text>
-            <Text style={styles.menuValue}>Apple Pay  ›</Text>
-          </TouchableOpacity>
-          <View style={styles.divider} />
-
-          <TouchableOpacity style={styles.menuRow}>
-            <Text style={styles.menuLabel}>Notifications</Text>
-            <Text style={styles.menuValue}>On  ›</Text>
-          </TouchableOpacity>
-          <View style={styles.divider} />
-
-          <TouchableOpacity style={styles.menuRow}>
-            <Text style={styles.menuLabel}>Currency</Text>
-            <Text style={styles.menuValue}>USD $  ›</Text>
-          </TouchableOpacity>
-          <View style={styles.divider} />
-
-          <TouchableOpacity style={styles.menuRow}>
-            <Text style={styles.menuLabel}>Help & support</Text>
-            <Text style={styles.menuValue}>›</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Log Out CTA */}
-        <TouchableOpacity style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Log out</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </DotGridBackground>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   container: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xxxl,
   },
   headerTitle: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-    marginBottom: 20,
-    paddingTop: 8,
+    ...Typography.screenTitle,
   },
-  profileCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radii.card,
-    padding: 24,
+  profileContent: {
+    padding: 18,
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#2F65F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  avatarCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#FCE7F3',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
   },
   profileName: {
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: 4,
+    color: Colors.ink,
+    marginTop: Spacing.sm,
+    maxWidth: '100%',
   },
   profileEmail: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 18,
+    ...Typography.caption,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 2,
+    maxWidth: '100%',
   },
-  editProfileButton: {
-    paddingHorizontal: 28,
-    paddingVertical: 10,
+  animalCardContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  sectionCap: {
+    ...Typography.micro,
+    fontSize: 12,
+    color: Colors.ink,
+    marginBottom: Spacing.sm,
+  },
+  animalRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  animalRing: {
+    minWidth: TouchTarget.minSize,
+    minHeight: TouchTarget.minSize,
+    padding: 3,
     borderRadius: Radii.pill,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderWidth: Border.width,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  editProfileText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '800',
+  animalRingSelected: {
+    backgroundColor: Colors.amber,
+    borderColor: Colors.ink,
   },
-  menuCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radii.card,
-    paddingHorizontal: 20,
-    marginBottom: 24,
-    shadowColor: '#2F65F6',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+  menuCardContent: {
+    paddingHorizontal: 18,
   },
   menuRow: {
+    minHeight: 52,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 18,
+    gap: Spacing.md,
+  },
+  menuRowBorder: {
+    borderTopWidth: 2,
+    borderStyle: 'dashed',
+    borderTopColor: Colors.ink,
   },
   menuLabel: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    fontWeight: '800',
+    color: Colors.ink,
+  },
+  menuRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flexShrink: 0,
   },
   menuValue: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '700',
     color: Colors.textSecondary,
-    fontWeight: '600',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-  },
-  logoutButton: {
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  logoutText: {
-    color: '#EF4444',
-    fontSize: 16,
-    fontWeight: '800',
   },
 });
