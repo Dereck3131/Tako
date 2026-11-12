@@ -1,374 +1,512 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  Pressable,
   ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Colors, Radii } from '../../src/constants/theme';
+import Svg, { Path } from 'react-native-svg';
+import {
+  Border,
+  Colors,
+  Motion,
+  Radii,
+  Spacing,
+  TouchTarget,
+  Typography,
+} from '../../src/constants/theme';
+import { DotGridBackground } from '../../src/components/DotGridBackground';
+import { NeoButton, NeoCard } from '../../src/components/NeoUI';
 import { Badge } from '../../src/components/Badge';
-import { MemojiAvatar } from '../../src/components/MemojiAvatar';
+import { MemojiAvatar, MemojiId } from '../../src/components/MemojiAvatar';
+import { HairlineEmptyReceipt } from '../../src/components/HairlineEmptyReceipt';
+import { StaggerItem } from '../../src/components/MotionPrimitives';
+import { useRoomStore } from '../../src/store/roomStore';
+
+interface DisplayItem {
+  id: string;
+  title: string;
+  addedBy: string;
+  price: string;
+  claimers: MemojiId[];
+  mine: boolean;
+}
+
+const SAMPLE_ITEMS: DisplayItem[] = [
+  {
+    id: 'truffle-burger',
+    title: 'Truffle Burger ×2',
+    addedBy: 'Added by Mia',
+    price: '$36.00',
+    claimers: ['bear', 'fox', 'panda'],
+    mine: true,
+  },
+  {
+    id: 'margherita-pizza',
+    title: 'Margherita Pizza',
+    addedBy: 'Added by Aly',
+    price: '$24.00',
+    claimers: [],
+    mine: false,
+  },
+  {
+    id: 'iced-tea',
+    title: 'Iced Tea ×4',
+    addedBy: 'Added by Jonas',
+    price: '$18.00',
+    claimers: ['bear', 'panda', 'frog', 'cat'],
+    mine: true,
+  },
+  {
+    id: 'garlic-fries',
+    title: 'Garlic Fries',
+    addedBy: 'Added by Jonas',
+    price: '$9.50',
+    claimers: ['bear', 'panda'],
+    mine: true,
+  },
+  {
+    id: 'tiramisu',
+    title: 'Tiramisu',
+    addedBy: 'Added by Ken',
+    price: '$12.00',
+    claimers: [],
+    mine: false,
+  },
+];
 
 export default function ItemsScreen() {
   const router = useRouter();
+  const { selectedAnimal } = useRoomStore();
   const [filter, setFilter] = useState<'All' | 'Unclaimed' | 'Mine'>('All');
-  const [claimedDishes, setClaimedDishes] = useState<Record<string, boolean>>({});
+  const [claimedMap, setClaimedMap] = useState<Record<string, boolean>>({});
+  const [showEmptyDemo, setShowEmptyDemo] = useState(false);
 
-  const handleQuickClaim = (dishName: string) => {
+  const handleQuickClaim = (id: string) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {
       // Fallback
     }
-    setClaimedDishes((prev) => ({ ...prev, [dishName]: true }));
+    setClaimedMap((prev) => ({ ...prev, [id]: true }));
   };
 
+  const itemsWithClaims = SAMPLE_ITEMS.map((item) => {
+    const isClaimedNow = item.claimers.length > 0 || claimedMap[item.id];
+    const claimers =
+      item.claimers.length > 0
+        ? item.claimers.map((c) => (c === 'bear' ? selectedAnimal : c))
+        : claimedMap[item.id]
+          ? [selectedAnimal]
+          : [];
+    return {
+      ...item,
+      claimers,
+      isClaimed: isClaimedNow,
+      mine: item.mine || Boolean(claimedMap[item.id]),
+    };
+  });
+
+  const filteredItems = showEmptyDemo
+    ? []
+    : itemsWithClaims.filter((item) => {
+        if (filter === 'Unclaimed') return !item.isClaimed;
+        if (filter === 'Mine') return item.mine;
+        return true;
+      });
+
+  const unclaimedCount = itemsWithClaims.filter((i) => !i.isClaimed).length;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Top Header matching Page 2 */}
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>Items</Text>
-          <TouchableOpacity
-            style={styles.addItemButton}
-            onPress={() => router.push('/claim')}
-          >
-            <Text style={styles.addItemText}>+ Add item</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Filter Pills */}
-        <View style={styles.filterRow}>
-          {(['All', 'Unclaimed', 'Mine'] as const).map((tab) => {
-            const isActive = filter === tab;
-            return (
-              <TouchableOpacity
-                key={tab}
-                style={[styles.filterPill, isActive && styles.filterPillActive]}
-                onPress={() => {
-                  try {
-                    Haptics.selectionAsync();
-                  } catch {
-                    // Fallback
-                  }
-                  setFilter(tab);
-                }}
+    <DotGridBackground>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Items</Text>
+            <View style={styles.headerActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={showEmptyDemo ? 'Show items' : 'Preview empty state'}
+                onPress={() => setShowEmptyDemo(!showEmptyDemo)}
+                style={({ pressed }) => [
+                  styles.emptyToggle,
+                  pressed && { transform: [{ scale: Motion.pressScale }] },
+                ]}
               >
-                <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
-                  {tab}
+                <Text style={styles.emptyToggleText}>
+                  {showEmptyDemo ? 'Show items' : 'Empty'}
                 </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Blue Summary Hero Card matching Page 2 */}
-        <View style={styles.summaryCard}>
-          <View>
-            <Text style={styles.summarySubtitle}>12 items · Friday Night Dinner</Text>
-            <Text style={styles.summaryTotal}>$310.00</Text>
+              </Pressable>
+              <NeoButton
+                label="+ Add item"
+                onPress={() => router.push('/claim')}
+                backgroundColor={Colors.amber}
+                textColor={Colors.ink}
+                height={44}
+                fontSize={14}
+              />
+            </View>
           </View>
-          <Badge
-            label={claimedDishes['pizza'] && claimedDishes['tiramisu'] ? 'All claimed 🎉' : '2 unclaimed'}
-            variant={claimedDishes['pizza'] && claimedDishes['tiramisu'] ? 'emerald' : 'amber'}
-          />
-        </View>
 
-        {/* Item Cards List matching Page 2 */}
-        <View style={styles.itemList}>
-          {/* Item 1: Truffle Burger x2 */}
-          <TouchableOpacity
-            style={styles.itemCard}
-            onPress={() => router.push('/claim')}
-            activeOpacity={0.8}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemName}>Truffle Burger ×2</Text>
-              <Text style={styles.itemAuthor}>Added by Mia</Text>
-              <View style={styles.avatarRow}>
-                <View style={[styles.avatarStackItem, { zIndex: 3 }]}>
-                  <MemojiAvatar id="mia" size={24} />
+          {filteredItems.length === 0 ? (
+            /* Empty State with Signature Hairline Illustration */
+            <StaggerItem index={0} distance={10}>
+              <View style={styles.emptyCard}>
+                <View style={{ alignItems: 'center' }}>
+                  <HairlineEmptyReceipt size={148} />
                 </View>
-                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 2 }]}>
-                  <MemojiAvatar id="jonas" size={24} />
+                <Text style={styles.emptyTitle}>No items yet</Text>
+                <Text style={styles.emptySubtitle}>
+                  Add the first dish and Tako will tell everyone in the room.
+                </Text>
+
+                <View style={{ marginTop: 22, width: '100%' }}>
+                  <NeoButton
+                    label="+ Add first item"
+                    onPress={() => {
+                      setShowEmptyDemo(false);
+                      setFilter('All');
+                      router.push('/claim');
+                    }}
+                    backgroundColor={Colors.amber}
+                    textColor={Colors.ink}
+                    height={54}
+                    fontSize={17}
+                  />
                 </View>
-                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 1 }]}>
-                  <MemojiAvatar id="aly" size={24} />
+
+                <View style={{ marginTop: 14, width: '100%' }}>
+                  <NeoButton
+                    onPress={() => {
+                      setShowEmptyDemo(false);
+                      setFilter('All');
+                    }}
+                    backgroundColor="#FFFFFF"
+                    textColor={Colors.ink}
+                    height={50}
+                    fontSize={15}
+                  >
+                    <Svg
+                      width={18}
+                      height={18}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={Colors.ink}
+                      strokeWidth={2.4}
+                      strokeLinecap="round"
+                    >
+                      <Path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16" />
+                    </Svg>
+                    <Text style={styles.scanBtnText}>Scan the receipt</Text>
+                  </NeoButton>
                 </View>
               </View>
-            </View>
-            <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
-              <Text style={styles.itemPrice}>$36.00</Text>
-              <Badge label="Claimed" variant="emerald" />
-            </View>
-          </TouchableOpacity>
-
-          {/* Item 2: Margherita Pizza */}
-          <TouchableOpacity
-            style={styles.itemCard}
-            onPress={() => router.push('/claim')}
-            activeOpacity={0.8}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemName}>Margherita Pizza</Text>
-              <Text style={styles.itemAuthor}>Added by Aly</Text>
-              {claimedDishes['pizza'] ? (
-                <Text style={styles.claimedSelfText}>Claimed by You (100%)</Text>
-              ) : (
-                <TouchableOpacity
-                  style={styles.quickClaimPill}
-                  onPress={() => handleQuickClaim('pizza')}
-                >
-                  <Text style={styles.quickClaimText}>Nobody yet · Claim</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
-              <Text style={styles.itemPrice}>$24.00</Text>
-              <Badge
-                label={claimedDishes['pizza'] ? 'Claimed' : 'Unclaimed'}
-                variant={claimedDishes['pizza'] ? 'emerald' : 'amber'}
-              />
-            </View>
-          </TouchableOpacity>
-
-          {/* Item 3: Iced Tea x4 */}
-          <TouchableOpacity
-            style={styles.itemCard}
-            onPress={() => router.push('/claim')}
-            activeOpacity={0.8}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemName}>Iced Tea ×4</Text>
-              <Text style={styles.itemAuthor}>Added by Jonas</Text>
-              <View style={styles.avatarRow}>
-                <View style={[styles.avatarStackItem, { zIndex: 4 }]}>
-                  <MemojiAvatar id="you" size={24} />
-                </View>
-                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 3 }]}>
-                  <MemojiAvatar id="mia" size={24} />
-                </View>
-                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 2 }]}>
-                  <MemojiAvatar id="jonas" size={24} />
-                </View>
-                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 1 }]}>
-                  <MemojiAvatar id="aly" size={24} />
-                </View>
+            </StaggerItem>
+          ) : (
+            <>
+              {/* Filter Chips */}
+              <View style={styles.filterRow}>
+                {(['All', 'Unclaimed', 'Mine'] as const).map((tab) => {
+                  const isActive = filter === tab;
+                  return (
+                    <Pressable
+                      key={tab}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isActive }}
+                      style={({ pressed }) => [
+                        styles.filterChip,
+                        isActive ? styles.filterChipActive : styles.filterChipInactive,
+                        pressed && { transform: [{ scale: Motion.pressScale }] },
+                      ]}
+                      onPress={() => {
+                        try {
+                          Haptics.selectionAsync();
+                        } catch {
+                          // Fallback
+                        }
+                        setFilter(tab);
+                      }}
+                    >
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          styles.filterChipText,
+                          { color: isActive ? '#FFFFFF' : Colors.ink },
+                        ]}
+                      >
+                        {tab}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
-            </View>
-            <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
-              <Text style={styles.itemPrice}>$18.00</Text>
-              <Badge label="Claimed" variant="emerald" />
-            </View>
-          </TouchableOpacity>
 
-          {/* Item 4: Garlic Fries */}
-          <TouchableOpacity
-            style={styles.itemCard}
-            onPress={() => router.push('/claim')}
-            activeOpacity={0.8}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemName}>Garlic Fries</Text>
-              <Text style={styles.itemAuthor}>Added by Jonas</Text>
-              <View style={styles.avatarRow}>
-                <View style={[styles.avatarStackItem, { zIndex: 2 }]}>
-                  <MemojiAvatar id="jonas" size={24} />
+              {/* Blue Summary Hero Card */}
+              <NeoCard
+                style={{ marginTop: 14 }}
+                backgroundColor={Colors.primary}
+                borderRadius={Radii.card}
+                contentStyle={styles.summaryContent}
+              >
+                <View style={styles.summaryTextCol}>
+                  <Text style={styles.summarySub} numberOfLines={1}>
+                    12 items · Friday Night Dinner
+                  </Text>
+                  <Text style={styles.summaryTotal} numberOfLines={1} adjustsFontSizeToFit>
+                    $310.00
+                  </Text>
                 </View>
-                <View style={[styles.avatarStackItem, { marginLeft: -6, zIndex: 1 }]}>
-                  <MemojiAvatar id="you" size={24} />
-                </View>
+                <Badge
+                  label={
+                    unclaimedCount === 0
+                      ? 'All claimed'
+                      : `${unclaimedCount} unclaimed`
+                  }
+                  variant={unclaimedCount === 0 ? 'emerald' : 'amber'}
+                />
+              </NeoCard>
+
+              {/* Item Cards */}
+              <View style={{ gap: Spacing.md, marginTop: Spacing.md }}>
+                {filteredItems.map((item, idx) => (
+                  <StaggerItem key={item.id} index={idx} distance={8}>
+                    <NeoCard
+                      onPress={() => router.push('/claim')}
+                      borderRadius={Radii.lg}
+                      contentStyle={styles.itemCardContent}
+                    >
+                      <View style={styles.itemTopRow}>
+                        <View style={styles.itemInfoCol}>
+                          <Text style={styles.itemTitle} numberOfLines={2}>
+                            {item.title}
+                          </Text>
+                          <Text style={styles.itemAddedBy} numberOfLines={1}>
+                            {item.addedBy}
+                          </Text>
+                        </View>
+                        <Text style={styles.itemPrice} numberOfLines={1}>
+                          {item.price}
+                        </Text>
+                      </View>
+
+                      <View style={styles.itemBottomRow}>
+                        {item.isClaimed ? (
+                          <View style={styles.avatarStack}>
+                            {item.claimers.map((avatar, aIdx) => (
+                              <View
+                                key={`${avatar}-${aIdx}`}
+                                style={{
+                                  marginLeft: aIdx > 0 ? -9 : 0,
+                                  zIndex: 10 - aIdx,
+                                }}
+                              >
+                                <MemojiAvatar id={avatar} size={26} />
+                              </View>
+                            ))}
+                          </View>
+                        ) : (
+                          <Text style={styles.nobodyText}>Nobody yet</Text>
+                        )}
+
+                        {item.isClaimed ? (
+                          <Badge label="Claimed" variant="emerald" />
+                        ) : (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Claim ${item.title}`}
+                            onPress={() => handleQuickClaim(item.id)}
+                            hitSlop={8}
+                            style={({ pressed }) => [
+                              styles.quickClaimHit,
+                              pressed && { transform: [{ scale: Motion.pressScale }] },
+                            ]}
+                          >
+                            <Badge label="Tap to claim" variant="amber" />
+                          </Pressable>
+                        )}
+                      </View>
+                    </NeoCard>
+                  </StaggerItem>
+                ))}
               </View>
-            </View>
-            <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
-              <Text style={styles.itemPrice}>$9.50</Text>
-              <Badge label="Claimed" variant="emerald" />
-            </View>
-          </TouchableOpacity>
-
-          {/* Item 5: Tiramisu */}
-          <TouchableOpacity
-            style={styles.itemCard}
-            onPress={() => router.push('/claim')}
-            activeOpacity={0.8}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemName}>Tiramisu</Text>
-              <Text style={styles.itemAuthor}>Added by Ken</Text>
-              {claimedDishes['tiramisu'] ? (
-                <Text style={styles.claimedSelfText}>Claimed by You (100%)</Text>
-              ) : (
-                <TouchableOpacity
-                  style={styles.quickClaimPill}
-                  onPress={() => handleQuickClaim('tiramisu')}
-                >
-                  <Text style={styles.quickClaimText}>Nobody yet · Claim</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
-              <Text style={styles.itemPrice}>$12.00</Text>
-              <Badge
-                label={claimedDishes['tiramisu'] ? 'Claimed' : 'Unclaimed'}
-                variant={claimedDishes['tiramisu'] ? 'emerald' : 'amber'}
-              />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            </>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </DotGridBackground>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   container: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xxxl,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingTop: 8,
+    gap: Spacing.sm,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flexShrink: 0,
+  },
+  emptyToggle: {
+    minHeight: TouchTarget.minSize,
+    paddingHorizontal: 14,
+    borderRadius: Radii.pill,
+    borderWidth: 2,
+    borderColor: Colors.ink,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyToggleText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.ink,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-  },
-  addItemButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radii.pill,
-    paddingHorizontal: 18,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  addItemText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
+    ...Typography.screenTitle,
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginTop: 14,
   },
-  filterPill: {
-    backgroundColor: '#FFFFFF',
+  filterChip: {
+    minHeight: TouchTarget.minSize,
+    borderWidth: 2,
+    borderColor: Colors.ink,
     borderRadius: Radii.pill,
     paddingHorizontal: 18,
-    minHeight: 40,
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    alignItems: 'center',
   },
-  filterPillActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+  filterChipActive: {
+    backgroundColor: Colors.ink,
   },
-  filterText: {
-    fontSize: 14,
+  filterChipInactive: {
+    backgroundColor: '#FFFFFF',
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  summaryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  summaryTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  summarySub: {
+    fontSize: 12,
     fontWeight: '700',
-    color: Colors.textSecondary,
-  },
-  filterTextActive: {
     color: '#FFFFFF',
   },
-  summaryCard: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radii.card,
-    padding: 20,
+  summaryTotal: {
+    ...Typography.currencyLg,
+    color: '#FFFFFF',
+    marginTop: 2,
+  },
+  itemCardContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  itemTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+  },
+  itemInfoCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  itemTitle: {
+    ...Typography.cardTitle,
+  },
+  itemAddedBy: {
+    ...Typography.caption,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  itemPrice: {
+    ...Typography.currencyMd,
+    fontSize: 21,
+    lineHeight: 25,
+    color: Colors.ink,
+    flexShrink: 0,
+  },
+  itemBottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    elevation: 3,
+    marginTop: 8,
+    minHeight: 36,
   },
-  summarySubtitle: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 4,
+  quickClaimHit: {
+    minHeight: TouchTarget.minSize,
+    justifyContent: 'center',
   },
-  summaryTotal: {
-    color: '#FFFFFF',
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-  },
-  itemList: {
-    gap: 12,
-  },
-  itemCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
-    flexDirection: 'row',
-    shadowColor: '#2F65F6',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 2,
-  },
-  itemAuthor: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginBottom: 8,
-  },
-  quickClaimPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#EEF3FF',
-    borderRadius: Radii.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  quickClaimText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  claimedSelfText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.emerald,
-  },
-  avatarRow: {
+  avatarStack: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  avatarStackItem: {
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-    borderRadius: 13,
+  nobodyText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textSecondary,
   },
-  itemPrice: {
-    fontSize: 18,
+  emptyCard: {
+    marginTop: Spacing.xxxl,
+    paddingHorizontal: Spacing.xxl,
+    paddingTop: Spacing.xxxl,
+    paddingBottom: Spacing.xxl,
+    borderRadius: Radii.cardLg,
+    borderWidth: Border.width,
+    borderStyle: 'dashed',
+    borderColor: Colors.ink,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 26,
     fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: 8,
+    letterSpacing: -0.7,
+    color: Colors.ink,
+    marginTop: 10,
+  },
+  emptySubtitle: {
+    ...Typography.body,
+    fontSize: 15,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+  },
+  scanBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.ink,
   },
 });
