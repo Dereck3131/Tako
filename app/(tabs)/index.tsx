@@ -1,417 +1,391 @@
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  Pressable,
   ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { QrSmallIcon } from '../../src/components/Icons';
 import { useRoomStore } from '../../src/store/roomStore';
-import { Colors, Radii } from '../../src/constants/theme';
+import {
+  Colors,
+  Motion,
+  Radii,
+  Spacing,
+  TouchTarget,
+  Typography,
+} from '../../src/constants/theme';
+import { DotGridBackground } from '../../src/components/DotGridBackground';
+import { TakoMascot } from '../../src/components/TakoMascot';
+import { NeoButton, NeoCard } from '../../src/components/NeoUI';
 import { TicketCard } from '../../src/components/TicketCard';
 import { PeopleCarousel } from '../../src/components/PeopleCarousel';
 import { Badge } from '../../src/components/Badge';
-import { MemojiAvatar } from '../../src/components/MemojiAvatar';
+import { MemojiAvatar, MemojiId } from '../../src/components/MemojiAvatar';
+import { HeroShaderBackground } from '../../src/components/HeroShaderBackground';
+import { StaggerItem } from '../../src/components/MotionPrimitives';
 
 export default function RoomHomeScreen() {
   const router = useRouter();
-  const { currentRoom, members } = useRoomStore();
+  const { currentRoom, members, items, selectedAnimal } = useRoomStore();
 
-  const totalSpendCents = 31000; // $310.00 from Figma
+  const totalSpendCents = 31000;
+  const memberCount = members.length;
 
   const triggerHaptic = () => {
     try {
       Haptics.selectionAsync();
     } catch {
-      // Fallback
+      // Web fallback
     }
   };
 
+  const liveItems = items.slice(0, 3);
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Top Header */}
-        <View style={styles.topHeader}>
-          <View>
-            <View style={styles.titleRow}>
-              <Text style={styles.roomTitle}>{currentRoom.title}</Text>
-              {/* Orange Triangle Down Chevron matching Figma */}
-              <View style={styles.orangeChevron}>
-                <Text style={styles.orangeChevronText}>▼</Text>
-              </View>
+    <DotGridBackground>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header with Tako Mascot */}
+          <View style={styles.headerRow}>
+            <View style={styles.headerTitleCol}>
+              <Text style={styles.roomTitle} numberOfLines={2}>
+                {currentRoom.title}
+              </Text>
+              <Badge
+                label={`${memberCount} in the room`}
+                variant="emerald"
+                style={{ marginTop: Spacing.sm }}
+              />
             </View>
-            <View style={styles.liveCountRow}>
-              <View style={styles.greenDot} />
-              <Text style={styles.liveCountText}>4 in room</Text>
-            </View>
-          </View>
-
-          {/* Top-Right Memoji Avatar Stack matching Figma */}
-          <View style={styles.avatarStack}>
-            <View style={[styles.avatarStackItem, { zIndex: 3 }]}>
-              <MemojiAvatar id="mia" size={34} />
-            </View>
-            <View style={[styles.avatarStackItem, { marginLeft: -12, zIndex: 2 }]}>
-              <MemojiAvatar id="jonas" size={34} />
-            </View>
-            <View style={[styles.avatarStackItem, { marginLeft: -12, zIndex: 1 }]}>
-              <MemojiAvatar id="aly" size={34} />
+            <View style={styles.takoCorner}>
+              <TakoMascot size={104} />
             </View>
           </View>
-        </View>
 
-        {/* Hero Spend Card ($310.00) matching Figma Page 1 */}
-        <View style={styles.heroCard}>
-          <Text style={styles.heroSubtext}>Total spend</Text>
-          <Text style={styles.heroCurrency}>
-            ${(totalSpendCents / 100).toFixed(2)}
-          </Text>
-
-          <View style={styles.splitWithRow}>
-            <Text style={styles.splitWithLabel}>Split with</Text>
-            <View style={styles.splitAvatars}>
-              {['you', 'mia', 'jonas', 'aly', 'ken'].map((id, idx) => (
-                <View
-                  key={id}
-                  style={[
-                    styles.splitAvatarBorder,
-                    { marginLeft: idx > 0 ? -10 : 0, zIndex: 10 - idx },
+          {/* Blue Hero Spend Card with subtle signature shader gradient */}
+          <StaggerItem index={0} distance={8}>
+            <NeoCard
+              style={{ marginTop: Spacing.sm }}
+              backgroundColor={Colors.primary}
+              borderRadius={Radii.cardLg}
+              contentStyle={styles.heroCardContent}
+            >
+              <HeroShaderBackground />
+              <View style={styles.heroTopRow}>
+                <View style={styles.heroAmountCol}>
+                  <Text style={styles.heroLabel}>Total spend</Text>
+                  <Text
+                    style={styles.heroAmount}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.65}
+                  >
+                    ${(totalSpendCents / 100).toFixed(2)}
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Settle up"
+                  style={({ pressed }) => [
+                    styles.settlePill,
+                    pressed && { transform: [{ scale: Motion.pressScale }] },
                   ]}
+                  onPress={() => {
+                    triggerHaptic();
+                    router.push('/settle');
+                  }}
                 >
-                  <MemojiAvatar id={id} size={32} />
+                  <Text style={styles.settlePillText}>Settle up →</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.splitWithRow}>
+                <Text style={styles.splitWithLabel}>Split with</Text>
+                <View style={styles.avatarStack}>
+                  {(
+                    [selectedAnimal, 'mia', 'jonas', 'aly', 'ken'] as MemojiId[]
+                  ).map((id, idx) => (
+                    <View
+                      key={`${id}-${idx}`}
+                      style={{ marginLeft: idx > 0 ? -8 : 0, zIndex: 10 - idx }}
+                    >
+                      <MemojiAvatar id={id} size={32} />
+                    </View>
+                  ))}
                 </View>
-              ))}
+              </View>
+
+              <View style={{ marginTop: Spacing.md }}>
+                <NeoButton
+                  onPress={() => {
+                    triggerHaptic();
+                    router.push('/join');
+                  }}
+                  backgroundColor={Colors.amber}
+                  textColor={Colors.ink}
+                  height={46}
+                  fontSize={15}
+                >
+                  <QrSmallIcon size={18} color={Colors.ink} strokeWidth={2.4} />
+                  <Text style={styles.inviteBtnText}>Invite with QR</Text>
+                </NeoButton>
+              </View>
+            </NeoCard>
+          </StaggerItem>
+
+          {/* Who's here */}
+          <Text style={styles.sectionTitle}>Who's here</Text>
+          <PeopleCarousel members={members} />
+
+          {/* Live receipt */}
+          <Text style={styles.sectionTitle}>Live receipt</Text>
+          {liveItems.length === 0 ? (
+            <NeoCard borderRadius={Radii.card} contentStyle={styles.emptyReceiptCard}>
+              <Text style={styles.emptyReceiptTitle}>No items claimed yet</Text>
+              <Text style={styles.emptyReceiptSub}>
+                Add the first dish in Items to start splitting.
+              </Text>
+            </NeoCard>
+          ) : (
+            <View style={{ gap: Spacing.md }}>
+              {liveItems.map((item, idx) => {
+                const splitAvatars: MemojiId[] =
+                  idx === 0
+                    ? [selectedAnimal, 'mia', 'jonas']
+                    : [selectedAnimal, 'jonas'];
+                return (
+                  <StaggerItem key={item.id} index={idx + 1} distance={10}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Claim ${item.title}`}
+                      onPress={() => {
+                        triggerHaptic();
+                        router.push('/claim');
+                      }}
+                      style={({ pressed }) =>
+                        pressed ? { transform: [{ scale: Motion.pressScale }] } : undefined
+                      }
+                    >
+                      <TicketCard
+                        topStyle={styles.ticketTop}
+                        bottomStyle={styles.ticketBottom}
+                        childrenTop={
+                          <View style={styles.ticketTopRow}>
+                            <View style={styles.ticketInfoCol}>
+                              <Text style={styles.itemTitle} numberOfLines={2}>
+                                {item.title}
+                              </Text>
+                              <Text style={styles.itemMeta} numberOfLines={1}>
+                                Added by {item.createdByName} · {item.createdAt}
+                              </Text>
+                            </View>
+                            <View style={styles.ticketPriceCol}>
+                              <Text style={styles.itemPrice} numberOfLines={1}>
+                                ${(item.priceCents / 100).toFixed(2)}
+                              </Text>
+                              {item.isNew && (
+                                <Badge
+                                  label="NEW"
+                                  variant="amber"
+                                  style={{ marginTop: 3 }}
+                                />
+                              )}
+                            </View>
+                          </View>
+                        }
+                        childrenBottom={
+                          <View style={styles.ticketBottomRow}>
+                            <Text style={styles.splitWaysText}>
+                              Split {splitAvatars.length}{' '}
+                              {splitAvatars.length === 1 ? 'way' : 'ways'}
+                            </Text>
+                            <View style={styles.avatarStack}>
+                              {splitAvatars.map((id, aIdx) => (
+                                <View
+                                  key={`${id}-${aIdx}`}
+                                  style={{
+                                    marginLeft: aIdx > 0 ? -9 : 0,
+                                    zIndex: 10 - aIdx,
+                                  }}
+                                >
+                                  <MemojiAvatar id={id} size={26} />
+                                </View>
+                              ))}
+                            </View>
+                          </View>
+                        }
+                      />
+                    </Pressable>
+                  </StaggerItem>
+                );
+              })}
             </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.inviteButton}
-            activeOpacity={0.85}
-            onPress={() => {
-              triggerHaptic();
-              router.push('/join');
-            }}
-          >
-            <View style={{ marginRight: 8 }}>
-              <QrSmallIcon size={18} color={Colors.primary} strokeWidth={2.2} />
-            </View>
-            <Text style={styles.inviteButtonText}>Invite to Room via QR</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* In the Room Now Section */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>In the Room Now</Text>
-        </View>
-        <PeopleCarousel members={members} />
-
-        {/* Live Items Section */}
-        <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
-          <Text style={styles.sectionTitle}>Live items</Text>
-          <TouchableOpacity
-            onPress={() => {
-              triggerHaptic();
-              router.push('/(tabs)/items');
-            }}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Ticket Item 1: Truffle Burger x2 */}
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => {
-            triggerHaptic();
-            router.push('/claim');
-          }}
-        >
-          <TicketCard
-            childrenTop={
-              <View style={styles.itemRow}>
-                <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={styles.itemTitle}>Truffle Burger ×2</Text>
-                  <Text style={styles.itemSubtitle}>Added by Mia · just now</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.itemPrice}>$36.00</Text>
-                  <Badge label="NEW" variant="amber" />
-                </View>
-              </View>
-            }
-            childrenBottom={
-              <View style={styles.splitRow}>
-                <Text style={styles.splitWaysText}>Split 3 ways</Text>
-                <View style={styles.avatarMiniStack}>
-                  <View style={[styles.miniAvatarWrap, { zIndex: 3 }]}>
-                    <MemojiAvatar id="mia" size={26} />
-                  </View>
-                  <View style={[styles.miniAvatarWrap, { marginLeft: -8, zIndex: 2 }]}>
-                    <MemojiAvatar id="jonas" size={26} />
-                  </View>
-                  <View style={[styles.miniAvatarWrap, { marginLeft: -8, zIndex: 1 }]}>
-                    <MemojiAvatar id="aly" size={26} />
-                  </View>
-                </View>
-              </View>
-            }
-          />
-        </TouchableOpacity>
-
-        {/* Ticket Item 2: Garlic Fries */}
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => {
-            triggerHaptic();
-            router.push('/claim');
-          }}
-        >
-          <TicketCard
-            childrenTop={
-              <View style={styles.itemRow}>
-                <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={styles.itemTitle}>Garlic Fries</Text>
-                  <Text style={styles.itemSubtitle}>Added by Jonas · 2m ago</Text>
-                </View>
-                <Text style={styles.itemPrice}>$9.50</Text>
-              </View>
-            }
-            childrenBottom={
-              <View style={styles.splitRow}>
-                <Text style={styles.splitWaysText}>Split 2 ways</Text>
-                <View style={styles.avatarMiniStack}>
-                  <View style={[styles.miniAvatarWrap, { zIndex: 2 }]}>
-                    <MemojiAvatar id="jonas" size={26} />
-                  </View>
-                  <View style={[styles.miniAvatarWrap, { marginLeft: -8, zIndex: 1 }]}>
-                    <MemojiAvatar id="you" size={26} />
-                  </View>
-                </View>
-              </View>
-            }
-          />
-        </TouchableOpacity>
-
-        {/* Bottom Settle Shortcut */}
-        <TouchableOpacity
-          style={styles.settleShortcutButton}
-          activeOpacity={0.85}
-          onPress={() => {
-            triggerHaptic();
-            router.push('/settle');
-          }}
-        >
-          <Text style={styles.settleShortcutText}>Go to Settlement ($52.50) →</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </DotGridBackground>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   container: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xxxl,
   },
-  topHeader: {
+  headerRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingTop: 8,
+    minHeight: 72,
+    gap: Spacing.sm,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  headerTitleCol: {
+    flex: 1,
+    minWidth: 0,
   },
   roomTitle: {
+    ...Typography.screenTitle,
     fontSize: 24,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-    letterSpacing: -0.4,
+    marginTop: Spacing.xs,
   },
-  orangeChevron: {
-    marginLeft: 6,
+  takoCorner: {
+    marginTop: -12,
+    marginRight: -6,
+    flexShrink: 0,
+  },
+  heroCardContent: {
+    padding: Spacing.xl,
+    position: 'relative',
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+  },
+  heroAmountCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  heroLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  heroAmount: {
+    ...Typography.currencyHero,
+    fontSize: 52,
+    lineHeight: 56,
+    color: '#FFFFFF',
+    marginTop: 2,
+  },
+  settlePill: {
+    backgroundColor: Colors.ink,
+    borderRadius: Radii.pill,
+    paddingHorizontal: Spacing.md,
+    minHeight: TouchTarget.minSize,
     justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
   },
-  orangeChevronText: {
-    fontSize: 12,
-    color: '#F97316', // Orange chevron matching Figma
+  settlePillText: {
+    color: Colors.amber,
+    fontSize: 13,
+    fontWeight: '800',
   },
-  liveCountRow: {
+  splitWithRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    gap: 10,
+    marginTop: Spacing.md,
   },
-  greenDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.emerald,
-    marginRight: 6,
-  },
-  liveCountText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textSecondary,
+  splitWithLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   avatarStack: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  avatarStackItem: {
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    borderRadius: 18,
-  },
-  heroCard: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radii.card,
-    padding: 24,
-    marginBottom: 24,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  heroSubtext: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  heroCurrency: {
-    color: '#FFFFFF',
-    fontSize: 44,
-    fontWeight: '900',
-    letterSpacing: -1.2,
-    marginBottom: 16,
-  },
-  splitWithRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  splitWithLabel: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 13,
-    fontWeight: '600',
-    marginRight: 10,
-  },
-  splitAvatars: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  splitAvatarBorder: {
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    borderRadius: 17,
-  },
-  inviteButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radii.pill,
-    minHeight: 50,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  inviteButtonText: {
-    color: Colors.primary,
+  inviteBtnText: {
     fontSize: 15,
     fontWeight: '800',
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    color: Colors.ink,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.textPrimary,
+    ...Typography.sectionTitle,
+    marginTop: Spacing.xxl,
+    marginBottom: Spacing.sm,
   },
-  seeAllText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  emptyReceiptCard: {
+    padding: Spacing.xl,
     alignItems: 'center',
   },
-  itemTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 4,
+  emptyReceiptTitle: {
+    ...Typography.cardTitle,
   },
-  itemSubtitle: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontWeight: '500',
+  emptyReceiptSub: {
+    ...Typography.caption,
+    marginTop: Spacing.xs,
+    textAlign: 'center',
+  },
+  ticketTop: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+  },
+  ticketBottom: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: 10,
+  },
+  ticketTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+  },
+  ticketInfoCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  ticketPriceCol: {
+    alignItems: 'flex-end',
+    flexShrink: 0,
+  },
+  itemTitle: {
+    ...Typography.cardTitle,
+  },
+  itemMeta: {
+    ...Typography.caption,
+    fontWeight: '600',
+    marginTop: 2,
   },
   itemPrice: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: 4,
+    ...Typography.currencyMd,
+    fontSize: 22,
+    lineHeight: 26,
+    color: Colors.ink,
   },
-  splitRow: {
+  ticketBottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   splitWaysText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  avatarMiniStack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  miniAvatarWrap: {
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-    borderRadius: 14,
-  },
-  settleShortcutButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radii.pill,
-    minHeight: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-  },
-  settleShortcutText: {
-    color: Colors.textPrimary,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
+    color: Colors.ink,
   },
 });
