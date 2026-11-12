@@ -230,11 +230,11 @@ export default function ClaimAndAdjustModal() {
           {/* Bottom Confirm CTA */}
           <View style={{ marginTop: Spacing.xl }}>
             <NeoButton
-              label={t(language, 'confirmSplit')}
+              label={`${t(language, 'confirmSplit')} · ${formatMoney(activeItem.priceCents, currency, { roundToWhole: roundToPeso })}`}
               onPress={handleConfirm}
               backgroundColor={Colors.primary}
               textColor="#FFFFFF"
-              height={52}
+              height={54}
               fontSize={16}
             />
           </View>

@@ -63,10 +63,10 @@ const ARM_PALETTE = [
   Colors.mintText,
 ];
 
-const CANVAS_HEIGHT = 368;
-const MIN_CANVAS_WIDTH = 330;
-const TAKO_HEAD_SIZE = 126;
-const MIN_ARM_RADIUS = 74; // Keeps avatars clear of Tako's 126px head
+const CANVAS_HEIGHT = 360;
+const MIN_CANVAS_WIDTH = 318;
+const TAKO_HEAD_SIZE = 130;
+const MIN_ARM_RADIUS = 74; // Keeps avatars clear of Tako's 130px head
 
 /**
  * Linear share-to-arm-length mapping:
@@ -308,13 +308,13 @@ export function TakoArmSplit({
   const useRadialCanvas = participants.length >= 2 && participants.length <= 8;
   const effectiveWidth = Math.max(MIN_CANVAS_WIDTH, canvasWidth);
   const centerX = effectiveWidth / 2;
-  const centerY = CANVAS_HEIGHT / 2;
-  // Allow up to 170px+ vertically/diagonally while keeping avatars inside card
-  const maxArmRadius = Math.min(176, centerY - 24);
+  const centerY = 170;
+  // Allow up to 170px+ while keeping avatars/labels inside 360px canvas
+  const maxArmRadius = Math.min(170, centerY - 12);
   const evenPct = 100 / participants.length;
   const evenRadius = sharePctToArmLength(evenPct, maxArmRadius);
-  // Rotate angles by +0.56 rad (~32°) so 4 arms sit diagonally, never on a + sign
-  const angleOffset = -Math.PI / 2 + 0.56;
+  // Rotate angles so 4 arms sit diagonally (-128°, -38°, 52°, 142°) — never a + sign
+  const angleOffset = -Math.PI * 0.68;
 
   return (
     <View style={styles.container}>
@@ -329,9 +329,6 @@ export function TakoArmSplit({
           label={totalPct === 100 ? t(language, 'claimed100') : `${totalPct}% claimed`}
           variant={totalPct === 100 ? 'emerald' : 'amber'}
         />
-        {showDragHint && useRadialCanvas && (
-          <Text style={styles.dragHintText}>Drag to adjust</Text>
-        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t(language, 'splitEvenly')}
@@ -386,18 +383,27 @@ export function TakoArmSplit({
               cy={centerY}
               r={evenRadius}
               fill="none"
-              stroke={Colors.border}
+              stroke="#C5CBDD"
               strokeWidth={1.5}
-              strokeDasharray="5 5"
+              strokeDasharray="3 6"
             />
             <SvgText
-              x={centerX + evenRadius + 6}
-              y={centerY + 4}
+              x={centerX + evenRadius + 4}
+              y={centerY - 10}
               fill={Colors.textSecondary}
               fontSize={10}
               fontWeight="600"
             >
               Even
+            </SvgText>
+            <SvgText
+              x={centerX + evenRadius + 4}
+              y={centerY + 2}
+              fill={Colors.textSecondary}
+              fontSize={10}
+              fontWeight="600"
+            >
+              split
             </SvgText>
 
             {participants.map((p, idx) => {
@@ -410,19 +416,27 @@ export function TakoArmSplit({
               const bendSign = idx % 2 === 0 ? 1 : -1;
               const { pathD, suctionDots } = buildTaperedArm(centerX, centerY, ex, ey, bendSign);
               const isDragging = draggingId === p.id;
+              const isFirst = idx === 0;
 
               return (
                 <React.Fragment key={p.id}>
-                  <Path d={pathD} fill={color} opacity={isDragging ? 1 : 0.9} />
+                  <Path
+                    d={pathD}
+                    fill={color}
+                    stroke={color}
+                    strokeWidth={2}
+                    strokeLinejoin="round"
+                  />
+                  <Circle cx={ex} cy={ey} r={isFirst ? 7.5 : 6.0} fill={color} />
                   {isDragging &&
                     suctionDots.map((dot, dIdx) => (
                       <Circle
                         key={dIdx}
                         cx={dot.x}
                         cy={dot.y}
-                        r={2.4}
+                        r={2.3}
                         fill="#FFFFFF"
-                        opacity={0.95}
+                        opacity={0.85}
                       />
                     ))}
                 </React.Fragment>
@@ -430,14 +444,14 @@ export function TakoArmSplit({
             })}
           </Svg>
 
-          {/* Layer 2: Center Tako Head Only (126px wide, no legs) */}
+          {/* Layer 2: Center Tako Head Only (130px wide, no legs) */}
           <Animated.View
             pointerEvents="none"
             style={[
               styles.centerTako,
               {
                 left: centerX - TAKO_HEAD_SIZE / 2,
-                top: centerY - Math.round(TAKO_HEAD_SIZE * 0.36),
+                top: centerY - 63,
                 transform: [{ rotate: wiggleRotate }],
               },
             ]}
@@ -449,7 +463,7 @@ export function TakoArmSplit({
             />
           </Animated.View>
 
-          {/* Layer 3: Draggable Avatars + Non-Truncating Outside Two-Line Labels */}
+          {/* Layer 3: Draggable Avatars + Non-Truncating Above/Below Labels */}
           {participants.map((p, idx) => {
             const angle = angleOffset + (idx / participants.length) * Math.PI * 2;
             const alloc = allocMap.get(p.id);
@@ -460,21 +474,16 @@ export function TakoArmSplit({
             const y = centerY + Math.sin(angle) * radius;
             const amountText = formatMoney(cents, currency, { roundToWhole: roundToPeso });
 
-            // Position two-line label outside the arm/avatar, clamped within canvas
-            const cosA = Math.cos(angle);
+            // Place label directly above top-half avatars and directly below bottom-half avatars
             const sinA = Math.sin(angle);
-            const labelW = 94;
-            const labelH = 36;
-            const rawLabelCenterX = x + cosA * 46;
-            const rawLabelCenterY = y + sinA * 42;
+            const labelW = 90;
+            const labelH = 34;
             const labelLeft = Math.max(
               2,
-              Math.min(effectiveWidth - labelW - 2, rawLabelCenterX - labelW / 2)
+              Math.min(effectiveWidth - labelW - 2, x - labelW / 2)
             );
-            const labelTop = Math.max(
-              2,
-              Math.min(CANVAS_HEIGHT - labelH - 2, rawLabelCenterY - labelH / 2)
-            );
+            const rawTop = sinA < 0 ? y - 68 : y + 34;
+            const labelTop = Math.max(2, Math.min(CANVAS_HEIGHT - labelH - 2, rawTop));
 
             return (
               <React.Fragment key={p.id}>
@@ -504,9 +513,11 @@ export function TakoArmSplit({
                   pointerEvents="none"
                   style={[
                     styles.outsideLabel,
+                    Shadows.cardSoft,
                     {
                       left: labelLeft,
                       top: labelTop,
+                      width: labelW,
                       minWidth: 84,
                     },
                   ]}
@@ -519,6 +530,12 @@ export function TakoArmSplit({
               </React.Fragment>
             );
           })}
+
+          {showDragHint && (
+            <View pointerEvents="none" style={styles.dragHintPill}>
+              <Text style={styles.dragHintPillText}>Drag to adjust</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -862,20 +879,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radii.md,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 3,
     alignItems: 'center',
   },
   labelName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  labelMeta: {
     fontSize: 11,
     fontWeight: '600',
     color: Colors.textSecondary,
+  },
+  labelMeta: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.ink,
     fontVariant: ['tabular-nums'],
+  },
+  dragHintPill: {
+    position: 'absolute',
+    alignSelf: 'center',
+    bottom: 8,
+    backgroundColor: Colors.ink,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radii.pill,
+  },
+  dragHintPillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   stepperList: {
     marginTop: Spacing.xs,

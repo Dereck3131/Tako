@@ -90,8 +90,8 @@ export function TakoMascot({ size = 120, mood = 'happy', hideLegs = false }: Tak
   return (
     <Svg
       width={size}
-      height={hideLegs ? Math.round(size * 0.72) : size}
-      viewBox={hideLegs ? '20 12 80 76' : '0 0 120 120'}
+      height={hideLegs ? Math.round(size * (74 / 76)) : size}
+      viewBox={hideLegs ? '22 12 76 74' : '0 0 120 120'}
     >
       {/* Confetti accents for celebrating mood (existing palette only) */}
       {isCelebrating && !hideLegs && (
