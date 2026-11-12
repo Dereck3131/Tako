@@ -192,3 +192,62 @@ export function calculateMemberSettlement(
     totalCents: memberFoodCents + memberTaxCents + memberTipCents,
   };
 }
+
+export interface LargestRemainderAllocation {
+  memberId: string;
+  basisPoints: number;
+  percent: number; // Whole integer percent; sums to 100 when totalBps > 0
+  cents: number; // Integer centavos; sums to totalCents
+}
+
+/**
+ * Allocates whole percentages and integer cents using the largest-remainder method
+ * (Hamilton method) so displayed percentages always sum to 100 and centavos sum
+ * to the exact item price.
+ */
+export function allocateSharesLargestRemainder(
+  totalCents: number,
+  shares: ShareAllocationInput[]
+): LargestRemainderAllocation[] {
+  if (shares.length === 0) return [];
+  const totalBps = shares.reduce((sum, s) => sum + Math.max(0, s.basisPoints), 0);
+
+  if (totalBps <= 0) {
+    return shares.map((s) => ({
+      memberId: s.memberId,
+      basisPoints: 0,
+      percent: 0,
+      cents: 0,
+    }));
+  }
+
+  // 1. Largest-remainder for whole percentages (sum === 100)
+  const rawPct = shares.map((s, idx) => {
+    const exact = (Math.max(0, s.basisPoints) / totalBps) * 100;
+    const floorVal = Math.floor(exact);
+    return {
+      idx,
+      floorVal,
+      remainder: exact - floorVal,
+    };
+  });
+
+  const pctFloorSum = rawPct.reduce((sum, p) => sum + p.floorVal, 0);
+  const pctLeftover = 100 - pctFloorSum;
+  const pctSorted = [...rawPct].sort((a, b) => b.remainder - a.remainder);
+  const pctBonus = new Set<number>();
+  for (let i = 0; i < pctLeftover && i < pctSorted.length; i++) {
+    pctBonus.add(pctSorted[i].idx);
+  }
+
+  // 2. Largest-remainder for integer cents (sum === totalCents)
+  const centsAlloc = calculateItemCents(totalCents, shares);
+  const centsMap = new Map(centsAlloc.map((c) => [c.memberId, c.cents]));
+
+  return shares.map((s, idx) => ({
+    memberId: s.memberId,
+    basisPoints: s.basisPoints,
+    percent: rawPct[idx].floorVal + (pctBonus.has(idx) ? 1 : 0),
+    cents: centsMap.get(s.memberId) ?? 0,
+  }));
+}

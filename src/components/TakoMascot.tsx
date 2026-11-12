@@ -13,6 +13,7 @@ export type TakoMood =
 interface TakoMascotProps {
   size?: number;
   mood?: TakoMood;
+  hideLegs?: boolean;
 }
 
 /**
@@ -80,16 +81,20 @@ export function getTakoMoodCopy(
   }
 }
 
-export function TakoMascot({ size = 120, mood = 'happy' }: TakoMascotProps) {
+export function TakoMascot({ size = 120, mood = 'happy', hideLegs = false }: TakoMascotProps) {
   const isWaiting = mood === 'waiting';
   const isCounting = mood === 'counting';
   const isEmptyPockets = mood === 'empty_pockets';
   const isCelebrating = mood === 'celebrating';
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 120 120">
+    <Svg
+      width={size}
+      height={hideLegs ? Math.round(size * 0.72) : size}
+      viewBox={hideLegs ? '20 12 80 76' : '0 0 120 120'}
+    >
       {/* Confetti accents for celebrating mood (existing palette only) */}
-      {isCelebrating && (
+      {isCelebrating && !hideLegs && (
         <>
           <Circle cx={18} cy={22} r={3.5} fill="#FFB400" />
           <Circle cx={102} cy={20} r={3.5} fill="#14B87A" />
@@ -99,65 +104,68 @@ export function TakoMascot({ size = 120, mood = 'happy' }: TakoMascotProps) {
         </>
       )}
 
-      {/* Tentacle outlines (arms raised for happy/celebrating) */}
-      <Path
-        d={isCelebrating || mood === 'happy' ? 'M32 64C14 54 14 34 22 26' : 'M38 72C22 88 30 106 14 104'}
-        fill="none"
-        stroke="#14123A"
-        strokeWidth={15}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M50 80C44 96 56 108 44 114"
-        fill="none"
-        stroke="#14123A"
-        strokeWidth={15}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M70 80C76 96 64 108 76 114"
-        fill="none"
-        stroke="#14123A"
-        strokeWidth={15}
-        strokeLinecap="round"
-      />
-      <Path
-        d={isCelebrating || mood === 'happy' ? 'M88 64C106 54 106 34 98 26' : 'M82 72C98 88 90 106 106 104'}
-        fill="none"
-        stroke="#14123A"
-        strokeWidth={15}
-        strokeLinecap="round"
-      />
+      {/* Tentacles (hidden when used as center head in TakoArmSplit) */}
+      {!hideLegs && (
+        <>
+          <Path
+            d={isCelebrating || mood === 'happy' ? 'M32 64C14 54 14 34 22 26' : 'M38 72C22 88 30 106 14 104'}
+            fill="none"
+            stroke="#14123A"
+            strokeWidth={15}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M50 80C44 96 56 108 44 114"
+            fill="none"
+            stroke="#14123A"
+            strokeWidth={15}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M70 80C76 96 64 108 76 114"
+            fill="none"
+            stroke="#14123A"
+            strokeWidth={15}
+            strokeLinecap="round"
+          />
+          <Path
+            d={isCelebrating || mood === 'happy' ? 'M88 64C106 54 106 34 98 26' : 'M82 72C98 88 90 106 106 104'}
+            fill="none"
+            stroke="#14123A"
+            strokeWidth={15}
+            strokeLinecap="round"
+          />
 
-      {/* Tentacle inner fills */}
-      <Path
-        d={isCelebrating || mood === 'happy' ? 'M32 64C14 54 14 34 22 26' : 'M38 72C22 88 30 106 14 104'}
-        fill="none"
-        stroke="#2F65F6"
-        strokeWidth={9}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M50 80C44 96 56 108 44 114"
-        fill="none"
-        stroke="#2F65F6"
-        strokeWidth={9}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M70 80C76 96 64 108 76 114"
-        fill="none"
-        stroke="#2F65F6"
-        strokeWidth={9}
-        strokeLinecap="round"
-      />
-      <Path
-        d={isCelebrating || mood === 'happy' ? 'M88 64C106 54 106 34 98 26' : 'M82 72C98 88 90 106 106 104'}
-        fill="none"
-        stroke="#2F65F6"
-        strokeWidth={9}
-        strokeLinecap="round"
-      />
+          <Path
+            d={isCelebrating || mood === 'happy' ? 'M32 64C14 54 14 34 22 26' : 'M38 72C22 88 30 106 14 104'}
+            fill="none"
+            stroke="#2F65F6"
+            strokeWidth={9}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M50 80C44 96 56 108 44 114"
+            fill="none"
+            stroke="#2F65F6"
+            strokeWidth={9}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M70 80C76 96 64 108 76 114"
+            fill="none"
+            stroke="#2F65F6"
+            strokeWidth={9}
+            strokeLinecap="round"
+          />
+          <Path
+            d={isCelebrating || mood === 'happy' ? 'M88 64C106 54 106 34 98 26' : 'M82 72C98 88 90 106 106 104'}
+            fill="none"
+            stroke="#2F65F6"
+            strokeWidth={9}
+            strokeLinecap="round"
+          />
+        </>
+      )}
 
       {/* Head */}
       <Path

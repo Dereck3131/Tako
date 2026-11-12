@@ -4,6 +4,7 @@ import {
   splitEqualCents,
   rebalanceSliders,
   calculateMemberSettlement,
+  allocateSharesLargestRemainder,
 } from '../splitEngine';
 
 describe('TabTogether Split Engine Precision Math', () => {
@@ -70,5 +71,16 @@ describe('TabTogether Split Engine Precision Math', () => {
     expect(sam.totalCents).toBe(5120); // $51.20
 
     expect(alex.totalCents + sam.totalCents).toBe(15360); // $153.60
+  });
+
+  test('TC-4.1: Largest-remainder method guarantees whole percentages sum to 100 and cents sum to price', () => {
+    // 3-way even split (33.33% each) on ₱120.00 (12000 centavos)
+    const alloc = allocateSharesLargestRemainder(12000, [
+      { memberId: 'a', basisPoints: 3334 },
+      { memberId: 'b', basisPoints: 3333 },
+      { memberId: 'c', basisPoints: 3333 },
+    ]);
+    expect(alloc.reduce((s, x) => s + x.percent, 0)).toBe(100);
+    expect(alloc.reduce((s, x) => s + x.cents, 0)).toBe(12000);
   });
 });
