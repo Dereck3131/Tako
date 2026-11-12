@@ -4,6 +4,7 @@ import {
   Easing,
   LayoutChangeEvent,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +17,7 @@ import {
   Motion,
   Radii,
   Spacing,
+  TouchTarget,
   Typography,
 } from '../../src/constants/theme';
 import { DotGridBackground } from '../../src/components/DotGridBackground';
@@ -23,9 +25,25 @@ import { NeoCard } from '../../src/components/NeoUI';
 import { Badge } from '../../src/components/Badge';
 import { MemojiAvatar, MemojiId } from '../../src/components/MemojiAvatar';
 import { StaggerItem, useReducedMotion } from '../../src/components/MotionPrimitives';
+import { TakoMascot, getTakoMood, getTakoMoodCopy } from '../../src/components/TakoMascot';
+import { formatMoney } from '../../src/services/currency';
+import { t } from '../../src/constants/i18n';
+import { triggerHaptic } from '../../src/services/feedbackEngine';
 
 export default function ActivityScreen() {
-  const { activities, members, selectedAnimal } = useRoomStore();
+  const {
+    activities,
+    members,
+    items,
+    shares,
+    selectedAnimal,
+    currency,
+    language,
+    roundToPeso,
+    muteNudges,
+    canNudgeMember,
+    nudgeMember,
+  } = useRoomStore();
   const reducedMotion = useReducedMotion();
   const [trackWidth, setTrackWidth] = useState(0);
 
@@ -38,12 +56,17 @@ export default function ActivityScreen() {
     return selectedAnimal;
   };
 
-  const paidMembers = members.filter((m) => m.paymentStatus === 'paid');
+  const paidMembers = members.filter((m) => m.paymentStatus === 'paid' || m.paymentStatus === 'verified');
+  const unpaidMembers = members.filter(
+    (m) => m.totalOwedCents > 0 && m.paymentStatus !== 'paid' && m.paymentStatus !== 'verified' && m.userId !== 'user-you'
+  );
   const paidCount = paidMembers.length;
   const totalMembers = 4;
   const paidCents = paidMembers.reduce((sum, m) => sum + m.totalOwedCents, 0);
   const totalCents = 21000;
   const ratio = Math.min(1, Math.max(0, paidCents / totalCents));
+  const takoMood = getTakoMood(members, items, shares);
+  const moodCopy = getTakoMoodCopy(takoMood, language, paidCount, totalMembers);
 
   const progressAnim = useRef(new Animated.Value(ratio)).current;
 
@@ -97,11 +120,11 @@ export default function ActivityScreen() {
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
-                  ${(paidCents / 100).toFixed(2)}
+                  {formatMoney(paidCents, currency, { roundToWhole: roundToPeso })}
                 </Text>
                 <Text style={styles.totalAmount} numberOfLines={1}>
                   {' '}
-                  of ${(totalCents / 100).toFixed(2)}
+                  of {formatMoney(totalCents, currency, { roundToWhole: roundToPeso })}
                 </Text>
               </View>
 
@@ -123,6 +146,55 @@ export default function ActivityScreen() {
                   />
                 )}
               </View>
+
+              {/* Tako Mood Strip */}
+              <View style={styles.moodRow}>
+                <TakoMascot size={46} mood={takoMood} />
+                <Text style={styles.moodText} numberOfLines={2}>
+                  {moodCopy}
+                </Text>
+              </View>
+
+              {/* Squirt Ink Gentle Nudge (1 per person / 24h) */}
+              {unpaidMembers.length > 0 && (
+                <View style={styles.nudgeSection}>
+                  {unpaidMembers.map((friend) => {
+                    const allowed = canNudgeMember(friend.id);
+                    return (
+                      <View key={friend.id} style={styles.nudgeRow}>
+                        <View style={styles.nudgeLeft}>
+                          <MemojiAvatar id={getMemojiId(friend.displayName)} size={32} />
+                          <Text style={styles.nudgeName} numberOfLines={1}>
+                            {friend.displayName} · {formatMoney(friend.totalOwedCents, currency, { roundToWhole: roundToPeso })}
+                          </Text>
+                        </View>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Squirt ink nudge to ${friend.displayName}`}
+                          disabled={!allowed}
+                          onPress={() => {
+                            const res = nudgeMember(friend.id);
+                            if (res.sent) triggerHaptic('tick');
+                          }}
+                          style={({ pressed }) => [
+                            styles.nudgeBtn,
+                            !allowed && styles.nudgeBtnDisabled,
+                            pressed && allowed && { transform: [{ scale: Motion.pressScale }] },
+                          ]}
+                        >
+                          <Text style={[styles.nudgeBtnText, !allowed && styles.nudgeBtnTextDisabled]}>
+                            {muteNudges
+                              ? t(language, 'nudgesMuted')
+                              : allowed
+                              ? t(language, 'squirtInk')
+                              : t(language, 'nudgedToday')}
+                          </Text>
+                        </Pressable>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </NeoCard>
           </StaggerItem>
 
@@ -240,6 +312,64 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: Colors.mintProgress,
     borderRadius: Radii.pill,
+  },
+  moodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  moodText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  nudgeSection: {
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
+  },
+  nudgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  nudgeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flex: 1,
+    minWidth: 0,
+  },
+  nudgeName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.ink,
+    flex: 1,
+  },
+  nudgeBtn: {
+    minHeight: TouchTarget.minSize,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radii.pill,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  nudgeBtnDisabled: {
+    backgroundColor: Colors.surfaceSubtle,
+  },
+  nudgeBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  nudgeBtnTextDisabled: {
+    color: Colors.textSecondary,
   },
   sectionHeader: {
     ...Typography.sectionTitle,

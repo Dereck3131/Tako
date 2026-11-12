@@ -20,7 +20,9 @@ import {
   Typography,
 } from '../../src/constants/theme';
 import { DotGridBackground } from '../../src/components/DotGridBackground';
-import { TakoMascot } from '../../src/components/TakoMascot';
+import { TakoMascot, getTakoMood, getTakoMoodCopy } from '../../src/components/TakoMascot';
+import { formatMoney } from '../../src/services/currency';
+import { t } from '../../src/constants/i18n';
 import { NeoButton, NeoCard } from '../../src/components/NeoUI';
 import { TicketCard } from '../../src/components/TicketCard';
 import { PeopleCarousel } from '../../src/components/PeopleCarousel';
@@ -31,10 +33,25 @@ import { StaggerItem } from '../../src/components/MotionPrimitives';
 
 export default function RoomHomeScreen() {
   const router = useRouter();
-  const { currentRoom, members, items, selectedAnimal } = useRoomStore();
+  const {
+    currentRoom,
+    members,
+    items,
+    shares,
+    selectedAnimal,
+    currency,
+    language,
+    roundToPeso,
+  } = useRoomStore();
 
   const totalSpendCents = 31000;
   const memberCount = 4;
+  const owingMembers = members.filter((m) => m.totalOwedCents > 0);
+  const paidCount = owingMembers.filter(
+    (m) => m.paymentStatus === 'paid' || m.paymentStatus === 'verified'
+  ).length;
+  const takoMood = getTakoMood(members, items, shares);
+  const moodCopy = getTakoMoodCopy(takoMood, language, paidCount, owingMembers.length);
 
   const triggerHaptic = () => {
     try {
@@ -71,7 +88,7 @@ export default function RoomHomeScreen() {
           <StaggerItem index={0} distance={8}>
             <View style={styles.heroWrap}>
               <View style={styles.takoPeekBehind} pointerEvents="none">
-                <TakoMascot size={92} />
+                <TakoMascot size={92} mood={takoMood} />
               </View>
               <NeoCard
                 noBorder
@@ -83,14 +100,14 @@ export default function RoomHomeScreen() {
                 <HeroShaderBackground />
                 <View style={styles.heroTopRow}>
                   <View style={styles.heroAmountCol}>
-                    <Text style={styles.heroLabel}>Total spend</Text>
+                    <Text style={styles.heroLabel}>{t(language, 'splitTheBill')}</Text>
                     <Text
                       style={styles.heroAmount}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       minimumFontScale={0.65}
                     >
-                      ${(totalSpendCents / 100).toFixed(2)}
+                      {formatMoney(totalSpendCents, currency, { roundToWhole: roundToPeso })}
                     </Text>
                   </View>
                   <Pressable
@@ -125,7 +142,13 @@ export default function RoomHomeScreen() {
                   </View>
                 </View>
 
-                <View style={{ marginTop: Spacing.lg }}>
+                <View style={styles.moodBanner}>
+                  <Text style={styles.moodBannerText} numberOfLines={2}>
+                    {moodCopy}
+                  </Text>
+                </View>
+
+                <View style={{ marginTop: Spacing.md }}>
                   <NeoButton
                     onPress={() => {
                       triggerHaptic();
@@ -318,6 +341,21 @@ const styles = StyleSheet.create({
   },
   splitWithLabel: {
     fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.85)',
+  },
+  moodBanner: {
+    marginTop: Spacing.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderRadius: Radii.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  moodBannerText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    lineHeight: 18,
+  },
     fontWeight: '500',
     color: 'rgba(255, 255, 255, 0.85)',
   },
