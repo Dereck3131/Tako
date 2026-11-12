@@ -47,6 +47,7 @@ export default function ClaimAndAdjustModal() {
 
   const [selectedItemId, setSelectedItemId] = useState('burgers');
   const [wiggleSignal, setWiggleSignal] = useState(0);
+  const [isDraggingArm, setIsDraggingArm] = useState(false);
   const [shares, setShares] = useState<
     { id: MemojiId; name: string; basisPoints: number }[]
   >([
@@ -96,6 +97,7 @@ export default function ClaimAndAdjustModal() {
     <DotGridBackground>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView
+          scrollEnabled={!isDraggingArm}
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
         >
@@ -219,6 +221,7 @@ export default function ClaimAndAdjustModal() {
               language={language}
               roundToPeso={roundToPeso}
               wiggleSignal={wiggleSignal}
+              onDragActiveChange={setIsDraggingArm}
               onChangeShare={handleArmChange}
               onResetEven={handleResetEven}
             />

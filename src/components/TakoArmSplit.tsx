@@ -46,6 +46,7 @@ interface TakoArmSplitProps {
   isLoading?: boolean;
   errorMessage?: string | null;
   wiggleSignal?: number;
+  onDragActiveChange?: (isDragging: boolean) => void;
   onChangeShare: (memberId: string, targetBps: number) => void;
   onResetEven: () => void;
 }
@@ -186,6 +187,7 @@ export function TakoArmSplit({
   isLoading = false,
   errorMessage = null,
   wiggleSignal = 0,
+  onDragActiveChange,
   onChangeShare,
   onResetEven,
 }: TakoArmSplitProps) {
@@ -486,6 +488,7 @@ export function TakoArmSplit({
                   accentColor={ARM_PALETTE[idx % ARM_PALETTE.length]}
                   onDragStateChange={(active) => {
                     setDraggingId(active ? p.id : null);
+                    onDragActiveChange?.(active);
                     if (active) setShowDragHint(false);
                   }}
                   onSnapPct={(nextPct) => {
@@ -609,30 +612,50 @@ function RadialArmHandle({
   const startRadiusRef = useRef(sharePctToArmLength(pct, maxRadius));
   const latestPctRef = useRef(pct);
   latestPctRef.current = pct;
+  const lastEmittedPctRef = useRef(pct);
+  const onDragRef = useRef(onDragStateChange);
+  onDragRef.current = onDragStateChange;
+  const onSnapRef = useRef(onSnapPct);
+  onSnapRef.current = onSnapPct;
+  const angleRef = useRef(angle);
+  angleRef.current = angle;
+  const maxRadiusRef = useRef(maxRadius);
+  maxRadiusRef.current = maxRadius;
 
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponderCapture: () => true,
         onMoveShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponderCapture: () => true,
+        onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: () => {
-          startRadiusRef.current = sharePctToArmLength(latestPctRef.current, maxRadius);
-          onDragStateChange(true);
+          startRadiusRef.current = sharePctToArmLength(
+            latestPctRef.current,
+            maxRadiusRef.current
+          );
+          lastEmittedPctRef.current = latestPctRef.current;
+          onDragRef.current(true);
         },
         onPanResponderMove: (_evt, gesture) => {
+          const a = angleRef.current;
           const radialDelta =
-            gesture.dx * Math.cos(angle) + gesture.dy * Math.sin(angle);
+            gesture.dx * Math.cos(a) + gesture.dy * Math.sin(a);
           const nextRadius = Math.max(
             MIN_ARM_RADIUS,
-            Math.min(maxRadius, startRadiusRef.current + radialDelta)
+            Math.min(maxRadiusRef.current, startRadiusRef.current + radialDelta)
           );
           const snapped = armLengthToSharePct(nextRadius);
-          onSnapPct(snapped);
+          if (snapped !== lastEmittedPctRef.current) {
+            lastEmittedPctRef.current = snapped;
+            onSnapRef.current(snapped);
+          }
         },
-        onPanResponderRelease: () => onDragStateChange(false),
-        onPanResponderTerminate: () => onDragStateChange(false),
+        onPanResponderRelease: () => onDragRef.current(false),
+        onPanResponderTerminate: () => onDragRef.current(false),
       }),
-    [angle, maxRadius, onDragStateChange, onSnapPct]
+    []
   );
 
   return (
@@ -642,7 +665,9 @@ function RadialArmHandle({
       accessibilityLabel={`${participant.name} arm ${pct}% (${amountText})`}
       style={[
         styles.handleWrap,
-        Platform.OS === 'web' ? ({ touchAction: 'none', cursor: 'grab' } as object) : null,
+        Platform.OS === 'web'
+          ? ({ touchAction: 'none', userSelect: 'none', cursor: 'grab' } as object)
+          : null,
         {
           left: x - 24,
           top: y - 24,
