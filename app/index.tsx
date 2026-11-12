@@ -1,152 +1,163 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors } from '../src/constants/theme';
-import { MemojiAvatar } from '../src/components/MemojiAvatar';
+import { Border, Colors, Motion } from '../src/constants/theme';
+import { DotGridBackground } from '../src/components/DotGridBackground';
+import { TakoMascot } from '../src/components/TakoMascot';
+import { BrandWordmark } from '../src/components/NeoUI';
+import { useReducedMotion } from '../src/components/MotionPrimitives';
+
+function FloatingCoin({
+  style,
+  rotate,
+}: {
+  style: object;
+  rotate: string;
+}) {
+  return (
+    <View style={[styles.coinWrap, style, { transform: [{ rotate }] }]} pointerEvents="none">
+      <View style={styles.coinShadow} />
+      <View style={styles.coin}>
+        <Text style={styles.coinText}>$</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function SplashScreen() {
   const router = useRouter();
+  const reducedMotion = useReducedMotion();
+  const enterAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    const anim = Animated.timing(enterAnim, {
+      toValue: 1,
+      duration: reducedMotion ? 120 : Motion.durationNormal,
+      easing: Easing.bezier(0.23, 1, 0.32, 1),
+      useNativeDriver: Platform.OS !== 'web',
+    });
+    anim.start();
+
     const timer = setTimeout(() => {
-      router.replace('/(tabs)');
+      router.replace('/onboarding');
     }, 1800);
-    return () => clearTimeout(timer);
-  }, []);
+
+    return () => {
+      anim.stop();
+      clearTimeout(timer);
+    };
+  }, [enterAnim, reducedMotion, router]);
+
+  const scale = enterAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [reducedMotion ? 1 : 0.95, 1],
+  });
 
   return (
-    <View style={styles.container}>
-      {/* Translucent circle patterns */}
-      <View style={styles.circleTopLeft} />
-      <View style={styles.circleBottomRight} />
+    <DotGridBackground>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Continue to onboarding"
+        style={styles.container}
+        onPress={() => router.replace('/onboarding')}
+      >
+        {/* 4 Floating $ Coins */}
+        <FloatingCoin style={{ left: 40, top: 96 }} rotate="-14deg" />
+        <FloatingCoin style={{ right: 46, top: 150 }} rotate="12deg" />
+        <FloatingCoin style={{ left: 64, bottom: 170 }} rotate="10deg" />
+        <FloatingCoin style={{ right: 60, bottom: 120 }} rotate="-8deg" />
 
-      {/* Floating Memoji Avatars matching Page 8 */}
-      <View style={[styles.floatingAvatar, { top: 120, left: 40 }]}>
-        <MemojiAvatar id="mia" size={54} />
-      </View>
-      <View style={[styles.floatingAvatar, { top: 200, right: 35 }]}>
-        <MemojiAvatar id="jonas" size={54} />
-      </View>
-      <View style={[styles.floatingAvatar, { bottom: 220, left: 50 }]}>
-        <MemojiAvatar id="you" size={54} />
-      </View>
-      <View style={[styles.floatingAvatar, { bottom: 160, right: 45 }]}>
-        <MemojiAvatar id="aly" size={54} />
-      </View>
+        {/* Center Tako Mascot & Wordmark */}
+        <Animated.View
+          style={[
+            styles.centerContent,
+            {
+              opacity: enterAnim,
+              transform: [{ scale }],
+            },
+          ]}
+        >
+          <TakoMascot size={230} />
+          <View style={styles.mascotShadow} />
+          <View style={{ marginTop: 22 }}>
+            <BrandWordmark fontSize={42} />
+          </View>
+          <Text style={styles.tagline}>Eight arms. One bill. Zero drama.</Text>
+        </Animated.View>
 
-      {/* Center Brand Squircle matching Page 8 */}
-      <View style={styles.centerContent}>
-        <View style={styles.logoSquircle}>
-          <View style={styles.coinBlue} />
-          <View style={styles.coinAmber} />
+        {/* Bottom 3 Dots */}
+        <View style={styles.bottomDots}>
+          <View style={[styles.dot, { backgroundColor: Colors.ink }]} />
+          <View style={[styles.dot, { backgroundColor: Colors.amber }]} />
+          <View style={[styles.dot, { backgroundColor: Colors.primary }]} />
         </View>
-        <Text style={styles.brandTitle}>TabTogether</Text>
-        <Text style={styles.brandSubtitle}>Split bills, live, with friends</Text>
-      </View>
-
-      {/* Bottom Paging Dots */}
-      <View style={styles.bottomDots}>
-        <View style={[styles.dot, styles.dotActive]} />
-        <View style={styles.dot} />
-        <View style={styles.dot} />
-      </View>
-    </View>
+      </Pressable>
+    </DotGridBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  circleTopLeft: {
+  coinWrap: {
     position: 'absolute',
-    top: -80,
-    left: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    width: 44,
+    height: 44,
   },
-  circleBottomRight: {
+  coinShadow: {
     position: 'absolute',
-    bottom: -100,
-    right: -100,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    top: 3,
+    left: 3,
+    right: -3,
+    bottom: -3,
+    borderRadius: 22,
+    backgroundColor: Colors.ink,
   },
-  floatingAvatar: {
-    position: 'absolute',
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    borderRadius: 30,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+  coin: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.amber,
+    borderWidth: Border.width,
+    borderColor: Colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coinText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.ink,
   },
   centerContent: {
     alignItems: 'center',
   },
-  logoSquircle: {
-    width: 96,
-    height: 96,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 6,
+  mascotShadow: {
+    width: 150,
+    height: 14,
+    borderRadius: 75,
+    backgroundColor: 'rgba(20, 18, 58, 0.16)',
+    marginTop: -6,
   },
-  coinBlue: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.primary,
-    marginRight: -14,
-  },
-  coinAmber: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.amber,
-  },
-  brandTitle: {
-    color: '#FFFFFF',
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-    marginBottom: 8,
-  },
-  brandSubtitle: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 16,
+  tagline: {
+    fontSize: 17,
     fontWeight: '600',
+    color: Colors.textBody,
+    marginTop: 6,
   },
   bottomDots: {
     position: 'absolute',
-    bottom: 48,
+    bottom: 56,
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.35)',
-  },
-  dotActive: {
-    width: 24,
-    backgroundColor: '#FFFFFF',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: Border.width,
+    borderColor: Colors.ink,
   },
 });
