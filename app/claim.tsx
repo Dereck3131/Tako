@@ -29,6 +29,11 @@ import { MemojiAvatar, MemojiId } from '../src/components/MemojiAvatar';
 import { BarcodeVector } from '../src/components/BarcodeVector';
 import { StaggerItem } from '../src/components/MotionPrimitives';
 import { useRoomStore } from '../src/store/roomStore';
+import { TakoArmSplit } from '../src/components/TakoArmSplit';
+import { rebalanceSliders } from '../src/services/splitEngine';
+import { formatMoney } from '../src/services/currency';
+import { t } from '../src/constants/i18n';
+import { playSound, triggerHaptic } from '../src/services/feedbackEngine';
 
 const RECEIPT_ITEMS = [
   { id: 'burgers', label: 'Burgers ×4', shortName: 'Burgers', priceCents: 12000 },
@@ -38,73 +43,52 @@ const RECEIPT_ITEMS = [
 
 export default function ClaimAndAdjustModal() {
   const router = useRouter();
-  const { selectedAnimal } = useRoomStore();
+  const { selectedAnimal, currency, language, roundToPeso } = useRoomStore();
 
   const [selectedItemId, setSelectedItemId] = useState('burgers');
-  const [trackWidth, setTrackWidth] = useState(300);
+  const [wiggleSignal, setWiggleSignal] = useState(0);
   const [shares, setShares] = useState<
-    { id: MemojiId; name: string; pct: number }[]
+    { id: MemojiId; name: string; basisPoints: number }[]
   >([
-    { id: 'you', name: 'You', pct: 25 },
-    { id: 'mia', name: 'Mia', pct: 25 },
-    { id: 'jonas', name: 'Jonas', pct: 25 },
-    { id: 'aly', name: 'Aly', pct: 25 },
+    { id: 'you', name: 'You', basisPoints: 2500 },
+    { id: 'mia', name: 'Mia', basisPoints: 2500 },
+    { id: 'jonas', name: 'Jonas', basisPoints: 2500 },
+    { id: 'aly', name: 'Aly', basisPoints: 2500 },
   ]);
 
   const activeItem =
     RECEIPT_ITEMS.find((i) => i.id === selectedItemId) ?? RECEIPT_ITEMS[0];
 
-  const adjustShare = (index: number, rawPct: number) => {
-    try {
-      Haptics.selectionAsync();
-    } catch {
-      // Fallback
-    }
-
-    const clamped = Math.max(0, Math.min(100, Math.round(rawPct)));
-    const remaining = 100 - clamped;
-    const others = shares.filter((_, i) => i !== index);
-    const othersSum = others.reduce((s, o) => s + o.pct, 0);
-
-    const next = shares.map((s, idx) => {
-      if (idx === index) return { ...s, pct: clamped };
-      if (othersSum === 0) {
-        return { ...s, pct: Math.floor(remaining / others.length) };
-      }
-      return {
+  const handleArmChange = (memberId: string, targetBps: number) => {
+    const rebalanced = rebalanceSliders(
+      shares.map((s) => ({ memberId: s.id, basisPoints: s.basisPoints })),
+      memberId,
+      targetBps
+    );
+    setShares((prev) =>
+      prev.map((s) => ({
         ...s,
-        pct: Math.max(0, Math.round((s.pct / othersSum) * remaining)),
-      };
-    });
-
-    // Guarantee exact 100% total after integer rounding
-    const total = next.reduce((sum, s) => sum + s.pct, 0);
-    const diff = 100 - total;
-    if (diff !== 0) {
-      const adjustIdx = next.findIndex((_, idx) => idx !== index);
-      if (adjustIdx >= 0) {
-        next[adjustIdx] = {
-          ...next[adjustIdx],
-          pct: Math.max(0, next[adjustIdx].pct + diff),
-        };
-      }
-    }
-
-    setShares(next);
+        basisPoints: rebalanced.find((r) => r.memberId === s.id)?.basisPoints ?? s.basisPoints,
+      }))
+    );
   };
 
-  const handleTrackPress = (index: number, locationX: number) => {
-    if (trackWidth <= 0) return;
-    const pct = (locationX / trackWidth) * 100;
-    adjustShare(index, pct);
+  const handleResetEven = () => {
+    const evenBps = Math.floor(10000 / shares.length);
+    const remainder = 10000 - evenBps * shares.length;
+    setShares((prev) =>
+      prev.map((s, idx) => ({
+        ...s,
+        basisPoints: evenBps + (idx === 0 ? remainder : 0),
+      }))
+    );
+    setWiggleSignal((n) => n + 1);
   };
 
   const handleConfirm = () => {
-    try {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      // Fallback
-    }
+    triggerHaptic('success');
+    playSound('item_add_whoosh');
+    setWiggleSignal((n) => n + 1);
     router.back();
   };
 
@@ -188,7 +172,7 @@ export default function ClaimAndAdjustModal() {
                             ]}
                             numberOfLines={1}
                           >
-                            ${(item.priceCents / 100).toFixed(2)}
+                            {formatMoney(item.priceCents, currency, { roundToWhole: roundToPeso })}
                           </Text>
                         </Pressable>
                       );
@@ -201,7 +185,7 @@ export default function ClaimAndAdjustModal() {
                   <View style={styles.totalRow}>
                     <Text style={styles.totalLabel}>Total</Text>
                     <Text style={styles.totalAmount} numberOfLines={1}>
-                      $210.00
+                      {formatMoney(21000, currency, { roundToWhole: roundToPeso })}
                     </Text>
                   </View>
                   <View style={{ marginTop: 10 }}>
@@ -215,82 +199,35 @@ export default function ClaimAndAdjustModal() {
           {/* Who's sharing header */}
           <View style={styles.sharingHeader}>
             <Text style={styles.sharingTitle} numberOfLines={1}>
-              Who's sharing {activeItem.shortName}
+              Who&apos;s sharing {activeItem.shortName}
             </Text>
             <Badge label="Live" variant="emerald" />
           </View>
 
-          {/* 4 Member Slider Cards */}
-          <View style={{ gap: 10, marginTop: Spacing.sm }}>
-            {shares.map((member, index) => {
-              const isYou = member.id === 'you';
-              const avatarId: MemojiId = isYou ? selectedAnimal : member.id;
-              const dollarAmount = (
-                (activeItem.priceCents * member.pct) /
-                10000
-              ).toFixed(2);
-
-              return (
-                <StaggerItem key={member.id} index={index + 1} distance={8}>
-                  <NeoCard
-                    backgroundColor={Colors.card}
-                    borderColor={isYou ? Colors.primary : Colors.border}
-                    borderRadius={Radii.card}
-                    contentStyle={styles.sliderCardContent}
-                  >
-                    <View style={styles.sliderTopRow}>
-                      <View style={styles.avatarShrink}>
-                        <MemojiAvatar id={avatarId} size={34} />
-                      </View>
-                      <Text style={styles.memberName} numberOfLines={1}>
-                        {member.name}
-                      </Text>
-                      <Badge
-                        label={`${member.pct}%`}
-                        variant={isYou ? 'blue' : 'neutral'}
-                      />
-                      <Text style={styles.memberAmount} numberOfLines={1}>
-                        ${dollarAmount}
-                      </Text>
-                    </View>
-
-                    <Pressable
-                      accessibilityRole="adjustable"
-                      accessibilityLabel={`${member.name} share ${member.pct}%`}
-                      onLayout={(e: LayoutChangeEvent) => {
-                        setTrackWidth(e.nativeEvent.layout.width);
-                      }}
-                      onPress={(e) =>
-                        handleTrackPress(index, e.nativeEvent.locationX)
-                      }
-                      style={styles.sliderTrackWrap}
-                    >
-                      <View style={styles.sliderTrack}>
-                        <View
-                          style={[
-                            styles.sliderFill,
-                            { width: `${member.pct}%` },
-                          ]}
-                        />
-                      </View>
-                      <View
-                        style={[
-                          styles.sliderThumb,
-                          Shadows.cardSoft,
-                          { left: `${member.pct}%` },
-                        ]}
-                      />
-                    </Pressable>
-                  </NeoCard>
-                </StaggerItem>
-              );
-            })}
+          {/* Tako's Arms Interactive Radial Split */}
+          <View style={{ marginTop: Spacing.sm }}>
+            <TakoArmSplit
+              itemTitle={activeItem.shortName}
+              itemPriceCents={activeItem.priceCents}
+              participants={shares.map((s) => ({
+                id: s.id,
+                avatarId: s.id === 'you' ? selectedAnimal : s.id,
+                name: s.name,
+                basisPoints: s.basisPoints,
+              }))}
+              currency={currency}
+              language={language}
+              roundToPeso={roundToPeso}
+              wiggleSignal={wiggleSignal}
+              onChangeShare={handleArmChange}
+              onResetEven={handleResetEven}
+            />
           </View>
 
           {/* Bottom Confirm CTA */}
           <View style={{ marginTop: Spacing.xl }}>
             <NeoButton
-              label="Confirm split"
+              label={t(language, 'confirmSplit')}
               onPress={handleConfirm}
               backgroundColor={Colors.primary}
               textColor="#FFFFFF"
