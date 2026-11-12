@@ -1,61 +1,88 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
+  LayoutChangeEvent,
+  Pressable,
   ScrollView,
-  TouchableOpacity,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Colors, Radii } from '../src/constants/theme';
+import Svg, { Path } from 'react-native-svg';
+import {
+  Border,
+  Colors,
+  Motion,
+  Radii,
+  Spacing,
+  TouchTarget,
+  Typography,
+} from '../src/constants/theme';
+import { DotGridBackground } from '../src/components/DotGridBackground';
+import { NeoButton, NeoCard } from '../src/components/NeoUI';
 import { TicketCard } from '../src/components/TicketCard';
-import { MemojiAvatar } from '../src/components/MemojiAvatar';
+import { Badge } from '../src/components/Badge';
+import { MemojiAvatar, MemojiId } from '../src/components/MemojiAvatar';
 import { BarcodeVector } from '../src/components/BarcodeVector';
+import { StaggerItem } from '../src/components/MotionPrimitives';
+import { useRoomStore } from '../src/store/roomStore';
+
+const RECEIPT_ITEMS = [
+  { id: 'burgers', label: 'Burgers ×4', shortName: 'Burgers', priceCents: 12000 },
+  { id: 'drinks', label: 'Drinks ×6', shortName: 'Drinks', priceCents: 6000 },
+  { id: 'fries', label: 'Fries ×2', shortName: 'Fries', priceCents: 3000 },
+];
 
 export default function ClaimAndAdjustModal() {
   const router = useRouter();
+  const { selectedAnimal } = useRoomStore();
 
-  const [shares, setShares] = useState([
-    { id: 'you', name: 'You', pct: 25, amount: 30.0 },
-    { id: 'mia', name: 'Mia', pct: 25, amount: 30.0 },
-    { id: 'jonas', name: 'Jonas', pct: 25, amount: 30.0 },
-    { id: 'aly', name: 'Aly', pct: 25, amount: 30.0 },
+  const [selectedItemId, setSelectedItemId] = useState('burgers');
+  const [trackWidth, setTrackWidth] = useState(300);
+  const [shares, setShares] = useState<
+    { id: MemojiId; name: string; pct: number }[]
+  >([
+    { id: 'you', name: 'You', pct: 25 },
+    { id: 'mia', name: 'Mia', pct: 25 },
+    { id: 'jonas', name: 'Jonas', pct: 25 },
+    { id: 'aly', name: 'Aly', pct: 25 },
   ]);
 
-  const adjustShare = (index: number, newPct: number) => {
+  const activeItem =
+    RECEIPT_ITEMS.find((i) => i.id === selectedItemId) ?? RECEIPT_ITEMS[0];
+
+  const adjustShare = (index: number, rawPct: number) => {
     try {
       Haptics.selectionAsync();
     } catch {
-      // Haptics web fallback
+      // Fallback
     }
 
-    const clamped = Math.max(0, Math.min(100, newPct));
-    const delta = clamped - shares[index].pct;
-    const othersCount = shares.length - 1;
-    if (othersCount <= 0) return;
-
-    const deductionPerOther = delta / othersCount;
+    const clamped = Math.max(0, Math.min(100, Math.round(rawPct)));
+    const remaining = 100 - clamped;
+    const others = shares.filter((_, i) => i !== index);
+    const othersSum = others.reduce((s, o) => s + o.pct, 0);
 
     setShares((prev) =>
       prev.map((s, idx) => {
-        if (idx === index) {
-          return {
-            ...s,
-            pct: clamped,
-            amount: Number(((120 * clamped) / 100).toFixed(2)),
-          };
-        } else {
-          const nextPct = Math.max(0, Math.min(100, s.pct - deductionPerOther));
-          return {
-            ...s,
-            pct: Math.round(nextPct),
-            amount: Number(((120 * nextPct) / 100).toFixed(2)),
-          };
+        if (idx === index) return { ...s, pct: clamped };
+        if (othersSum === 0) {
+          return { ...s, pct: Math.round(remaining / others.length) };
         }
+        return {
+          ...s,
+          pct: Math.max(0, Math.round((s.pct / othersSum) * remaining)),
+        };
       })
     );
+  };
+
+  const handleTrackPress = (index: number, locationX: number) => {
+    if (trackWidth <= 0) return;
+    const pct = (locationX / trackWidth) * 100;
+    adjustShare(index, pct);
   };
 
   const handleConfirm = () => {
@@ -68,323 +95,331 @@ export default function ClaimAndAdjustModal() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Navigation Header */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backChevron}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Claim & adjust</Text>
-          <View style={{ width: 48 }} />
-        </View>
-
-        {/* Receipt Ticket Card with Authentic Barcode matching Page 6 */}
-        <TicketCard
-          childrenTop={
-            <View>
-              <View style={styles.receiptTopHeader}>
-                <Text style={styles.receiptLabel}>RECEIPT · FRIDAY NIGHT DINNER</Text>
-                <Text style={styles.receiptNumber}>#0412</Text>
-              </View>
-
-              <View style={styles.receiptItemRow}>
-                <Text style={styles.itemTitle}>Burgers ×4</Text>
-                <Text style={styles.itemPrice}>$120.00</Text>
-              </View>
-
-              <View style={styles.receiptItemRow}>
-                <Text style={styles.itemTitle}>Drinks ×6</Text>
-                <Text style={styles.itemPrice}>$60.00</Text>
-              </View>
-
-              <View style={styles.receiptItemRow}>
-                <Text style={styles.itemTitle}>Fries ×2</Text>
-                <Text style={styles.itemPrice}>$30.00</Text>
-              </View>
-
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalAmount}>$210.00</Text>
-              </View>
-            </View>
-          }
-          childrenBottom={
-            <View style={styles.barcodeSection}>
-              <BarcodeVector height={32} />
-            </View>
-          }
-        />
-
-        {/* Who is Sharing Burgers Header */}
-        <View style={styles.sharingHeaderRow}>
-          <Text style={styles.sharingTitle}>Who is sharing Burgers</Text>
-          <View style={styles.liveBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>Live</Text>
-          </View>
-        </View>
-
-        {/* Per-Person Sliders with Memoji Avatars matching Figma Page 6 */}
-        <View style={styles.slidersCard}>
-          {shares.map((person, idx) => (
-            <View key={person.id} style={styles.sliderPersonRow}>
-              <View style={styles.personInfoRow}>
-                <View style={styles.personAvatarWrap}>
-                  <MemojiAvatar id={person.id} size={38} />
-                </View>
-                <Text style={styles.personName}>{person.name}</Text>
-                <View style={styles.shareStats}>
-                  <Text style={styles.sharePct}>{person.pct}%</Text>
-                  <Text style={styles.shareAmount}>
-                    ${person.amount.toFixed(2)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Slider Track with Custom Thumb */}
-              <View style={styles.sliderTrackWrapper}>
-                <View style={styles.trackBackground}>
-                  <View style={[styles.trackFill, { width: `${person.pct}%` }]} />
-                  <TouchableOpacity
-                    style={[styles.sliderThumb, { left: `${person.pct}%` }]}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                    onPress={() => {
-                      const next = person.pct === 25 ? 50 : person.pct === 50 ? 33 : 25;
-                      adjustShare(idx, next);
-                    }}
-                  >
-                    <View style={styles.innerThumbCircle} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {/* Bottom Confirm Split CTA */}
-        <TouchableOpacity
-          style={styles.confirmButton}
-          activeOpacity={0.85}
-          onPress={handleConfirm}
+    <DotGridBackground>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.confirmButtonText}>Confirm split</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+          {/* Header */}
+          <View style={styles.headerRow}>
+            <NeoCard
+              onPress={() => router.back()}
+              accessibilityLabel="Back"
+              borderRadius={Radii.md}
+              shadowOffset={3}
+              contentStyle={styles.backBtnBox}
+            >
+              <Svg
+                width={18}
+                height={18}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={Colors.ink}
+                strokeWidth={3}
+              >
+                <Path d="m15 5-7 7 7 7" />
+              </Svg>
+            </NeoCard>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              Claim & adjust
+            </Text>
+            <View style={{ width: TouchTarget.minSize }} />
+          </View>
+
+          {/* Receipt Ticket Card */}
+          <StaggerItem index={0} distance={8}>
+            <TicketCard
+              style={{ marginTop: 18 }}
+              topStyle={{ paddingHorizontal: 12, paddingVertical: 10 }}
+              bottomStyle={{ paddingHorizontal: 20, paddingVertical: 12 }}
+              childrenTop={
+                <View>
+                  <View style={styles.receiptMetaRow}>
+                    <Text style={[styles.receiptMetaText, { flex: 1, minWidth: 0 }]} numberOfLines={1}>
+                      RECEIPT · FRIDAY NIGHT DINNER
+                    </Text>
+                    <Text style={[styles.receiptMetaText, { flexShrink: 0 }]}>#0412</Text>
+                  </View>
+
+                  <View style={{ marginTop: 8, gap: 4 }}>
+                    {RECEIPT_ITEMS.map((item) => {
+                      const isSelected = item.id === selectedItemId;
+                      return (
+                        <Pressable
+                          key={item.id}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: isSelected }}
+                          onPress={() => setSelectedItemId(item.id)}
+                          style={({ pressed }) => [
+                            styles.receiptItemRow,
+                            isSelected && styles.receiptItemRowSelected,
+                            pressed && { transform: [{ scale: Motion.pressScale }] },
+                          ]}
+                        >
+                          <Text style={styles.receiptItemLabel} numberOfLines={1}>
+                            {item.label}
+                          </Text>
+                          <Text style={styles.receiptItemPrice} numberOfLines={1}>
+                            ${(item.priceCents / 100).toFixed(2)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              }
+              childrenBottom={
+                <View>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Total</Text>
+                    <Text style={styles.totalAmount} numberOfLines={1}>
+                      $210.00
+                    </Text>
+                  </View>
+                  <View style={{ marginTop: 8 }}>
+                    <BarcodeVector height={30} />
+                  </View>
+                </View>
+              }
+            />
+          </StaggerItem>
+
+          {/* Who's sharing header */}
+          <View style={styles.sharingHeader}>
+            <Text style={styles.sharingTitle} numberOfLines={1}>
+              Who's sharing {activeItem.shortName}
+            </Text>
+            <Badge label="Live" variant="emerald" />
+          </View>
+
+          {/* 4 Member Slider Cards */}
+          <View style={{ gap: 10, marginTop: 6 }}>
+            {shares.map((member, index) => {
+              const isYou = member.id === 'you';
+              const avatarId: MemojiId = isYou ? selectedAnimal : member.id;
+              const dollarAmount = (
+                (activeItem.priceCents * member.pct) /
+                10000
+              ).toFixed(2);
+
+              return (
+                <StaggerItem key={member.id} index={index + 1} distance={8}>
+                  <NeoCard
+                    backgroundColor={isYou ? Colors.amberTint : '#FFFFFF'}
+                    borderRadius={Radii.lg}
+                    contentStyle={styles.sliderCardContent}
+                  >
+                    <View style={styles.sliderTopRow}>
+                      <View style={styles.avatarShrink}>
+                        <MemojiAvatar id={avatarId} size={34} />
+                      </View>
+                      <Text style={styles.memberName} numberOfLines={1}>
+                        {member.name}
+                      </Text>
+                      <Badge label={`${member.pct}%`} variant="amber" />
+                      <Text style={styles.memberAmount} numberOfLines={1}>
+                        ${dollarAmount}
+                      </Text>
+                    </View>
+
+                    <Pressable
+                      accessibilityRole="adjustable"
+                      accessibilityLabel={`${member.name} share ${member.pct}%`}
+                      onLayout={(e: LayoutChangeEvent) => {
+                        setTrackWidth(e.nativeEvent.layout.width);
+                      }}
+                      onPress={(e) =>
+                        handleTrackPress(index, e.nativeEvent.locationX)
+                      }
+                      style={styles.sliderTrackWrap}
+                    >
+                      <View style={styles.sliderTrack}>
+                        <View
+                          style={[
+                            styles.sliderFill,
+                            { width: `${member.pct}%` },
+                          ]}
+                        />
+                      </View>
+                      <View
+                        style={[
+                          styles.sliderThumb,
+                          { left: `${member.pct}%` },
+                        ]}
+                      />
+                    </Pressable>
+                  </NeoCard>
+                </StaggerItem>
+              );
+            })}
+          </View>
+
+          {/* Bottom Confirm CTA */}
+          <View style={{ marginTop: 22 }}>
+            <NeoButton
+              label="Confirm split"
+              onPress={handleConfirm}
+              backgroundColor={Colors.primary}
+              textColor="#FFFFFF"
+              height={56}
+              fontSize={17}
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </DotGridBackground>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   container: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xxxl,
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingTop: 8,
+    alignItems: 'center',
+    gap: Spacing.md,
   },
-  backButton: {
-    width: 48,
-    height: 48,
+  backBtnBox: {
+    width: TouchTarget.minSize,
+    height: TouchTarget.minSize,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backChevron: {
-    fontSize: 32,
-    color: Colors.textPrimary,
-    fontWeight: '600',
-  },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: Colors.ink,
+    flex: 1,
+    textAlign: 'center',
   },
-  receiptTopHeader: {
+  receiptMetaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    gap: Spacing.sm,
+    paddingHorizontal: 8,
   },
-  receiptLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.textSecondary,
-    letterSpacing: 0.5,
-  },
-  receiptNumber: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.textSecondary,
+  receiptMetaText: {
+    ...Typography.micro,
+    color: Colors.ink,
   },
   receiptItemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    alignItems: 'center',
+    gap: Spacing.md,
+    minHeight: TouchTarget.minSize,
+    paddingHorizontal: 10,
+    borderRadius: Radii.sm,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
-  itemTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.primary,
+  receiptItemRowSelected: {
+    backgroundColor: Colors.amberTint,
+    borderColor: Colors.ink,
   },
-  itemPrice: {
+  receiptItemLabel: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    fontWeight: '800',
+    color: Colors.ink,
+  },
+  receiptItemPrice: {
+    ...Typography.tabular,
+    fontSize: 15,
+    fontWeight: '900',
+    color: Colors.ink,
+    flexShrink: 0,
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    alignItems: 'center',
   },
   totalLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.ink,
   },
   totalAmount: {
+    ...Typography.currencyLg,
     fontSize: 28,
-    fontWeight: '900',
-    color: Colors.textPrimary,
+    lineHeight: 34,
+    color: Colors.ink,
   },
-  barcodeSection: {
-    alignItems: 'center',
-    paddingVertical: 2,
-  },
-  sharingHeaderRow: {
+  sharingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 12,
+    gap: Spacing.sm,
+    marginTop: 18,
   },
   sharingTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-  },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.emerald,
-    marginRight: 6,
-  },
-  liveText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.emerald,
-  },
-  slidersCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radii.card,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#2F65F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-  },
-  sliderPersonRow: {
-    marginBottom: 18,
-  },
-  personInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  personAvatarWrap: {
-    marginRight: 10,
-  },
-  personName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
     flex: 1,
+    minWidth: 0,
+    ...Typography.sectionTitle,
   },
-  shareStats: {
+  sliderCardContent: {
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  sliderTopRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
+    alignItems: 'center',
+    gap: 10,
   },
-  sharePct: {
+  avatarShrink: {
+    flexShrink: 0,
+  },
+  memberName: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 15,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  shareAmount: {
-    fontSize: 18,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: Colors.ink,
   },
-  sliderTrackWrapper: {
-    height: 28,
-    justifyContent: 'center',
+  memberAmount: {
+    ...Typography.currencyMd,
+    fontSize: 20,
+    color: Colors.ink,
+    minWidth: 74,
+    textAlign: 'right',
+    flexShrink: 0,
   },
-  trackBackground: {
-    height: 6,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
+  sliderTrackWrap: {
     position: 'relative',
+    height: TouchTarget.minSize,
     justifyContent: 'center',
   },
-  trackFill: {
+  sliderTrack: {
+    height: 14,
+    borderRadius: Radii.pill,
+    borderWidth: Border.width,
+    borderColor: Colors.ink,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  sliderFill: {
     height: '100%',
     backgroundColor: Colors.primary,
-    borderRadius: 3,
   },
   sliderThumb: {
     position: 'absolute',
+    marginLeft: -12,
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  innerThumbCircle: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-  },
-  confirmButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radii.pill,
-    minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
-    elevation: 4,
-  },
-  confirmButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
+    backgroundColor: Colors.amber,
+    borderWidth: Border.width,
+    borderColor: Colors.ink,
   },
 });
