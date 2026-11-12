@@ -15,6 +15,7 @@ import {
   Colors,
   Motion,
   Radii,
+  Shadows,
   Spacing,
   TouchTarget,
   Typography,
@@ -23,7 +24,8 @@ import { DotGridBackground } from '../../src/components/DotGridBackground';
 import { NeoButton, NeoCard } from '../../src/components/NeoUI';
 import { Badge } from '../../src/components/Badge';
 import { MemojiAvatar, MemojiId } from '../../src/components/MemojiAvatar';
-import { HairlineEmptyReceipt } from '../../src/components/HairlineEmptyReceipt';
+import { TakoMascot } from '../../src/components/TakoMascot';
+import { HeroShaderBackground } from '../../src/components/HeroShaderBackground';
 import { StaggerItem } from '../../src/components/MotionPrimitives';
 import { useRoomStore } from '../../src/store/roomStore';
 
@@ -148,8 +150,8 @@ export default function ItemsScreen() {
               <NeoButton
                 label="+ Add item"
                 onPress={() => router.push('/claim')}
-                backgroundColor={Colors.amber}
-                textColor={Colors.ink}
+                backgroundColor={Colors.primary}
+                textColor="#FFFFFF"
                 height={44}
                 fontSize={14}
               />
@@ -157,15 +159,13 @@ export default function ItemsScreen() {
           </View>
 
           {filteredItems.length === 0 ? (
-            /* Empty State with Signature Hairline Illustration */
+            /* Empty State with Tako */
             <StaggerItem index={0} distance={10}>
-              <View style={styles.emptyCard}>
-                <View style={{ alignItems: 'center' }}>
-                  <HairlineEmptyReceipt size={148} />
-                </View>
+              <View style={[styles.emptyCard, Shadows.card]}>
+                <TakoMascot size={144} />
                 <Text style={styles.emptyTitle}>No items yet</Text>
                 <Text style={styles.emptySubtitle}>
-                  Add the first dish and Tako will tell everyone in the room.
+                  Add the first dish and Tako will notify everyone in the room.
                 </Text>
 
                 <View style={{ marginTop: 22, width: '100%' }}>
@@ -176,14 +176,14 @@ export default function ItemsScreen() {
                       setFilter('All');
                       router.push('/claim');
                     }}
-                    backgroundColor={Colors.amber}
-                    textColor={Colors.ink}
-                    height={54}
-                    fontSize={17}
+                    backgroundColor={Colors.primary}
+                    textColor="#FFFFFF"
+                    height={52}
+                    fontSize={16}
                   />
                 </View>
 
-                <View style={{ marginTop: 14, width: '100%' }}>
+                <View style={{ marginTop: 12, width: '100%' }}>
                   <NeoButton
                     onPress={() => {
                       setShowEmptyDemo(false);
@@ -199,8 +199,8 @@ export default function ItemsScreen() {
                       height={18}
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke={Colors.ink}
-                      strokeWidth={2.4}
+                      stroke={Colors.primary}
+                      strokeWidth={2.2}
                       strokeLinecap="round"
                     >
                       <Path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16" />
@@ -239,7 +239,7 @@ export default function ItemsScreen() {
                         numberOfLines={1}
                         style={[
                           styles.filterChipText,
-                          { color: isActive ? '#FFFFFF' : Colors.ink },
+                          { color: isActive ? '#FFFFFF' : Colors.textSecondary },
                         ]}
                       >
                         {tab}
@@ -249,13 +249,16 @@ export default function ItemsScreen() {
                 })}
               </View>
 
-              {/* Blue Summary Hero Card */}
+              {/* Summary Card */}
               <NeoCard
-                style={{ marginTop: 14 }}
+                noBorder
+                elevated
+                style={{ marginTop: Spacing.lg }}
                 backgroundColor={Colors.primary}
-                borderRadius={Radii.card}
+                borderRadius={Radii.cardLg}
                 contentStyle={styles.summaryContent}
               >
+                <HeroShaderBackground />
                 <View style={styles.summaryTextCol}>
                   <Text style={styles.summarySub} numberOfLines={1}>
                     12 items · Friday Night Dinner
@@ -275,12 +278,12 @@ export default function ItemsScreen() {
               </NeoCard>
 
               {/* Item Cards */}
-              <View style={{ gap: Spacing.md, marginTop: Spacing.md }}>
+              <View style={{ gap: Spacing.md, marginTop: Spacing.lg }}>
                 {filteredItems.map((item, idx) => (
                   <StaggerItem key={item.id} index={idx} distance={8}>
                     <NeoCard
                       onPress={() => router.push('/claim')}
-                      borderRadius={Radii.lg}
+                      borderRadius={Radii.card}
                       contentStyle={styles.itemCardContent}
                     >
                       <View style={styles.itemTopRow}>
@@ -370,16 +373,16 @@ const styles = StyleSheet.create({
     minHeight: TouchTarget.minSize,
     paddingHorizontal: 14,
     borderRadius: Radii.pill,
-    borderWidth: 2,
-    borderColor: Colors.ink,
-    backgroundColor: '#FFFFFF',
+    borderWidth: Border.width,
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptyToggleText: {
     fontSize: 12,
-    fontWeight: '800',
-    color: Colors.ink,
+    fontWeight: '600',
+    color: Colors.textSecondary,
   },
   title: {
     ...Typography.screenTitle,
@@ -388,12 +391,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
-    marginTop: 14,
+    marginTop: Spacing.md,
   },
   filterChip: {
     minHeight: TouchTarget.minSize,
-    borderWidth: 2,
-    borderColor: Colors.ink,
     borderRadius: Radii.pill,
     paddingHorizontal: 18,
     justifyContent: 'center',
@@ -403,18 +404,21 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.ink,
   },
   filterChipInactive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
+    borderWidth: Border.width,
+    borderColor: Colors.border,
   },
   filterChipText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   summaryContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.lg,
+    position: 'relative',
   },
   summaryTextCol: {
     flex: 1,
@@ -422,8 +426,8 @@ const styles = StyleSheet.create({
   },
   summarySub: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.85)',
   },
   summaryTotal: {
     ...Typography.currencyLg,
@@ -432,7 +436,7 @@ const styles = StyleSheet.create({
   },
   itemCardContent: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingVertical: 14,
   },
   itemTopRow: {
     flexDirection: 'row',
@@ -449,13 +453,10 @@ const styles = StyleSheet.create({
   },
   itemAddedBy: {
     ...Typography.caption,
-    fontWeight: '600',
     marginTop: 2,
   },
   itemPrice: {
     ...Typography.currencyMd,
-    fontSize: 21,
-    lineHeight: 25,
     color: Colors.ink,
     flexShrink: 0,
   },
@@ -463,7 +464,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 10,
     minHeight: 36,
   },
   quickClaimHit: {
@@ -476,37 +477,35 @@ const styles = StyleSheet.create({
   },
   nobodyText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     color: Colors.textSecondary,
   },
   emptyCard: {
-    marginTop: Spacing.xxxl,
+    marginTop: Spacing.xxl,
     paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.xxxl,
     paddingBottom: Spacing.xxl,
     borderRadius: Radii.cardLg,
     borderWidth: Border.width,
-    borderStyle: 'dashed',
-    borderColor: Colors.ink,
-    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
     alignItems: 'center',
   },
   emptyTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.7,
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.4,
     color: Colors.ink,
-    marginTop: 10,
+    marginTop: 12,
   },
   emptySubtitle: {
     ...Typography.body,
-    fontSize: 15,
     textAlign: 'center',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   scanBtnText: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.ink,
   },
 });

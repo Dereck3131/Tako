@@ -1,68 +1,35 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import Svg, { Rect, Path } from 'react-native-svg';
-import { Colors } from '../constants/theme';
+import { StyleSheet, View } from 'react-native';
+import Svg, { G, Path, Rect } from 'react-native-svg';
+import { Border, Colors, Radii, Shadows } from '../constants/theme';
 
-export const QRCodeVector: React.FC<{ size?: number }> = ({ size = 200 }) => {
+export const QRCodeVector: React.FC<{ size?: number }> = ({ size = 216 }) => {
+  const innerSize = Math.round(size * 0.785);
+
   return (
-    <View style={[styles.card, { width: size, height: size }]}>
-      <Svg width={size - 32} height={size - 32} viewBox="0 0 100 100">
-        {/* Top-Left Finder Bracket (Cobalt Blue) */}
-        <Path
-          d="M 6 24 L 6 10 A 4 4 0 0 1 10 6 L 24 6"
-          stroke={Colors.primary}
-          strokeWidth="4"
-          strokeLinecap="round"
-          fill="none"
-        />
-        {/* Top-Left Inner Square */}
-        <Rect x="14" y="14" width="16" height="16" rx="4" fill={Colors.primary} />
-
-        {/* Top-Right Finder Bracket (Cobalt Blue) */}
-        <Path
-          d="M 76 6 L 90 6 A 4 4 0 0 1 94 10 L 94 24"
-          stroke={Colors.primary}
-          strokeWidth="4"
-          strokeLinecap="round"
-          fill="none"
-        />
-        {/* Top-Right Inner Square */}
-        <Rect x="70" y="14" width="16" height="16" rx="4" fill={Colors.primary} />
-
-        {/* Bottom-Left Finder Bracket (Cobalt Blue) */}
-        <Path
-          d="M 6 76 L 6 90 A 4 4 0 0 0 10 94 L 24 94"
-          stroke={Colors.primary}
-          strokeWidth="4"
-          strokeLinecap="round"
-          fill="none"
-        />
-        {/* Bottom-Left Inner Square */}
-        <Rect x="14" y="70" width="16" height="16" rx="4" fill={Colors.primary} />
-
-        {/* Bottom-Right Corner Accent */}
-        <Path
-          d="M 76 94 L 90 94 A 4 4 0 0 0 94 90 L 94 76"
-          stroke={Colors.primary}
-          strokeWidth="4"
-          strokeLinecap="round"
-          fill="none"
-        />
-
-        {/* Center / Body QR modules */}
-        <Rect x="42" y="10" width="8" height="14" rx="2" fill="#0F172A" />
-        <Rect x="54" y="18" width="10" height="8" rx="2" fill="#0F172A" />
-        <Rect x="38" y="32" width="16" height="8" rx="2" fill="#0F172A" />
-        <Rect x="46" y="44" width="8" height="18" rx="2" fill={Colors.primary} />
-        <Rect x="58" y="34" width="12" height="14" rx="2" fill="#0F172A" />
-        <Rect x="14" y="44" width="14" height="8" rx="2" fill="#0F172A" />
-        <Rect x="18" y="56" width="10" height="8" rx="2" fill="#0F172A" />
-        <Rect x="74" y="46" width="12" height="12" rx="2" fill="#0F172A" />
-        <Rect x="70" y="62" width="14" height="8" rx="2" fill="#0F172A" />
-        <Rect x="36" y="68" width="14" height="10" rx="2" fill="#0F172A" />
-        <Rect x="54" y="72" width="8" height="14" rx="2" fill="#0F172A" />
-        <Rect x="44" y="86" width="18" height="8" rx="2" fill="#0F172A" />
+    <View style={[styles.card, Shadows.card, { width: size, height: size }]}>
+      <Svg width={innerSize} height={innerSize} viewBox="0 0 25 25">
+        <G fill={Colors.ink}>
+          <Path d="M0 0h7v7H0zM18 0h7v7h-7zM0 18h7v7H0z" />
+          <Path d="M9 0h3v1H9zM13 0h2v2h-2zM9 2h1v2H9zM11 3h3v1h-3zM15 4h2v1h-2zM8 5h2v1H8zM11 6h1v3h-1zM13 5h3v2h-3zM0 8h2v1H0zM3 8h3v2H3zM8 8h2v2H8zM15 9h3v1h-3zM19 8h2v2h-2zM22 8h3v1h-3zM0 11h1v2H0zM2 11h3v1H2zM6 10h1v3H6zM9 11h2v2H9zM12 11h3v1h-3zM16 12h1v2h-1zM18 11h3v1h-3zM22 11h2v3h-2zM4 13h2v2H4zM8 14h1v2H8zM10 14h3v1h-3zM14 14h1v3h-1zM19 13h2v2h-2zM9 19h2v1H9zM12 19h1v3h-1zM14 18h3v1h-3zM18 19h1v3h-1zM20 18h2v2h-2zM23 19h2v2h-2zM9 21h2v2H9zM14 21h3v2h-3zM20 22h3v1h-3zM10 24h3v1h-3zM19 24h4v1h-4z" />
+        </G>
+        <G fill="#FFFFFF">
+          <Rect x={1} y={1} width={5} height={5} />
+          <Rect x={19} y={1} width={5} height={5} />
+          <Rect x={1} y={19} width={5} height={5} />
+        </G>
+        <G fill={Colors.primary}>
+          <Rect x={2} y={2} width={3} height={3} />
+          <Rect x={20} y={2} width={3} height={3} />
+          <Rect x={2} y={20} width={3} height={3} />
+        </G>
       </Svg>
+
+      {/* Slim Cobalt Corner Brackets */}
+      <View style={[styles.corner, styles.cornerTL]} />
+      <View style={[styles.corner, styles.cornerTR]} />
+      <View style={[styles.corner, styles.cornerBL]} />
+      <View style={[styles.corner, styles.cornerBR]} />
     </View>
   );
 };
@@ -70,14 +37,44 @@ export const QRCodeVector: React.FC<{ size?: number }> = ({ size = 200 }) => {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 16,
+    borderRadius: Radii.cardLg,
+    borderWidth: Border.width,
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2F65F6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 3,
+  },
+  corner: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderColor: Colors.primary,
+  },
+  cornerTL: {
+    left: -3,
+    top: -3,
+    borderTopWidth: 3.5,
+    borderLeftWidth: 3.5,
+    borderTopLeftRadius: 16,
+  },
+  cornerTR: {
+    right: -3,
+    top: -3,
+    borderTopWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderTopRightRadius: 16,
+  },
+  cornerBL: {
+    left: -3,
+    bottom: -3,
+    borderBottomWidth: 3.5,
+    borderLeftWidth: 3.5,
+    borderBottomLeftRadius: 16,
+  },
+  cornerBR: {
+    right: -3,
+    bottom: -3,
+    borderBottomWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderBottomRightRadius: 16,
   },
 });

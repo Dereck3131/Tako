@@ -19,75 +19,55 @@ export function SettlementHero({
   hasPaid = false,
 }: SettlementHeroProps) {
   return (
-    <View style={[styles.wrapper, Shadows.card]}>
-      {/* Amber hard offset shadow */}
-      <View style={styles.amberShadow} />
+    <View style={[styles.card, Shadows.hero]}>
+      <Text style={styles.label}>Your share to pay</Text>
+      <Text
+        style={styles.amount}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
+        ${(amountCents / 100).toFixed(2)}
+      </Text>
+      <Text style={styles.subtext} numberOfLines={1} ellipsizeMode="tail">
+        Split {splitWays} {splitWays === 1 ? 'way' : 'ways'} · {roomTitle}
+      </Text>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Your share to pay</Text>
-        <Text
-          style={styles.amount}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.7}
-        >
-          ${(amountCents / 100).toFixed(2)}
-        </Text>
-        <Text style={styles.subtext} numberOfLines={1} ellipsizeMode="tail">
-          Split {splitWays} {splitWays === 1 ? 'way' : 'ways'} · {roomTitle}
-        </Text>
-
-        <View style={{ marginTop: 16 }}>
-          <NeoButton
-            label={hasPaid ? 'Paid ✓' : 'Pay Now'}
-            onPress={onPayNow}
-            disabled={hasPaid}
-            backgroundColor={hasPaid ? Colors.mint : Colors.amber}
-            textColor={Colors.ink}
-            shadowColor={Colors.primary}
-            shadowOffset={3}
-            height={58}
-            fontSize={19}
-          />
-        </View>
+      <View style={{ marginTop: 18 }}>
+        <NeoButton
+          label={hasPaid ? 'Paid ✓' : 'Pay Now'}
+          onPress={onPayNow}
+          disabled={hasPaid}
+          backgroundColor={hasPaid ? Colors.mint : Colors.amber}
+          textColor={hasPaid ? Colors.mintText : Colors.ink}
+          height={54}
+          fontSize={16}
+        />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    position: 'relative',
-  },
-  amberShadow: {
-    position: 'absolute',
-    top: 5,
-    left: 5,
-    right: -5,
-    bottom: -5,
-    borderRadius: Radii.cardLg,
-    backgroundColor: Colors.amber,
-  },
   card: {
-    backgroundColor: Colors.ink,
+    backgroundColor: Colors.cardDark,
     borderRadius: Radii.cardLg,
     padding: 22,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '500',
     color: Colors.textOnDarkMuted,
   },
   amount: {
     ...Typography.currencyHero,
-    fontSize: 56,
-    lineHeight: 62,
     color: Colors.textWhite,
-    marginTop: 2,
+    marginTop: 4,
   },
   subtext: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     color: Colors.textOnDarkSubtle,
+    marginTop: 2,
   },
 });

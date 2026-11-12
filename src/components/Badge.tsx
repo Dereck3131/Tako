@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { Border, Colors, Radii } from '../constants/theme';
+import { Colors, Radii, Typography } from '../constants/theme';
 
 export type BadgeVariant = 'emerald' | 'amber' | 'blue' | 'neutral' | 'dark';
 
@@ -16,24 +16,30 @@ export function Badge({ label, variant = 'neutral', style }: BadgeProps) {
       case 'emerald':
         return Colors.mint;
       case 'amber':
-        return Colors.amber;
+        return Colors.amberLight;
       case 'blue':
-        return Colors.primary;
+        return Colors.primaryLight;
       case 'dark':
         return Colors.ink;
       case 'neutral':
       default:
-        return Colors.card;
+        return Colors.surfaceSubtle;
     }
   };
 
   const getTextColor = () => {
     switch (variant) {
+      case 'emerald':
+        return Colors.mintText;
+      case 'amber':
+        return Colors.amberText;
       case 'blue':
+        return Colors.primary;
       case 'dark':
         return Colors.textWhite;
+      case 'neutral':
       default:
-        return Colors.ink;
+        return Colors.textSecondary;
     }
   };
 
@@ -48,18 +54,16 @@ export function Badge({ label, variant = 'neutral', style }: BadgeProps) {
 
 const styles = StyleSheet.create({
   chip: {
-    borderWidth: Border.chipWidth,
-    borderColor: Colors.ink,
     borderRadius: Radii.pill,
     paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingVertical: 4,
     alignSelf: 'flex-start',
     flexShrink: 0,
     maxWidth: '100%',
   },
   label: {
-    fontSize: 11,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums'],
+    ...Typography.tabular,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

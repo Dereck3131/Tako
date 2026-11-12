@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
+  TextInputProps,
   TextStyle,
   View,
   ViewStyle,
@@ -13,6 +15,7 @@ import {
   Motion,
   Radii,
   Shadows,
+  Spacing,
   TouchTarget,
 } from '../constants/theme';
 
@@ -21,10 +24,10 @@ interface NeoCardProps {
   style?: ViewStyle;
   contentStyle?: ViewStyle;
   backgroundColor?: string;
-  shadowColor?: string;
-  shadowOffset?: number;
   borderRadius?: number;
   borderColor?: string;
+  noBorder?: boolean;
+  elevated?: boolean;
   onPress?: () => void;
   accessibilityLabel?: string;
 }
@@ -34,49 +37,30 @@ export function NeoCard({
   style,
   contentStyle,
   backgroundColor = Colors.card,
-  shadowColor = Colors.ink,
-  shadowOffset = 4,
   borderRadius = Radii.card,
-  borderColor = Colors.ink,
+  borderColor = Colors.border,
+  noBorder = false,
+  elevated = false,
   onPress,
   accessibilityLabel,
 }: NeoCardProps) {
   const renderCard = (pressed: boolean) => (
     <View
       style={[
-        styles.wrapper,
-        Shadows.card,
+        elevated ? Shadows.hero : Shadows.card,
+        {
+          backgroundColor,
+          borderRadius,
+          borderColor,
+          borderWidth: noBorder ? 0 : Border.width,
+          overflow: 'hidden',
+        },
         pressed && { transform: [{ scale: Motion.pressScale }] },
         style,
+        contentStyle,
       ]}
     >
-      <View
-        style={[
-          styles.shadow,
-          {
-            backgroundColor: shadowColor,
-            borderRadius,
-            top: shadowOffset,
-            left: shadowOffset,
-            right: -shadowOffset,
-            bottom: -shadowOffset,
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.surface,
-          {
-            backgroundColor,
-            borderRadius,
-            borderColor,
-            borderWidth: Border.width,
-          },
-          contentStyle,
-        ]}
-      >
-        {children}
-      </View>
+      {children}
     </View>
   );
 
@@ -102,8 +86,7 @@ interface NeoButtonProps {
   onPress?: () => void;
   backgroundColor?: string;
   textColor?: string;
-  shadowColor?: string;
-  shadowOffset?: number;
+  borderColor?: string;
   height?: number;
   fontSize?: number;
   style?: ViewStyle;
@@ -118,16 +101,22 @@ export function NeoButton({
   onPress,
   backgroundColor = Colors.primary,
   textColor = Colors.textWhite,
-  shadowColor = Colors.ink,
-  shadowOffset = 3,
-  height = 54,
-  fontSize = 17,
+  borderColor,
+  height = 50,
+  fontSize = 15,
   style,
   textStyle,
   disabled = false,
   accessibilityLabel,
 }: NeoButtonProps) {
   const effectiveHeight = Math.max(height, TouchTarget.minSize);
+  const isLight =
+    backgroundColor === '#FFFFFF' ||
+    backgroundColor === Colors.card ||
+    backgroundColor === Colors.primaryLight ||
+    backgroundColor === Colors.surfaceSubtle;
+  const resolvedBorderColor =
+    borderColor ?? (isLight ? Colors.border : 'transparent');
 
   return (
     <Pressable
@@ -136,59 +125,66 @@ export function NeoButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled }}
-      style={[styles.wrapper, disabled && styles.disabled, style]}
+      style={({ pressed }) => [
+        styles.buttonBase,
+        !isLight && Shadows.button,
+        isLight && Shadows.cardSoft,
+        {
+          height: effectiveHeight,
+          backgroundColor,
+          borderRadius: Radii.pill,
+          borderWidth: resolvedBorderColor === 'transparent' ? 0 : Border.width,
+          borderColor: resolvedBorderColor,
+        },
+        disabled && styles.disabled,
+        pressed && !disabled && { transform: [{ scale: Motion.pressScale }] },
+        style,
+      ]}
     >
-      {({ pressed }) => {
-        const activePress = pressed && !disabled;
-        const shift = activePress ? shadowOffset : 0;
-        return (
-          <View
-            style={[
-              Shadows.button,
-              activePress && { transform: [{ scale: Motion.pressScale }] },
-            ]}
-          >
-            <View
-              style={[
-                styles.shadow,
-                {
-                  backgroundColor: shadowColor,
-                  borderRadius: Radii.pill,
-                  top: shadowOffset,
-                  left: shadowOffset,
-                  right: -shadowOffset,
-                  bottom: -shadowOffset,
-                },
-              ]}
-            />
-            <View
-              style={[
-                styles.buttonSurface,
-                {
-                  height: effectiveHeight,
-                  backgroundColor,
-                  borderRadius: Radii.pill,
-                  transform: [{ translateX: shift }, { translateY: shift }],
-                },
-              ]}
-            >
-              {children ?? (
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.buttonText,
-                    { color: textColor, fontSize },
-                    textStyle,
-                  ]}
-                >
-                  {label}
-                </Text>
-              )}
-            </View>
-          </View>
-        );
-      }}
+      {children ?? (
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.buttonText,
+            { color: textColor, fontSize },
+            textStyle,
+          ]}
+        >
+          {label}
+        </Text>
+      )}
     </Pressable>
+  );
+}
+
+interface NeoInputProps extends TextInputProps {
+  label: string;
+}
+
+export function NeoInput({ label, style, ...props }: NeoInputProps) {
+  const [focused, setFocused] = useState(false);
+
+  return (
+    <View style={styles.inputGroup}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <TextInput
+        {...props}
+        onFocus={(e) => {
+          setFocused(true);
+          props.onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          props.onBlur?.(e);
+        }}
+        placeholderTextColor="#918EB0"
+        style={[
+          styles.input,
+          focused && styles.inputFocused,
+          style,
+        ]}
+      />
+    </View>
   );
 }
 
@@ -202,8 +198,8 @@ export function BrandWordmark({ fontSize = 16, onDark = false }: BrandWordmarkPr
     <Text
       style={{
         fontSize,
-        fontWeight: '800',
-        letterSpacing: fontSize > 30 ? -1.5 : -0.4,
+        fontWeight: '700',
+        letterSpacing: fontSize > 30 ? -1 : -0.3,
         color: onDark ? Colors.textWhite : Colors.ink,
       }}
     >
@@ -216,30 +212,41 @@ export function BrandWordmark({ fontSize = 16, onDark = false }: BrandWordmarkPr
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    position: 'relative',
-  },
   disabled: {
-    opacity: 0.65,
+    opacity: 0.6,
   },
-  shadow: {
-    position: 'absolute',
-  },
-  surface: {
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  buttonSurface: {
-    borderWidth: Border.width,
-    borderColor: Colors.ink,
+  buttonBase: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 18,
-    gap: 8,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.sm,
   },
   buttonText: {
-    fontWeight: '800',
-    letterSpacing: -0.2,
+    fontWeight: '600',
+    letterSpacing: -0.1,
+  },
+  inputGroup: {
+    marginTop: Spacing.md,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.ink,
+    marginBottom: 6,
+  },
+  input: {
+    minHeight: 50,
+    borderWidth: Border.width,
+    borderColor: Colors.border,
+    borderRadius: Radii.md,
+    paddingHorizontal: Spacing.lg,
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.ink,
+    backgroundColor: Colors.card,
+  },
+  inputFocused: {
+    borderColor: Colors.primary,
   },
 });

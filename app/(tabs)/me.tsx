@@ -11,7 +11,6 @@ import { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import {
-  Border,
   Colors,
   Motion,
   Radii,
@@ -22,6 +21,7 @@ import {
 import { DotGridBackground } from '../../src/components/DotGridBackground';
 import { NeoButton, NeoCard } from '../../src/components/NeoUI';
 import { MemojiAvatar } from '../../src/components/MemojiAvatar';
+import { AppIconShowcase } from '../../src/components/AppIconBadge';
 import { StaggerItem } from '../../src/components/MotionPrimitives';
 import { useRoomStore } from '../../src/store/roomStore';
 
@@ -34,8 +34,10 @@ function ChevronRight() {
       height={16}
       viewBox="0 0 24 24"
       fill="none"
-      stroke={Colors.ink}
-      strokeWidth={3}
+      stroke={Colors.textSecondary}
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
       <Path d="m9 5 7 7-7 7" />
     </Svg>
@@ -63,7 +65,7 @@ export default function MeScreen() {
               borderRadius={Radii.card}
               contentStyle={styles.profileContent}
             >
-              <MemojiAvatar id={selectedAnimal} size={88} />
+              <MemojiAvatar id={selectedAnimal} size={84} />
               <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">
                 Alex Santos
               </Text>
@@ -74,9 +76,9 @@ export default function MeScreen() {
                 <NeoButton
                   label="Edit profile"
                   onPress={() => {}}
-                  backgroundColor="#FFFFFF"
+                  backgroundColor={Colors.surfaceSubtle}
                   textColor={Colors.ink}
-                  shadowOffset={2}
+                  borderColor="transparent"
                   height={TouchTarget.minSize}
                   fontSize={14}
                 />
@@ -115,7 +117,7 @@ export default function MeScreen() {
                         pressed && { transform: [{ scale: Motion.pressScale }] },
                       ]}
                     >
-                      <MemojiAvatar id={animal} size={44} />
+                      <MemojiAvatar id={animal} size={42} />
                     </Pressable>
                   );
                 })}
@@ -204,12 +206,24 @@ export default function MeScreen() {
             </NeoCard>
           </StaggerItem>
 
+          {/* Screen 11: App Icon Showcase */}
+          <StaggerItem index={3} distance={8}>
+            <NeoCard
+              style={{ marginTop: Spacing.lg }}
+              borderRadius={Radii.card}
+              contentStyle={styles.animalCardContent}
+            >
+              <Text style={styles.sectionCap}>APP ICON</Text>
+              <AppIconShowcase />
+            </NeoCard>
+          </StaggerItem>
+
           {/* Log out */}
-          <View style={{ marginTop: 18 }}>
+          <View style={{ marginTop: Spacing.xl }}>
             <NeoButton
               label="Log out"
               onPress={() => router.replace('/login' as never)}
-              backgroundColor="#FFFFFF"
+              backgroundColor={Colors.card}
               textColor={Colors.danger}
               height={48}
               fontSize={15}
@@ -234,12 +248,12 @@ const styles = StyleSheet.create({
     ...Typography.screenTitle,
   },
   profileContent: {
-    padding: 18,
+    padding: Spacing.xl,
     alignItems: 'center',
   },
   profileName: {
-    fontSize: 23,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     color: Colors.ink,
     marginTop: Spacing.sm,
     maxWidth: '100%',
@@ -247,7 +261,6 @@ const styles = StyleSheet.create({
   profileEmail: {
     ...Typography.caption,
     fontSize: 13,
-    fontWeight: '600',
     marginTop: 2,
     maxWidth: '100%',
   },
@@ -257,8 +270,7 @@ const styles = StyleSheet.create({
   },
   sectionCap: {
     ...Typography.micro,
-    fontSize: 12,
-    color: Colors.ink,
+    color: Colors.textSecondary,
     marginBottom: Spacing.sm,
   },
   animalRow: {
@@ -271,19 +283,19 @@ const styles = StyleSheet.create({
   animalRing: {
     minWidth: TouchTarget.minSize,
     minHeight: TouchTarget.minSize,
-    padding: 3,
+    padding: 4,
     borderRadius: Radii.pill,
-    borderWidth: Border.width,
+    borderWidth: 2,
     borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
   animalRingSelected: {
-    backgroundColor: Colors.amber,
-    borderColor: Colors.ink,
+    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.primary,
   },
   menuCardContent: {
-    paddingHorizontal: 18,
+    paddingHorizontal: Spacing.lg,
   },
   menuRow: {
     minHeight: 52,
@@ -293,15 +305,14 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   menuRowBorder: {
-    borderTopWidth: 2,
-    borderStyle: 'dashed',
-    borderTopColor: Colors.ink,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
   },
   menuLabel: {
     flex: 1,
     minWidth: 0,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.ink,
   },
   menuRight: {
@@ -312,7 +323,7 @@ const styles = StyleSheet.create({
   },
   menuValue: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: Colors.textSecondary,
   },
 });

@@ -27,7 +27,7 @@ import { useRoomStore } from '../src/store/roomStore';
 
 export default function SettleUpScreen() {
   const router = useRouter();
-  const { currentRoom, members, markMemberPaid } = useRoomStore();
+  const { currentRoom, markMemberPaid } = useRoomStore();
   const [hasPaidSelf, setHasPaidSelf] = useState(false);
 
   const handlePayNow = () => {
@@ -53,8 +53,7 @@ export default function SettleUpScreen() {
               <NeoCard
                 onPress={() => router.back()}
                 accessibilityLabel="Back"
-                borderRadius={Radii.md}
-                shadowOffset={3}
+                borderRadius={Radii.pill}
                 contentStyle={styles.backBtnBox}
               >
                 <Svg
@@ -63,7 +62,9 @@ export default function SettleUpScreen() {
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke={Colors.ink}
-                  strokeWidth={3}
+                  strokeWidth={2.3}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
                   <Path d="m15 5-7 7 7 7" />
                 </Svg>
@@ -72,13 +73,13 @@ export default function SettleUpScreen() {
                 Settle up
               </Text>
             </View>
-            <Badge label={`${members.length} in the room`} variant="emerald" />
+            <Badge label="4 in the room" variant="emerald" />
           </View>
 
           {/* YOUR PLATE Card */}
           <StaggerItem index={0} distance={8}>
             <NeoCard
-              style={{ marginTop: 18 }}
+              style={{ marginTop: Spacing.lg }}
               borderRadius={Radii.card}
               contentStyle={styles.plateContent}
             >
@@ -162,11 +163,11 @@ export default function SettleUpScreen() {
             </NeoCard>
           </StaggerItem>
 
-          {/* Peeking Tako Mascot + Dark Settlement Hero */}
+          {/* Peeking Tako Mascot + Dark Navy Settlement Hero */}
           <StaggerItem index={2} distance={10}>
             <View style={styles.heroWrap}>
               <View style={styles.takoPeek} pointerEvents="none">
-                <TakoMascot size={98} />
+                <TakoMascot size={92} />
               </View>
               <SettlementHero
                 amountCents={5250}
@@ -212,22 +213,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.6,
-    color: Colors.ink,
+    ...Typography.screenTitle,
     flex: 1,
     minWidth: 0,
   },
   plateContent: {
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 6,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: 8,
   },
   sectionLabel: {
     ...Typography.micro,
-    fontSize: 12,
-    color: Colors.ink,
+    color: Colors.textSecondary,
     marginBottom: 6,
   },
   plateRow: {
@@ -235,40 +232,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: Spacing.md,
-    paddingVertical: 9,
-    borderTopWidth: 2,
-    borderStyle: 'dashed',
-    borderTopColor: Colors.ink,
+    paddingVertical: 11,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
   },
   plateItem: {
     flex: 1,
     minWidth: 0,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.ink,
   },
   platePct: {
-    fontWeight: '600',
+    fontWeight: '500',
     color: Colors.textSecondary,
     fontSize: 12,
     fontVariant: ['tabular-nums'],
   },
   platePrice: {
     ...Typography.currencyMd,
-    fontSize: 17,
+    fontSize: 16,
     color: Colors.ink,
     flexShrink: 0,
   },
   roomContent: {
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 8,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: 10,
   },
   roomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   avatarShrink: {
     flexShrink: 0,
@@ -277,17 +273,17 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.ink,
   },
   heroWrap: {
-    marginTop: 54,
+    marginTop: 56,
     position: 'relative',
   },
   takoPeek: {
     position: 'absolute',
-    right: 24,
-    top: -68,
-    zIndex: 1,
+    right: 20,
+    top: -58,
+    zIndex: 0,
   },
 });

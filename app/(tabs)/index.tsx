@@ -34,7 +34,7 @@ export default function RoomHomeScreen() {
   const { currentRoom, members, items, selectedAnimal } = useRoomStore();
 
   const totalSpendCents = 31000;
-  const memberCount = members.length;
+  const memberCount = 4;
 
   const triggerHaptic = () => {
     try {
@@ -53,7 +53,7 @@ export default function RoomHomeScreen() {
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header with Tako Mascot */}
+          {/* Header */}
           <View style={styles.headerRow}>
             <View style={styles.headerTitleCol}>
               <Text style={styles.roomTitle} numberOfLines={2}>
@@ -62,83 +62,87 @@ export default function RoomHomeScreen() {
               <Badge
                 label={`${memberCount} in the room`}
                 variant="emerald"
-                style={{ marginTop: Spacing.sm }}
+                style={{ marginTop: Spacing.xs }}
               />
-            </View>
-            <View style={styles.takoCorner}>
-              <TakoMascot size={104} />
             </View>
           </View>
 
-          {/* Blue Hero Spend Card with subtle signature shader gradient */}
+          {/* Hero Spend Card with Tako peeking behind */}
           <StaggerItem index={0} distance={8}>
-            <NeoCard
-              style={{ marginTop: Spacing.sm }}
-              backgroundColor={Colors.primary}
-              borderRadius={Radii.cardLg}
-              contentStyle={styles.heroCardContent}
-            >
-              <HeroShaderBackground />
-              <View style={styles.heroTopRow}>
-                <View style={styles.heroAmountCol}>
-                  <Text style={styles.heroLabel}>Total spend</Text>
-                  <Text
-                    style={styles.heroAmount}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.65}
-                  >
-                    ${(totalSpendCents / 100).toFixed(2)}
-                  </Text>
-                </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Settle up"
-                  style={({ pressed }) => [
-                    styles.settlePill,
-                    pressed && { transform: [{ scale: Motion.pressScale }] },
-                  ]}
-                  onPress={() => {
-                    triggerHaptic();
-                    router.push('/settle');
-                  }}
-                >
-                  <Text style={styles.settlePillText}>Settle up →</Text>
-                </Pressable>
+            <View style={styles.heroWrap}>
+              <View style={styles.takoPeekBehind} pointerEvents="none">
+                <TakoMascot size={92} />
               </View>
-
-              <View style={styles.splitWithRow}>
-                <Text style={styles.splitWithLabel}>Split with</Text>
-                <View style={styles.avatarStack}>
-                  {(
-                    [selectedAnimal, 'mia', 'jonas', 'aly', 'ken'] as MemojiId[]
-                  ).map((id, idx) => (
-                    <View
-                      key={`${id}-${idx}`}
-                      style={{ marginLeft: idx > 0 ? -8 : 0, zIndex: 10 - idx }}
+              <NeoCard
+                noBorder
+                elevated
+                backgroundColor={Colors.primary}
+                borderRadius={Radii.cardLg}
+                contentStyle={styles.heroCardContent}
+              >
+                <HeroShaderBackground />
+                <View style={styles.heroTopRow}>
+                  <View style={styles.heroAmountCol}>
+                    <Text style={styles.heroLabel}>Total spend</Text>
+                    <Text
+                      style={styles.heroAmount}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.65}
                     >
-                      <MemojiAvatar id={id} size={32} />
-                    </View>
-                  ))}
+                      ${(totalSpendCents / 100).toFixed(2)}
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Settle up"
+                    style={({ pressed }) => [
+                      styles.settlePill,
+                      pressed && { transform: [{ scale: Motion.pressScale }] },
+                    ]}
+                    onPress={() => {
+                      triggerHaptic();
+                      router.push('/settle');
+                    }}
+                  >
+                    <Text style={styles.settlePillText}>Settle up →</Text>
+                  </Pressable>
                 </View>
-              </View>
 
-              <View style={{ marginTop: Spacing.md }}>
-                <NeoButton
-                  onPress={() => {
-                    triggerHaptic();
-                    router.push('/join');
-                  }}
-                  backgroundColor={Colors.amber}
-                  textColor={Colors.ink}
-                  height={46}
-                  fontSize={15}
-                >
-                  <QrSmallIcon size={18} color={Colors.ink} strokeWidth={2.4} />
-                  <Text style={styles.inviteBtnText}>Invite with QR</Text>
-                </NeoButton>
-              </View>
-            </NeoCard>
+                <View style={styles.splitWithRow}>
+                  <Text style={styles.splitWithLabel}>Split with</Text>
+                  <View style={styles.avatarStack}>
+                    {(
+                      [selectedAnimal, 'mia', 'jonas', 'aly'] as MemojiId[]
+                    ).map((id, idx) => (
+                      <View
+                        key={`${id}-${idx}`}
+                        style={{ marginLeft: idx > 0 ? -8 : 0, zIndex: 10 - idx }}
+                      >
+                        <MemojiAvatar id={id} size={30} />
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={{ marginTop: Spacing.lg }}>
+                  <NeoButton
+                    onPress={() => {
+                      triggerHaptic();
+                      router.push('/join');
+                    }}
+                    backgroundColor="#FFFFFF"
+                    textColor={Colors.ink}
+                    borderColor="transparent"
+                    height={46}
+                    fontSize={15}
+                  >
+                    <QrSmallIcon size={18} color={Colors.primary} strokeWidth={2.2} />
+                    <Text style={styles.inviteBtnText}>Invite with QR</Text>
+                  </NeoButton>
+                </View>
+              </NeoCard>
+            </View>
           </StaggerItem>
 
           {/* Who's here */}
@@ -195,7 +199,7 @@ export default function RoomHomeScreen() {
                                 <Badge
                                   label="NEW"
                                   variant="amber"
-                                  style={{ marginTop: 3 }}
+                                  style={{ marginTop: 4 }}
                                 />
                               )}
                             </View>
@@ -246,10 +250,9 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 72,
-    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
   headerTitleCol: {
     flex: 1,
@@ -257,17 +260,21 @@ const styles = StyleSheet.create({
   },
   roomTitle: {
     ...Typography.screenTitle,
-    fontSize: 24,
-    marginTop: Spacing.xs,
   },
-  takoCorner: {
-    marginTop: -12,
-    marginRight: -6,
-    flexShrink: 0,
+  heroWrap: {
+    position: 'relative',
+    marginTop: 22,
+  },
+  takoPeekBehind: {
+    position: 'absolute',
+    right: 18,
+    top: -54,
+    zIndex: 0,
   },
   heroCardContent: {
     padding: Spacing.xl,
     position: 'relative',
+    zIndex: 1,
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -281,29 +288,27 @@ const styles = StyleSheet.create({
   },
   heroLabel: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.85)',
   },
   heroAmount: {
     ...Typography.currencyHero,
-    fontSize: 52,
-    lineHeight: 56,
     color: '#FFFFFF',
     marginTop: 2,
   },
   settlePill: {
-    backgroundColor: Colors.ink,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     borderRadius: Radii.pill,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: 14,
     minHeight: TouchTarget.minSize,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
   },
   settlePillText: {
-    color: Colors.amber,
+    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   splitWithRow: {
     flexDirection: 'row',
@@ -313,8 +318,8 @@ const styles = StyleSheet.create({
   },
   splitWithLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.85)',
   },
   avatarStack: {
     flexDirection: 'row',
@@ -322,7 +327,7 @@ const styles = StyleSheet.create({
   },
   inviteBtnText: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.ink,
   },
   sectionTitle: {
@@ -344,7 +349,7 @@ const styles = StyleSheet.create({
   },
   ticketTop: {
     paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
+    paddingVertical: 14,
   },
   ticketBottom: {
     paddingHorizontal: Spacing.xl,
@@ -369,13 +374,10 @@ const styles = StyleSheet.create({
   },
   itemMeta: {
     ...Typography.caption,
-    fontWeight: '600',
-    marginTop: 2,
+    marginTop: 3,
   },
   itemPrice: {
     ...Typography.currencyMd,
-    fontSize: 22,
-    lineHeight: 26,
     color: Colors.ink,
   },
   ticketBottomRow: {
@@ -385,7 +387,7 @@ const styles = StyleSheet.create({
   },
   splitWaysText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: Colors.ink,
+    fontWeight: '500',
+    color: Colors.textSecondary,
   },
 });

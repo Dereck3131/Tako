@@ -9,10 +9,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
-  Border,
   Colors,
   Motion,
   Radii,
+  Shadows,
   Spacing,
   TouchTarget,
   Typography,
@@ -26,19 +26,19 @@ import { StaggerItem } from '../src/components/MotionPrimitives';
 
 const SLIDES = [
   {
-    title: 'Split the bill,\nlive together',
+    title: 'Split live together',
     subtitle:
       'Everyone joins by QR, claims their items and pays their share in one shared room.',
     cta: 'Next',
   },
   {
-    title: 'Claim what\nyou ate',
+    title: 'Claim what you ate',
     subtitle:
-      'Tap your items and drag the slider to set your share. Everyone sees it instantly.',
+      'Tap your items and drag the slider to set your share. Everyone sees it update live.',
     cta: 'Next',
   },
   {
-    title: 'Pay your share\nin one tap',
+    title: 'Pay in one tap',
     subtitle:
       'See exactly what you owe and watch friends settle up in real time.',
     cta: 'Get started',
@@ -66,7 +66,7 @@ export default function OnboardingScreen() {
         >
           {/* Top Bar */}
           <View style={styles.topBar}>
-            <BrandWordmark fontSize={16} />
+            <BrandWordmark fontSize={17} />
             {slide < 2 ? (
               <Pressable
                 accessibilityRole="button"
@@ -90,12 +90,12 @@ export default function OnboardingScreen() {
               {slide === 0 && (
                 <View style={{ width: '100%' }}>
                   <View style={{ alignItems: 'center', marginTop: 8 }}>
-                    <TakoMascot size={196} />
+                    <TakoMascot size={172} />
                   </View>
 
                   <NeoCard
-                    style={{ marginTop: 8 }}
-                    borderRadius={Radii.lg}
+                    style={{ marginTop: 12 }}
+                    borderRadius={Radii.card}
                     contentStyle={styles.intro1ItemRow}
                   >
                     <View style={styles.flexMin0}>
@@ -113,7 +113,7 @@ export default function OnboardingScreen() {
 
                   <NeoCard
                     style={{ marginTop: Spacing.md }}
-                    borderRadius={Radii.md}
+                    borderRadius={Radii.card}
                     contentStyle={styles.intro1JoinRow}
                   >
                     <MemojiAvatar id="aly" size={34} />
@@ -128,11 +128,11 @@ export default function OnboardingScreen() {
               {slide === 1 && (
                 <View style={{ width: '100%' }}>
                   <View style={{ alignItems: 'center', marginTop: 8 }}>
-                    <TakoMascot size={150} />
+                    <TakoMascot size={140} />
                   </View>
 
                   <NeoCard
-                    style={{ marginTop: 6 }}
+                    style={{ marginTop: 10 }}
                     borderRadius={Radii.pill}
                     contentStyle={styles.intro2PillRow}
                   >
@@ -145,9 +145,9 @@ export default function OnboardingScreen() {
                   </NeoCard>
 
                   <NeoCard
-                    style={{ marginTop: 14 }}
-                    backgroundColor={Colors.amberTint}
-                    borderRadius={Radii.lg}
+                    style={{ marginTop: 12 }}
+                    backgroundColor={Colors.card}
+                    borderRadius={Radii.card}
                     contentStyle={styles.intro2SliderCard}
                   >
                     <View style={styles.rowGap10}>
@@ -155,7 +155,7 @@ export default function OnboardingScreen() {
                       <Text style={[styles.cardTitle, { flex: 1, minWidth: 0 }]} numberOfLines={1}>
                         You
                       </Text>
-                      <Badge label="25%" variant="amber" />
+                      <Badge label="25%" variant="blue" />
                       <Text style={styles.sliderAmount} numberOfLines={1}>
                         $30.00
                       </Text>
@@ -164,7 +164,7 @@ export default function OnboardingScreen() {
                       <View style={styles.sliderTrack}>
                         <View style={styles.sliderFill} />
                       </View>
-                      <View style={styles.sliderThumb} />
+                      <View style={[styles.sliderThumb, Shadows.cardSoft]} />
                     </View>
                   </NeoCard>
                 </View>
@@ -173,33 +173,29 @@ export default function OnboardingScreen() {
               {slide === 2 && (
                 <View style={{ width: '100%' }}>
                   <View style={{ alignItems: 'center', marginTop: 8 }}>
-                    <TakoMascot size={150} />
+                    <TakoMascot size={140} />
                   </View>
 
-                  <View style={styles.darkWrap}>
-                    <View style={styles.darkAmberShadow} />
-                    <View style={styles.darkCard}>
-                      <Text style={styles.darkLabel}>Your share to pay</Text>
-                      <Text style={styles.darkAmount} numberOfLines={1}>
-                        $52.50
-                      </Text>
-                      <View style={{ marginTop: 10 }}>
-                        <NeoButton
-                          label="Pay Now"
-                          onPress={() => router.replace('/(tabs)')}
-                          backgroundColor={Colors.amber}
-                          textColor={Colors.ink}
-                          shadowColor={Colors.primary}
-                          height={46}
-                          fontSize={16}
-                        />
-                      </View>
+                  <View style={[styles.darkCard, Shadows.hero]}>
+                    <Text style={styles.darkLabel}>Your share to pay</Text>
+                    <Text style={styles.darkAmount} numberOfLines={1}>
+                      $52.50
+                    </Text>
+                    <View style={{ marginTop: 12 }}>
+                      <NeoButton
+                        label="Pay Now"
+                        onPress={() => router.replace('/(tabs)')}
+                        backgroundColor={Colors.amber}
+                        textColor={Colors.ink}
+                        height={46}
+                        fontSize={15}
+                      />
                     </View>
                   </View>
 
                   <NeoCard
-                    style={{ marginTop: 14 }}
-                    borderRadius={Radii.md}
+                    style={{ marginTop: 12 }}
+                    borderRadius={Radii.card}
                     contentStyle={styles.intro1JoinRow}
                   >
                     <MemojiAvatar id="mia" size={34} />
@@ -247,8 +243,8 @@ export default function OnboardingScreen() {
                 onPress={handleNext}
                 backgroundColor={Colors.primary}
                 textColor={Colors.textWhite}
-                height={54}
-                fontSize={17}
+                height={52}
+                fontSize={16}
               />
             </View>
 
@@ -275,7 +271,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.xxl,
+    paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.xxl,
   },
@@ -296,11 +292,11 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontSize: 14,
-    fontWeight: '800',
-    color: Colors.ink,
+    fontWeight: '600',
+    color: Colors.textSecondary,
   },
   illustrationArea: {
-    minHeight: 340,
+    minHeight: 330,
     justifyContent: 'flex-start',
   },
   flexMin0: {
@@ -313,14 +309,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingVertical: 14,
   },
   intro1JoinRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 12,
   },
   intro2PillRow: {
     flexDirection: 'row',
@@ -330,9 +326,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   intro2SliderCard: {
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 14,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 14,
+    paddingBottom: 16,
   },
   rowGap10: {
     flexDirection: 'row',
@@ -340,40 +336,32 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   cardTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: Colors.ink,
+    ...Typography.cardTitle,
   },
   cardSub: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
+    ...Typography.caption,
     marginTop: 2,
   },
   cardPrice: {
     ...Typography.currencyMd,
-    fontSize: 22,
     color: Colors.ink,
     flexShrink: 0,
   },
   sliderAmount: {
     ...Typography.currencyMd,
-    fontSize: 20,
     color: Colors.ink,
     flexShrink: 0,
   },
   sliderTrackWrap: {
     position: 'relative',
-    height: 14,
-    marginTop: 10,
+    height: 20,
+    marginTop: 12,
     justifyContent: 'center',
   },
   sliderTrack: {
-    height: 14,
+    height: 4,
     borderRadius: Radii.pill,
-    borderWidth: Border.width,
-    borderColor: Colors.ink,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surfaceSubtle,
     overflow: 'hidden',
   },
   sliderFill: {
@@ -384,60 +372,48 @@ const styles = StyleSheet.create({
   sliderThumb: {
     position: 'absolute',
     left: '25%',
-    marginLeft: -11,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: Colors.amber,
-    borderWidth: Border.width,
-    borderColor: Colors.ink,
-  },
-  darkWrap: {
-    position: 'relative',
-    marginTop: 4,
-  },
-  darkAmberShadow: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    right: -4,
-    bottom: -4,
-    borderRadius: Radii.cardLg,
-    backgroundColor: Colors.amber,
+    marginLeft: -10,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: Colors.primary,
   },
   darkCard: {
-    backgroundColor: Colors.ink,
+    backgroundColor: Colors.cardDark,
     borderRadius: Radii.cardLg,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
+    marginTop: 8,
   },
   darkLabel: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: Colors.textOnDarkMuted,
   },
   darkAmount: {
     ...Typography.currencyHero,
-    fontSize: 44,
-    lineHeight: 50,
+    fontSize: 40,
+    lineHeight: 46,
     color: '#FFFFFF',
+    marginTop: 2,
   },
   copyArea: {
-    marginTop: Spacing.md,
+    marginTop: Spacing.lg,
   },
   headline: {
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -1,
-    lineHeight: 36,
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.7,
+    lineHeight: 34,
     color: Colors.ink,
   },
   subtitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    lineHeight: 23,
-    color: Colors.textBody,
-    marginTop: 10,
+    ...Typography.body,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: Spacing.sm,
   },
   bottomArea: {
     marginTop: 'auto',
@@ -455,18 +431,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pillDot: {
-    height: 12,
-    borderRadius: 6,
-    borderWidth: Border.width,
-    borderColor: Colors.ink,
+    height: 8,
+    borderRadius: 4,
   },
   pillDotActive: {
-    width: 30,
+    width: 24,
     backgroundColor: Colors.primary,
   },
   pillDotInactive: {
-    width: 12,
-    backgroundColor: '#FFFFFF',
+    width: 8,
+    backgroundColor: Colors.border,
   },
   loginLinkWrap: {
     alignItems: 'center',
@@ -476,7 +450,7 @@ const styles = StyleSheet.create({
   },
   loginLinkText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.primary,
   },
 });

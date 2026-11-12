@@ -9,15 +9,18 @@ interface RoomState {
   shares: Record<string, ItemShare[]>; // itemId -> ItemShare[]
   activities: ActivityEvent[];
   myUserId: string;
+  selectedAnimal: 'bear' | 'fox' | 'panda' | 'frog' | 'cat';
 
   // Actions
   updateSliderShare: (itemId: string, memberId: string, targetBps: number) => void;
   markMemberPaid: (memberId: string) => void;
   addItem: (title: string, priceCents: number, quantity?: number) => void;
+  setSelectedAnimal: (animal: 'bear' | 'fox' | 'panda' | 'frog' | 'cat') => void;
 }
 
 export const useRoomStore = create<RoomState>((set, get) => ({
   myUserId: 'user-you',
+  selectedAnimal: 'bear',
   currentRoom: {
     id: 'room-0412',
     title: 'Friday Night Dinner',
@@ -290,5 +293,9 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     set({
       items: [newItem, ...items],
     });
+  },
+
+  setSelectedAnimal: (animal) => {
+    set({ selectedAnimal: animal });
   },
 }));

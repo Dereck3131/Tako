@@ -11,7 +11,13 @@ export default function Root({ children }: PropsWithChildren) {
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
-        <meta name="theme-color" content="#FBF3E4" />
+        <meta name="theme-color" content="#F6F7FB" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
@@ -19,7 +25,8 @@ export default function Root({ children }: PropsWithChildren) {
               html, body {
                 height: 100dvh;
                 min-height: 100dvh;
-                background-color: #FBF3E4;
+                background-color: #F6F7FB;
+                font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                 overscroll-behavior: none;
                 -webkit-tap-highlight-color: transparent;
                 -webkit-font-smoothing: antialiased;

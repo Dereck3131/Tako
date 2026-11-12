@@ -8,11 +8,13 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="signup" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="join"
           options={{
-            presentation: 'modal',
+            presentation: 'transparentModal',
             animation: 'slide_from_bottom',
           }}
         />

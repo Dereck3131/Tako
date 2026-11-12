@@ -52,21 +52,21 @@ function NeoTabBar({ state, descriptors, navigation }: NeoTabBarProps) {
             }
           };
 
-          const iconColor = isFocused ? Colors.textWhite : Colors.ink;
+          const iconColor = isFocused ? Colors.primary : Colors.textSecondary;
 
           const renderIcon = () => {
             switch (route.name) {
               case 'index':
-                return <HomeIcon size={22} color={iconColor} strokeWidth={2.3} />;
+                return <HomeIcon size={21} color={iconColor} strokeWidth={2.1} />;
               case 'items':
-                return <ListIcon size={22} color={iconColor} strokeWidth={2.3} />;
+                return <ListIcon size={21} color={iconColor} strokeWidth={2.1} />;
               case 'activity':
                 return (
-                  <ActivityIcon size={22} color={iconColor} strokeWidth={2.3} />
+                  <ActivityIcon size={21} color={iconColor} strokeWidth={2.1} />
                 );
               case 'me':
               default:
-                return <UserIcon size={22} color={iconColor} strokeWidth={2.3} />;
+                return <UserIcon size={21} color={iconColor} strokeWidth={2.1} />;
             }
           };
 
@@ -88,7 +88,7 @@ function NeoTabBar({ state, descriptors, navigation }: NeoTabBarProps) {
                 numberOfLines={1}
                 style={[
                   styles.tabLabel,
-                  { color: isFocused ? Colors.textWhite : Colors.ink },
+                  { color: isFocused ? Colors.primary : Colors.textSecondary },
                 ]}
               >
                 {label}
@@ -117,37 +117,34 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   safeWrap: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderTopWidth: Border.width,
-    borderTopColor: Colors.ink,
+    borderTopColor: Colors.border,
   },
   bar: {
-    height: 76,
-    backgroundColor: '#FFFFFF',
+    height: 70,
+    backgroundColor: Colors.card,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
   },
   tabPill: {
     minHeight: TouchTarget.minSize,
-    minWidth: 64,
+    minWidth: 68,
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: 3,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: Radii.md,
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
   tabPillActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.ink,
+    backgroundColor: Colors.primaryLight,
   },
   tabLabel: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
   },
 });

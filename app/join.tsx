@@ -9,17 +9,15 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
-  Border,
   Colors,
   Motion,
   Radii,
+  Shadows,
   Spacing,
   Typography,
 } from '../src/constants/theme';
-import { TakoMascot } from '../src/components/TakoMascot';
 import { NeoButton, NeoCard } from '../src/components/NeoUI';
 import { Badge } from '../src/components/Badge';
 import { MemojiAvatar } from '../src/components/MemojiAvatar';
@@ -53,8 +51,7 @@ export default function JoinQRModal() {
 
   return (
     <View style={styles.root}>
-      {/* Blue Header Band + Dimmed Backdrop */}
-      <View style={styles.blueTopBand} />
+      {/* Dimmed Backdrop */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Close join modal"
@@ -62,23 +59,18 @@ export default function JoinQRModal() {
         onPress={() => router.back()}
       />
 
-      {/* Centered Tako Mascot */}
-      <SafeAreaView pointerEvents="none" style={styles.takoSafe}>
-        <View style={styles.takoCenter}>
-          <TakoMascot size={104} />
-        </View>
-      </SafeAreaView>
-
       {/* Bottom Sheet */}
       <Animated.View
         style={[
           styles.sheet,
+          Shadows.hero,
           {
             opacity: sheetAnim,
             transform: [{ translateY: sheetTranslateY }],
           },
         ]}
       >
+        <View style={styles.handle} />
         <ScrollView
           contentContainerStyle={styles.sheetScroll}
           showsVerticalScrollIndicator={false}
@@ -86,7 +78,7 @@ export default function JoinQRModal() {
           <Text style={styles.title}>{'Point your phone\nto join this bill'}</Text>
 
           <View style={styles.qrCenter}>
-            <QRCodeVector size={216} />
+            <QRCodeVector size={208} />
           </View>
 
           {/* PIN Digits */}
@@ -96,7 +88,6 @@ export default function JoinQRModal() {
               <NeoCard
                 key={idx}
                 borderRadius={Radii.md}
-                shadowOffset={3}
                 contentStyle={styles.pinDigitBox}
               >
                 <Text style={styles.pinDigitText}>{digit}</Text>
@@ -157,7 +148,7 @@ export default function JoinQRModal() {
             </View>
           </View>
 
-          <View style={{ marginTop: 18 }}>
+          <View style={{ marginTop: Spacing.xl }}>
             <NeoButton
               label="Done"
               onPress={() => router.back()}
@@ -176,58 +167,39 @@ export default function JoinQRModal() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
-  blueTopBand: {
-    height: 200,
-    backgroundColor: Colors.primary,
-    borderBottomWidth: Border.width,
-    borderBottomColor: Colors.ink,
+    justifyContent: 'flex-end',
   },
   dimOverlay: {
     ...StyleSheet.flatten(StyleSheet.absoluteFill),
-    backgroundColor: 'rgba(20, 18, 58, 0.55)',
-  },
-  takoSafe: {
-    position: 'absolute',
-    top: 10,
-    left: 0,
-    right: 0,
-    zIndex: 2,
-  },
-  takoCenter: {
-    alignItems: 'center',
+    backgroundColor: 'rgba(20, 18, 58, 0.35)',
   },
   sheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    top: 118,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.card,
     borderTopLeftRadius: Radii.sheet,
     borderTopRightRadius: Radii.sheet,
-    borderWidth: Border.width,
-    borderBottomWidth: 0,
-    borderColor: Colors.ink,
-    zIndex: 3,
+    maxHeight: '90%',
+    paddingTop: Spacing.sm,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    alignSelf: 'center',
+    marginBottom: Spacing.sm,
   },
   sheetScroll: {
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.xl,
+    paddingTop: Spacing.sm,
     paddingBottom: Spacing.xxxl,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.8,
-    lineHeight: 30,
-    color: Colors.ink,
+    ...Typography.screenTitle,
     textAlign: 'center',
   },
   qrCenter: {
     alignItems: 'center',
-    marginTop: 14,
+    marginTop: Spacing.lg,
   },
   pinRow: {
     flexDirection: 'row',
@@ -235,45 +207,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    marginTop: 18,
+    marginTop: Spacing.xl,
   },
   pinLabel: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: Colors.ink,
-    marginRight: 2,
+    ...Typography.micro,
+    color: Colors.textSecondary,
+    marginRight: 4,
   },
   pinDigitBox: {
     width: 48,
-    height: 56,
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pinDigitText: {
     ...Typography.tabular,
-    fontSize: 30,
-    fontWeight: '900',
+    fontSize: 26,
+    fontWeight: '700',
     color: Colors.ink,
   },
   guestSection: {
-    marginTop: 18,
+    marginTop: Spacing.xl,
   },
   guestHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: Spacing.sm,
   },
   guestSectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.ink,
+    ...Typography.sectionTitle,
   },
   guestRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   avatarShrink: {
     flexShrink: 0,
@@ -284,12 +253,12 @@ const styles = StyleSheet.create({
   },
   guestName: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.ink,
   },
   guestSub: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     color: Colors.textSecondary,
   },
 });

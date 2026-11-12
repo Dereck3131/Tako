@@ -4,22 +4,21 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
-  Border,
   Colors,
   Motion,
   Radii,
   Spacing,
   TouchTarget,
+  Typography,
 } from '../src/constants/theme';
 import { DotGridBackground } from '../src/components/DotGridBackground';
 import { TakoMascot } from '../src/components/TakoMascot';
-import { NeoButton, NeoCard } from '../src/components/NeoUI';
+import { BrandWordmark, NeoButton, NeoCard, NeoInput } from '../src/components/NeoUI';
 import { StaggerItem } from '../src/components/MotionPrimitives';
 
 export default function LoginScreen() {
@@ -29,9 +28,6 @@ export default function LoginScreen() {
 
   return (
     <DotGridBackground>
-      {/* Top Cobalt Blue Header Band */}
-      <View style={styles.topBand} />
-
       <SafeAreaView style={styles.safeArea}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -39,102 +35,95 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.headerRow}>
-            <Text style={styles.brandText}>TabTogether</Text>
+            <BrandWordmark fontSize={18} />
           </View>
 
-          {/* Peeking Tako Mascot */}
-          <View style={styles.takoPeek} pointerEvents="none">
-            <TakoMascot size={92} />
-          </View>
-
-          {/* Main Login Card */}
           <StaggerItem index={0} distance={10}>
-            <NeoCard
-              style={styles.cardMargin}
-              borderRadius={Radii.cardLg}
-              contentStyle={styles.cardContent}
-            >
-              <Text style={styles.title}>Welcome back</Text>
-              <Text style={styles.subtitle}>Log in to rejoin your rooms.</Text>
+            <View style={styles.cardWrap}>
+              {/* Small Tako peeking over the card */}
+              <View style={styles.takoPeek} pointerEvents="none">
+                <TakoMascot size={78} />
+              </View>
 
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="you@email.com"
-                placeholderTextColor="#6E6C91"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-                returnKeyType="next"
-                value={email}
-                onChangeText={setEmail}
-              />
+              <NeoCard borderRadius={Radii.cardLg} contentStyle={styles.cardContent}>
+                <Text style={styles.title}>Welcome back</Text>
+                <Text style={styles.subtitle}>Log in to rejoin your rooms.</Text>
 
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Your password"
-                placeholderTextColor="#6E6C91"
-                secureTextEntry
-                autoComplete="password"
-                returnKeyType="done"
-                value={password}
-                onChangeText={setPassword}
-              />
-
-              <Pressable
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.forgotWrap,
-                  pressed && { opacity: 0.7 },
-                ]}
-              >
-                <Text style={styles.forgotText}>Forgot password?</Text>
-              </Pressable>
-
-              <View style={{ marginTop: 6 }}>
-                <NeoButton
-                  label="Log in"
-                  onPress={() => router.replace('/(tabs)')}
-                  backgroundColor={Colors.primary}
-                  textColor={Colors.textWhite}
-                  height={54}
-                  fontSize={17}
+                <NeoInput
+                  label="Email"
+                  placeholder="you@email.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  returnKeyType="next"
+                  value={email}
+                  onChangeText={setEmail}
                 />
-              </View>
 
-              {/* Divider */}
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or continue with</Text>
-                <View style={styles.dividerLine} />
-              </View>
+                <NeoInput
+                  label="Password"
+                  placeholder="Your password"
+                  secureTextEntry
+                  autoComplete="password"
+                  returnKeyType="done"
+                  value={password}
+                  onChangeText={setPassword}
+                />
 
-              {/* Social Buttons */}
-              <View style={styles.socialRow}>
-                <View style={{ flex: 1 }}>
+                <Pressable
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    styles.forgotWrap,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Text style={styles.forgotText}>Forgot password?</Text>
+                </Pressable>
+
+                <View style={{ marginTop: Spacing.xs }}>
                   <NeoButton
-                    label="Apple"
+                    label="Log in"
                     onPress={() => router.replace('/(tabs)')}
-                    backgroundColor={Colors.ink}
+                    backgroundColor={Colors.primary}
                     textColor={Colors.textWhite}
-                    height={50}
-                    fontSize={15}
+                    height={52}
+                    fontSize={16}
                   />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <NeoButton
-                    label="Google"
-                    onPress={() => router.replace('/(tabs)')}
-                    backgroundColor="#FFFFFF"
-                    textColor={Colors.ink}
-                    height={50}
-                    fontSize={15}
-                  />
+
+                {/* Divider */}
+                <View style={styles.dividerRow}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or continue with</Text>
+                  <View style={styles.dividerLine} />
                 </View>
-              </View>
-            </NeoCard>
+
+                {/* Social Buttons */}
+                <View style={styles.socialRow}>
+                  <View style={{ flex: 1 }}>
+                    <NeoButton
+                      label="Apple"
+                      onPress={() => router.replace('/(tabs)')}
+                      backgroundColor={Colors.ink}
+                      textColor={Colors.textWhite}
+                      height={48}
+                      fontSize={15}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <NeoButton
+                      label="Google"
+                      onPress={() => router.replace('/(tabs)')}
+                      backgroundColor="#FFFFFF"
+                      textColor={Colors.ink}
+                      height={48}
+                      fontSize={15}
+                    />
+                  </View>
+                </View>
+              </NeoCard>
+            </View>
           </StaggerItem>
 
           <Pressable
@@ -156,16 +145,6 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  topBand: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 220,
-    backgroundColor: Colors.primary,
-    borderBottomWidth: Border.width,
-    borderBottomColor: Colors.ink,
-  },
   safeArea: {
     flex: 1,
   },
@@ -176,54 +155,29 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   headerRow: {
-    paddingTop: 4,
+    paddingVertical: Spacing.sm,
   },
-  brandText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '800',
+  cardWrap: {
+    position: 'relative',
+    marginTop: 52,
   },
   takoPeek: {
     position: 'absolute',
-    right: 26,
-    top: 96,
-    zIndex: 2,
-  },
-  cardMargin: {
-    marginTop: 112,
+    right: 20,
+    top: -48,
+    zIndex: 0,
   },
   cardContent: {
     padding: Spacing.xl,
+    zIndex: 1,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.8,
-    color: Colors.ink,
+    ...Typography.screenTitle,
   },
   subtitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textSecondary,
+    ...Typography.body,
     marginTop: 2,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: Colors.ink,
-    marginTop: Spacing.md,
-  },
-  input: {
-    minHeight: 50,
-    marginTop: 5,
-    borderWidth: Border.width,
-    borderColor: Colors.ink,
-    borderRadius: Radii.md,
-    paddingHorizontal: Spacing.lg,
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.ink,
-    backgroundColor: '#FFFFFF',
+    marginBottom: Spacing.xs,
   },
   forgotWrap: {
     alignSelf: 'flex-end',
@@ -233,25 +187,25 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.primary,
   },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: Spacing.md,
     marginTop: Spacing.lg,
-    marginBottom: 14,
+    marginBottom: Spacing.md,
   },
   dividerLine: {
     flex: 1,
-    height: 2,
-    backgroundColor: Colors.ink,
+    height: 1,
+    backgroundColor: Colors.border,
   },
   dividerText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: Colors.ink,
+    fontWeight: '500',
+    color: Colors.textSecondary,
   },
   socialRow: {
     flexDirection: 'row',
@@ -266,11 +220,11 @@ const styles = StyleSheet.create({
   },
   bottomLinkText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: Colors.ink,
+    fontWeight: '500',
+    color: Colors.textSecondary,
   },
   bottomLinkAccent: {
     color: Colors.primary,
-    fontWeight: '800',
+    fontWeight: '600',
   },
 });

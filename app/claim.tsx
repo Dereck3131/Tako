@@ -16,6 +16,7 @@ import {
   Colors,
   Motion,
   Radii,
+  Shadows,
   Spacing,
   TouchTarget,
   Typography,
@@ -65,18 +66,31 @@ export default function ClaimAndAdjustModal() {
     const others = shares.filter((_, i) => i !== index);
     const othersSum = others.reduce((s, o) => s + o.pct, 0);
 
-    setShares((prev) =>
-      prev.map((s, idx) => {
-        if (idx === index) return { ...s, pct: clamped };
-        if (othersSum === 0) {
-          return { ...s, pct: Math.round(remaining / others.length) };
-        }
-        return {
-          ...s,
-          pct: Math.max(0, Math.round((s.pct / othersSum) * remaining)),
+    const next = shares.map((s, idx) => {
+      if (idx === index) return { ...s, pct: clamped };
+      if (othersSum === 0) {
+        return { ...s, pct: Math.floor(remaining / others.length) };
+      }
+      return {
+        ...s,
+        pct: Math.max(0, Math.round((s.pct / othersSum) * remaining)),
+      };
+    });
+
+    // Guarantee exact 100% total after integer rounding
+    const total = next.reduce((sum, s) => sum + s.pct, 0);
+    const diff = 100 - total;
+    if (diff !== 0) {
+      const adjustIdx = next.findIndex((_, idx) => idx !== index);
+      if (adjustIdx >= 0) {
+        next[adjustIdx] = {
+          ...next[adjustIdx],
+          pct: Math.max(0, next[adjustIdx].pct + diff),
         };
-      })
-    );
+      }
+    }
+
+    setShares(next);
   };
 
   const handleTrackPress = (index: number, locationX: number) => {
@@ -106,8 +120,7 @@ export default function ClaimAndAdjustModal() {
             <NeoCard
               onPress={() => router.back()}
               accessibilityLabel="Back"
-              borderRadius={Radii.md}
-              shadowOffset={3}
+              borderRadius={Radii.pill}
               contentStyle={styles.backBtnBox}
             >
               <Svg
@@ -116,7 +129,9 @@ export default function ClaimAndAdjustModal() {
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke={Colors.ink}
-                strokeWidth={3}
+                strokeWidth={2.3}
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
                 <Path d="m15 5-7 7 7 7" />
               </Svg>
@@ -130,8 +145,8 @@ export default function ClaimAndAdjustModal() {
           {/* Receipt Ticket Card */}
           <StaggerItem index={0} distance={8}>
             <TicketCard
-              style={{ marginTop: 18 }}
-              topStyle={{ paddingHorizontal: 12, paddingVertical: 10 }}
+              style={{ marginTop: Spacing.lg }}
+              topStyle={{ paddingHorizontal: 14, paddingVertical: 12 }}
               bottomStyle={{ paddingHorizontal: 20, paddingVertical: 12 }}
               childrenTop={
                 <View>
@@ -157,10 +172,22 @@ export default function ClaimAndAdjustModal() {
                             pressed && { transform: [{ scale: Motion.pressScale }] },
                           ]}
                         >
-                          <Text style={styles.receiptItemLabel} numberOfLines={1}>
+                          <Text
+                            style={[
+                              styles.receiptItemLabel,
+                              isSelected && { color: Colors.primary },
+                            ]}
+                            numberOfLines={1}
+                          >
                             {item.label}
                           </Text>
-                          <Text style={styles.receiptItemPrice} numberOfLines={1}>
+                          <Text
+                            style={[
+                              styles.receiptItemPrice,
+                              isSelected && { color: Colors.primary },
+                            ]}
+                            numberOfLines={1}
+                          >
                             ${(item.priceCents / 100).toFixed(2)}
                           </Text>
                         </Pressable>
@@ -177,8 +204,8 @@ export default function ClaimAndAdjustModal() {
                       $210.00
                     </Text>
                   </View>
-                  <View style={{ marginTop: 8 }}>
-                    <BarcodeVector height={30} />
+                  <View style={{ marginTop: 10 }}>
+                    <BarcodeVector height={28} />
                   </View>
                 </View>
               }
@@ -194,7 +221,7 @@ export default function ClaimAndAdjustModal() {
           </View>
 
           {/* 4 Member Slider Cards */}
-          <View style={{ gap: 10, marginTop: 6 }}>
+          <View style={{ gap: 10, marginTop: Spacing.sm }}>
             {shares.map((member, index) => {
               const isYou = member.id === 'you';
               const avatarId: MemojiId = isYou ? selectedAnimal : member.id;
@@ -206,8 +233,9 @@ export default function ClaimAndAdjustModal() {
               return (
                 <StaggerItem key={member.id} index={index + 1} distance={8}>
                   <NeoCard
-                    backgroundColor={isYou ? Colors.amberTint : '#FFFFFF'}
-                    borderRadius={Radii.lg}
+                    backgroundColor={Colors.card}
+                    borderColor={isYou ? Colors.primary : Colors.border}
+                    borderRadius={Radii.card}
                     contentStyle={styles.sliderCardContent}
                   >
                     <View style={styles.sliderTopRow}>
@@ -217,7 +245,10 @@ export default function ClaimAndAdjustModal() {
                       <Text style={styles.memberName} numberOfLines={1}>
                         {member.name}
                       </Text>
-                      <Badge label={`${member.pct}%`} variant="amber" />
+                      <Badge
+                        label={`${member.pct}%`}
+                        variant={isYou ? 'blue' : 'neutral'}
+                      />
                       <Text style={styles.memberAmount} numberOfLines={1}>
                         ${dollarAmount}
                       </Text>
@@ -245,6 +276,7 @@ export default function ClaimAndAdjustModal() {
                       <View
                         style={[
                           styles.sliderThumb,
+                          Shadows.cardSoft,
                           { left: `${member.pct}%` },
                         ]}
                       />
@@ -256,14 +288,14 @@ export default function ClaimAndAdjustModal() {
           </View>
 
           {/* Bottom Confirm CTA */}
-          <View style={{ marginTop: 22 }}>
+          <View style={{ marginTop: Spacing.xl }}>
             <NeoButton
               label="Confirm split"
               onPress={handleConfirm}
               backgroundColor={Colors.primary}
               textColor="#FFFFFF"
-              height={56}
-              fontSize={17}
+              height={52}
+              fontSize={16}
             />
           </View>
         </ScrollView>
@@ -294,8 +326,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 19,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: Colors.ink,
     flex: 1,
     textAlign: 'center',
@@ -308,7 +340,7 @@ const styles = StyleSheet.create({
   },
   receiptMetaText: {
     ...Typography.micro,
-    color: Colors.ink,
+    color: Colors.textSecondary,
   },
   receiptItemRow: {
     flexDirection: 'row',
@@ -316,26 +348,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
     minHeight: TouchTarget.minSize,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: Radii.sm,
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
   receiptItemRowSelected: {
-    backgroundColor: Colors.amberTint,
-    borderColor: Colors.ink,
+    backgroundColor: Colors.primaryLight,
   },
   receiptItemLabel: {
     flex: 1,
     minWidth: 0,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.ink,
   },
   receiptItemPrice: {
     ...Typography.tabular,
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '600',
     color: Colors.ink,
     flexShrink: 0,
   },
@@ -346,13 +375,13 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 13,
-    fontWeight: '800',
-    color: Colors.ink,
+    fontWeight: '600',
+    color: Colors.textSecondary,
   },
   totalAmount: {
     ...Typography.currencyLg,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 26,
+    lineHeight: 32,
     color: Colors.ink,
   },
   sharingHeader: {
@@ -360,7 +389,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginTop: 18,
+    marginTop: Spacing.xl,
   },
   sharingTitle: {
     flex: 1,
@@ -368,8 +397,8 @@ const styles = StyleSheet.create({
     ...Typography.sectionTitle,
   },
   sliderCardContent: {
-    paddingHorizontal: 14,
-    paddingTop: 10,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 12,
     paddingBottom: 6,
   },
   sliderTopRow: {
@@ -384,14 +413,14 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.ink,
   },
   memberAmount: {
     ...Typography.currencyMd,
-    fontSize: 20,
+    fontSize: 17,
     color: Colors.ink,
-    minWidth: 74,
+    minWidth: 68,
     textAlign: 'right',
     flexShrink: 0,
   },
@@ -401,11 +430,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sliderTrack: {
-    height: 14,
+    height: 4,
     borderRadius: Radii.pill,
-    borderWidth: Border.width,
-    borderColor: Colors.ink,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surfaceSubtle,
     overflow: 'hidden',
   },
   sliderFill: {
@@ -414,12 +441,12 @@ const styles = StyleSheet.create({
   },
   sliderThumb: {
     position: 'absolute',
-    marginLeft: -12,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.amber,
-    borderWidth: Border.width,
-    borderColor: Colors.ink,
+    marginLeft: -10,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: Colors.primary,
   },
 });

@@ -13,7 +13,7 @@ export function PeopleCarousel({ members }: PeopleCarouselProps) {
 
   if (guests.length === 0) {
     return (
-      <View style={styles.emptyWrap}>
+      <View style={[styles.emptyWrap, Shadows.cardSoft]}>
         <Text style={styles.emptyText}>Waiting for friends to join…</Text>
       </View>
     );
@@ -28,25 +28,22 @@ export function PeopleCarousel({ members }: PeopleCarouselProps) {
       {guests.map((member) => {
         const isJoining = member.connectionStatus.toLowerCase().includes('joining');
         return (
-          <View key={member.id} style={[styles.cardWrapper, Shadows.cardSoft]}>
-            <View style={styles.cardShadow} />
-            <View style={styles.card}>
-              <View style={styles.avatarWrap}>
-                <MemojiAvatar id={(member.avatarUrl as MemojiId) || 'you'} size={46} />
-              </View>
-              <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
-                {member.displayName}
-              </Text>
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.status,
-                  { color: isJoining ? Colors.amberText : Colors.mintText },
-                ]}
-              >
-                {isJoining ? 'Joining' : 'Live'}
-              </Text>
+          <View key={member.id} style={[styles.card, Shadows.cardSoft]}>
+            <View style={styles.avatarWrap}>
+              <MemojiAvatar id={(member.avatarUrl as MemojiId) || 'you'} size={44} />
             </View>
+            <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+              {member.displayName}
+            </Text>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.status,
+                { color: isJoining ? Colors.amberText : Colors.mintText },
+              ]}
+            >
+              {isJoining ? 'Joining' : 'Live'}
+            </Text>
           </View>
         );
       })}
@@ -63,37 +60,24 @@ const styles = StyleSheet.create({
   emptyWrap: {
     backgroundColor: Colors.card,
     borderWidth: Border.width,
-    borderColor: Colors.ink,
-    borderRadius: Radii.md,
+    borderColor: Colors.border,
+    borderRadius: Radii.card,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
   },
   emptyText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: Colors.textSecondary,
-  },
-  cardWrapper: {
-    position: 'relative',
-    width: 82,
-  },
-  cardShadow: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    right: -3,
-    bottom: -3,
-    borderRadius: Radii.md,
-    backgroundColor: Colors.ink,
   },
   card: {
     width: 82,
     backgroundColor: Colors.card,
     borderWidth: Border.width,
-    borderColor: Colors.ink,
-    borderRadius: Radii.md,
-    paddingTop: 10,
-    paddingBottom: 8,
+    borderColor: Colors.border,
+    borderRadius: Radii.card,
+    paddingTop: 12,
+    paddingBottom: 10,
     paddingHorizontal: 6,
     alignItems: 'center',
   },
@@ -104,14 +88,14 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: Colors.ink,
-    marginTop: 5,
+    marginTop: 6,
     maxWidth: '100%',
   },
   status: {
     fontSize: 11,
-    fontWeight: '700',
-    marginTop: 1,
+    fontWeight: '600',
+    marginTop: 2,
   },
 });

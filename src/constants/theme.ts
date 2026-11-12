@@ -1,53 +1,55 @@
-import { TextStyle, ViewStyle } from 'react-native';
+import { Platform, TextStyle, ViewStyle } from 'react-native';
 
 export const Colors = {
   // Canvas & Surfaces
-  background: '#FBF3E4',
+  background: '#F6F7FB',
   card: '#FFFFFF',
   cardDark: '#14123A',
   cardMidnight: '#14123A',
-  amberTint: '#FFF1C2',
+  surfaceSubtle: '#F0F2F8',
 
   // Brand Primaries
   primary: '#2F65F6',
-  primaryLight: '#EEF3FF',
+  primaryGradientStart: '#4A7BFF',
+  primaryGradientEnd: '#2F65F6',
+  primaryLight: '#EAF0FF',
 
-  // Accents & Status
+  // Accents & Status (Pastel tints + high-contrast text)
   amber: '#FFB400',
-  amberLight: '#FFF1C2',
+  amberLight: '#FFF5DB',
+  amberTint: '#FFF5DB',
   amberText: '#8A5300',
-  mint: '#A8F0CD',
-  mintProgress: '#3DDC97',
+  mint: '#E6F9F0',
+  mintProgress: '#14B87A',
   mintText: '#0B7A4B',
-  emerald: '#3DDC97',
-  emeraldLight: '#A8F0CD',
-  danger: '#B3261E',
-  dangerLight: '#FDECEC',
+  emerald: '#14B87A',
+  emeraldLight: '#E6F9F0',
+  danger: '#D92D20',
+  dangerLight: '#FEF3F2',
 
-  // Ink & Typography
+  // Ink & Typography (WCAG AA)
   ink: '#14123A',
   textPrimary: '#14123A',
-  textSecondary: '#4B4975',
-  textBody: '#3B3963',
-  textMuted: '#4B4975',
+  textSecondary: '#5B5880',
+  textBody: '#5B5880',
+  textMuted: '#5B5880',
   textWhite: '#FFFFFF',
-  textOnDarkMuted: '#E9E6FF',
-  textOnDarkSubtle: '#D9D5FF',
+  textOnDarkMuted: '#E2E6F5',
+  textOnDarkSubtle: '#C5CAE3',
 
-  // Borders
-  border: '#14123A',
-  borderDashed: '#14123A',
-  dotGrid: 'rgba(20, 18, 58, 0.13)',
+  // Hairline Borders
+  border: '#E4E8F2',
+  borderDashed: '#E4E8F2',
 };
 
 export const Radii = {
-  xs: 6,
-  sm: 10,
-  md: 16,
-  lg: 20,
-  card: 22,
-  cardLg: 26,
-  sheet: 32,
+  xs: 8,
+  sm: 12,
+  md: 16, // inputs
+  lg: 20, // cards
+  card: 20,
+  cardLg: 24, // hero
+  sheet: 28,
   pill: 999,
 };
 
@@ -56,41 +58,48 @@ export const Spacing = {
   sm: 8,
   md: 12,
   lg: 16,
-  xl: 20,
+  xl: 20, // screen padding
   xxl: 24,
   xxxl: 32,
 };
 
 export const Border = {
-  width: 2.5,
-  chipWidth: 2,
+  width: 1,
+  chipWidth: 0,
 };
 
 export const TouchTarget = {
   minSize: 44,
 };
 
-export const Shadows: Record<'card' | 'cardSoft' | 'button', ViewStyle> = {
+export const Shadows: Record<'card' | 'cardSoft' | 'button' | 'hero', ViewStyle> = {
   card: {
     shadowColor: '#14123A',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 24,
     elevation: 3,
   },
   cardSoft: {
     shadowColor: '#14123A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
     elevation: 2,
   },
   button: {
+    shadowColor: '#2F65F6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  hero: {
     shadowColor: '#14123A',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: 28,
+    elevation: 5,
   },
 };
 
@@ -98,75 +107,90 @@ export const Motion = {
   easeOut: [0.23, 1, 0.32, 1] as const,
   easeInOut: [0.77, 0, 0.175, 1] as const,
   easeDrawer: [0.32, 0.72, 0, 1] as const,
-  durationFast: 140,
+  durationFast: 160,
   durationNormal: 240,
-  durationSlow: 320,
+  durationSlow: 280,
   pressScale: 0.97,
-  staggerMs: 45,
+  staggerMs: 40,
 };
+
+const fontFamily = Platform.select({
+  web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  default: undefined,
+});
 
 export const Typography: Record<string, TextStyle> = {
   screenTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.7,
-    lineHeight: 32,
+    fontFamily,
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    lineHeight: 30,
     color: Colors.ink,
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    fontFamily,
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
     lineHeight: 22,
     color: Colors.ink,
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontFamily,
+    fontSize: 15,
+    fontWeight: '600',
     letterSpacing: -0.2,
-    lineHeight: 21,
+    lineHeight: 20,
     color: Colors.ink,
   },
   body: {
+    fontFamily,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     lineHeight: 20,
-    color: Colors.textBody,
+    color: Colors.textSecondary,
   },
   caption: {
+    fontFamily,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     lineHeight: 16,
     color: Colors.textSecondary,
   },
   micro: {
+    fontFamily,
     fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontWeight: '600',
+    letterSpacing: 0.6,
     lineHeight: 14,
   },
   currencyHero: {
-    fontSize: 54,
-    fontWeight: '900',
-    letterSpacing: -1.8,
-    lineHeight: 60,
+    fontFamily,
+    fontSize: 48,
+    fontWeight: '800',
+    letterSpacing: -1.5,
+    lineHeight: 54,
     fontVariant: ['tabular-nums'],
   },
   currencyLg: {
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -1.1,
-    lineHeight: 40,
+    fontFamily,
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -1,
+    lineHeight: 38,
     fontVariant: ['tabular-nums'],
   },
   currencyMd: {
+    fontFamily,
     fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: -0.4,
+    fontWeight: '700',
+    letterSpacing: -0.3,
     lineHeight: 22,
     fontVariant: ['tabular-nums'],
   },
   tabular: {
+    fontFamily,
     fontVariant: ['tabular-nums'],
   },
 };

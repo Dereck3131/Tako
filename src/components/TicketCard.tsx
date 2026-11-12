@@ -18,44 +18,27 @@ export function TicketCard({
   bottomStyle,
 }: TicketCardProps) {
   return (
-    <View style={[styles.wrapper, Shadows.card, style]}>
-      {/* Hard offset shadow */}
-      <View style={styles.shadow} />
+    <View style={[styles.card, Shadows.card, style]}>
+      <View style={[styles.topSection, topStyle]}>{childrenTop}</View>
 
-      <View style={styles.card}>
-        <View style={[styles.topSection, topStyle]}>{childrenTop}</View>
-
-        {/* Perforated dashed divider with side notches */}
-        <View style={styles.dividerRow}>
-          <View style={styles.notchLeft} />
-          <View style={styles.dashedLine} />
-          <View style={styles.notchRight} />
-        </View>
-
-        <View style={[styles.bottomSection, bottomStyle]}>{childrenBottom}</View>
+      {/* Perforated dashed divider with hairline half-circle notches */}
+      <View style={styles.dividerRow}>
+        <View style={styles.notchLeft} />
+        <View style={styles.dashedLine} />
+        <View style={styles.notchRight} />
       </View>
+
+      <View style={[styles.bottomSection, bottomStyle]}>{childrenBottom}</View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    position: 'relative',
-  },
-  shadow: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    right: -4,
-    bottom: -4,
-    borderRadius: Radii.card,
-    backgroundColor: Colors.ink,
-  },
   card: {
     backgroundColor: Colors.card,
     borderRadius: Radii.card,
     borderWidth: Border.width,
-    borderColor: Colors.ink,
+    borderColor: Colors.border,
     overflow: 'hidden',
   },
   topSection: {
@@ -64,7 +47,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   dividerRow: {
-    height: 22,
+    height: 20,
     flexDirection: 'row',
     alignItems: 'center',
     position: 'relative',
@@ -72,30 +55,30 @@ const styles = StyleSheet.create({
   dashedLine: {
     flex: 1,
     height: 0,
-    borderTopWidth: 2.5,
+    borderTopWidth: 1,
     borderStyle: 'dashed',
-    borderColor: Colors.ink,
+    borderColor: Colors.borderDashed,
     marginHorizontal: 14,
   },
   notchLeft: {
     position: 'absolute',
-    left: -12,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    left: -11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: Colors.background,
     borderWidth: Border.width,
-    borderColor: Colors.ink,
+    borderColor: Colors.border,
   },
   notchRight: {
     position: 'absolute',
-    right: -12,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    right: -11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: Colors.background,
     borderWidth: Border.width,
-    borderColor: Colors.ink,
+    borderColor: Colors.border,
   },
   bottomSection: {
     paddingHorizontal: 20,

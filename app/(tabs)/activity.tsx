@@ -12,7 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoomStore } from '../../src/store/roomStore';
 import {
-  Border,
   Colors,
   Motion,
   Radii,
@@ -41,7 +40,7 @@ export default function ActivityScreen() {
 
   const paidMembers = members.filter((m) => m.paymentStatus === 'paid');
   const paidCount = paidMembers.length;
-  const totalMembers = Math.max(1, members.length - 1); // exclude host or show total
+  const totalMembers = 4;
   const paidCents = paidMembers.reduce((sum, m) => sum + m.totalOwedCents, 0);
   const totalCents = 21000;
   const ratio = Math.min(1, Math.max(0, paidCents / totalCents));
@@ -80,7 +79,7 @@ export default function ActivityScreen() {
           {/* Settlement Progress Card */}
           <StaggerItem index={0} distance={8}>
             <NeoCard
-              style={{ marginTop: 18 }}
+              style={{ marginTop: Spacing.lg }}
               borderRadius={Radii.card}
               contentStyle={styles.settlementContent}
             >
@@ -150,7 +149,7 @@ export default function ActivityScreen() {
                       ]}
                     >
                       <View style={styles.avatarShrink}>
-                        <MemojiAvatar id={memojiId} size={40} />
+                        <MemojiAvatar id={memojiId} size={38} />
                       </View>
                       <View style={styles.eventTextCol}>
                         <Text style={styles.eventTitle} numberOfLines={2}>
@@ -200,7 +199,7 @@ const styles = StyleSheet.create({
     ...Typography.screenTitle,
   },
   settlementContent: {
-    paddingHorizontal: 18,
+    paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
   },
   settlementTopRow: {
@@ -211,13 +210,12 @@ const styles = StyleSheet.create({
   },
   settlementLabel: {
     ...Typography.micro,
-    fontSize: 12,
-    color: Colors.ink,
+    color: Colors.textSecondary,
   },
   amountRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginTop: 4,
+    marginTop: 6,
     flexWrap: 'wrap',
   },
   boldAmount: {
@@ -226,29 +224,26 @@ const styles = StyleSheet.create({
   },
   totalAmount: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: Colors.textSecondary,
     fontVariant: ['tabular-nums'],
   },
   progressTrack: {
-    height: 16,
-    borderWidth: Border.width,
-    borderColor: Colors.ink,
+    height: 8,
     borderRadius: Radii.pill,
-    backgroundColor: '#FFFFFF',
-    marginTop: 10,
+    backgroundColor: Colors.surfaceSubtle,
+    marginTop: 12,
     overflow: 'hidden',
     position: 'relative',
   },
   progressFill: {
     height: '100%',
     backgroundColor: Colors.mintProgress,
-    borderRightWidth: Border.width,
-    borderRightColor: Colors.ink,
+    borderRadius: Radii.pill,
   },
   sectionHeader: {
     ...Typography.sectionTitle,
-    marginTop: 18,
+    marginTop: Spacing.xl,
     marginBottom: Spacing.sm,
   },
   emptyCard: {
@@ -264,8 +259,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   feedContent: {
-    paddingHorizontal: 18,
-    paddingVertical: 2,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 4,
   },
   eventRow: {
     flexDirection: 'row',
@@ -274,9 +269,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   eventRowBorder: {
-    borderTopWidth: 2,
-    borderStyle: 'dashed',
-    borderTopColor: Colors.ink,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
   },
   avatarShrink: {
     flexShrink: 0,
@@ -287,13 +281,13 @@ const styles = StyleSheet.create({
   },
   eventTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     lineHeight: 19,
     color: Colors.ink,
   },
   eventSubtitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     color: Colors.textSecondary,
     marginTop: 2,
   },
@@ -305,7 +299,7 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     color: Colors.textSecondary,
     fontVariant: ['tabular-nums'],
   },
