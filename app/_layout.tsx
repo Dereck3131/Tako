@@ -26,6 +26,13 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen name="settle" />
+        <Stack.Screen
+          name="recap"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
       </Stack>
     </>
   );

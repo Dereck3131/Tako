@@ -341,6 +341,7 @@ const styles = StyleSheet.create({
   },
   splitWithLabel: {
     fontSize: 12,
+    fontWeight: '500',
     color: 'rgba(255, 255, 255, 0.85)',
   },
   moodBanner: {
@@ -355,9 +356,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#FFFFFF',
     lineHeight: 18,
-  },
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.85)',
   },
   avatarStack: {
     flexDirection: 'row',

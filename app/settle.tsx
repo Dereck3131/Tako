@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -7,37 +8,67 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import Svg, { Path } from 'react-native-svg';
 import {
   Colors,
+  Motion,
   Radii,
   Spacing,
   TouchTarget,
   Typography,
 } from '../src/constants/theme';
 import { DotGridBackground } from '../src/components/DotGridBackground';
-import { NeoCard } from '../src/components/NeoUI';
+import { NeoButton, NeoCard } from '../src/components/NeoUI';
 import { Badge } from '../src/components/Badge';
 import { MemojiAvatar } from '../src/components/MemojiAvatar';
-import { TakoMascot } from '../src/components/TakoMascot';
+import { TakoMascot, getTakoMood, getTakoMoodCopy } from '../src/components/TakoMascot';
 import { SettlementHero } from '../src/components/SettlementHero';
 import { StaggerItem } from '../src/components/MotionPrimitives';
 import { useRoomStore } from '../src/store/roomStore';
+import { calculatePHBillBreakdown, formatMoney } from '../src/services/currency';
+import { t } from '../src/constants/i18n';
+import { playSound, triggerHaptic } from '../src/services/feedbackEngine';
+import { PaymentMethod } from '../src/types/database';
 
 export default function SettleUpScreen() {
   const router = useRouter();
-  const { currentRoom, markMemberPaid } = useRoomStore();
-  const [hasPaidSelf, setHasPaidSelf] = useState(false);
+  const {
+    currentRoom,
+    members,
+    items,
+    shares,
+    currency,
+    language,
+    roundToPeso,
+    serviceChargeBps,
+    vatBps,
+    setPaymentStatus,
+  } = useRoomStore();
+
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('gcash');
+  const youMember = members.find((m) => m.id === 'member-you');
+  const myStatus = youMember?.paymentStatus ?? 'pending';
+  const hasPaidSelf = myStatus === 'paid' || myStatus === 'verified';
+
+  const subtotalCents = 5250;
+  const breakdown = calculatePHBillBreakdown(subtotalCents, serviceChargeBps, vatBps);
+
+  const owingMembers = members.filter((m) => m.totalOwedCents > 0);
+  const paidCount = owingMembers.filter(
+    (m) => m.paymentStatus === 'paid' || m.paymentStatus === 'verified'
+  ).length;
+  const takoMood = getTakoMood(members, items, shares);
+  const moodCopy = getTakoMoodCopy(takoMood, language, paidCount, owingMembers.length);
+
+  const handlePayWithMethod = (method: PaymentMethod) => {
+    setSelectedMethod(method);
+    triggerHaptic('success');
+    playSound('pay_coin');
+    setPaymentStatus('member-you', 'paid', method);
+  };
 
   const handlePayNow = () => {
-    try {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      // Fallback
-    }
-    setHasPaidSelf(true);
-    markMemberPaid('member-you');
+    handlePayWithMethod(selectedMethod);
   };
 
   return (
@@ -88,30 +119,50 @@ export default function SettleUpScreen() {
               <View style={styles.plateRow}>
                 <Text style={styles.plateItem} numberOfLines={2}>
                   Burgers
-                  <Text style={styles.platePct}> 25% of $120.00</Text>
+                  <Text style={styles.platePct}> 25% of {formatMoney(12000, currency, { roundToWhole: roundToPeso })}</Text>
                 </Text>
                 <Text style={styles.platePrice} numberOfLines={1}>
-                  $30.00
+                  {formatMoney(3000, currency, { roundToWhole: roundToPeso })}
                 </Text>
               </View>
 
               <View style={styles.plateRow}>
                 <Text style={styles.plateItem} numberOfLines={2}>
                   Drinks
-                  <Text style={styles.platePct}> 25% of $60.00</Text>
+                  <Text style={styles.platePct}> 25% of {formatMoney(6000, currency, { roundToWhole: roundToPeso })}</Text>
                 </Text>
                 <Text style={styles.platePrice} numberOfLines={1}>
-                  $15.00
+                  {formatMoney(1500, currency, { roundToWhole: roundToPeso })}
                 </Text>
               </View>
 
               <View style={styles.plateRow}>
                 <Text style={styles.plateItem} numberOfLines={2}>
                   Fries
-                  <Text style={styles.platePct}> 25% of $30.00</Text>
+                  <Text style={styles.platePct}> 25% of {formatMoney(3000, currency, { roundToWhole: roundToPeso })}</Text>
                 </Text>
                 <Text style={styles.platePrice} numberOfLines={1}>
-                  $7.50
+                  {formatMoney(750, currency, { roundToWhole: roundToPeso })}
+                </Text>
+              </View>
+
+              {/* PH Service Charge & VAT breakdown */}
+              <View style={[styles.plateRow, styles.taxDividerRow]}>
+                <Text style={styles.platePct}>{t(language, 'serviceCharge')} ({serviceChargeBps / 100}%)</Text>
+                <Text style={styles.platePrice}>
+                  {formatMoney(breakdown.serviceChargeCents, currency, { roundToWhole: roundToPeso })}
+                </Text>
+              </View>
+              <View style={styles.plateRow}>
+                <Text style={styles.platePct}>{t(language, 'vat')}</Text>
+                <Text style={styles.platePrice}>
+                  {formatMoney(breakdown.vatCents, currency, { roundToWhole: roundToPeso })}
+                </Text>
+              </View>
+              <View style={styles.plateRow}>
+                <Text style={styles.plateItem}>{t(language, 'totalWithTax')}</Text>
+                <Text style={styles.platePrice}>
+                  {formatMoney(breakdown.totalCents, currency, { roundToWhole: roundToPeso })}
                 </Text>
               </View>
             </NeoCard>
@@ -167,16 +218,107 @@ export default function SettleUpScreen() {
           <StaggerItem index={2} distance={10}>
             <View style={styles.heroWrap}>
               <View style={styles.takoPeek} pointerEvents="none">
-                <TakoMascot size={92} />
+                <TakoMascot size={92} mood={takoMood} />
               </View>
               <SettlementHero
-                amountCents={5250}
+                amountCents={breakdown.totalCents}
                 splitWays={4}
                 roomTitle={currentRoom.title}
                 onPayNow={handlePayNow}
                 hasPaid={hasPaidSelf}
               />
             </View>
+            <Text style={styles.moodCaption}>{moodCopy}</Text>
+          </StaggerItem>
+
+          {/* Local Payment Methods + States (pending | paid | failed | refunded) */}
+          <StaggerItem index={3} distance={8}>
+            <NeoCard
+              style={{ marginTop: Spacing.lg }}
+              borderRadius={Radii.card}
+              contentStyle={styles.methodsContent}
+            >
+              <View style={styles.methodsHeader}>
+                <Text style={styles.sectionLabel}>PAYMENT OPTIONS</Text>
+                <Badge
+                  label={
+                    myStatus === 'paid' || myStatus === 'verified'
+                      ? t(language, 'paid')
+                      : myStatus === 'failed'
+                      ? t(language, 'failed')
+                      : myStatus === 'refunded'
+                      ? t(language, 'refunded')
+                      : t(language, 'pending')
+                  }
+                  variant={
+                    myStatus === 'paid' || myStatus === 'verified'
+                      ? 'emerald'
+                      : myStatus === 'refunded'
+                      ? 'blue'
+                      : 'amber'
+                  }
+                />
+              </View>
+
+              <View style={styles.methodsGrid}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => handlePayWithMethod('gcash')}
+                  style={({ pressed }) => [
+                    styles.methodBtn,
+                    selectedMethod === 'gcash' && styles.methodBtnActive,
+                    pressed && { transform: [{ scale: Motion.pressScale }] },
+                  ]}
+                >
+                  <Text style={styles.methodBtnText}>{t(language, 'payWithGCash')}</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => handlePayWithMethod('maya')}
+                  style={({ pressed }) => [
+                    styles.methodBtn,
+                    selectedMethod === 'maya' && styles.methodBtnActive,
+                    pressed && { transform: [{ scale: Motion.pressScale }] },
+                  ]}
+                >
+                  <Text style={styles.methodBtnText}>{t(language, 'payWithMaya')}</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => handlePayWithMethod('cash')}
+                  style={({ pressed }) => [
+                    styles.methodBtn,
+                    selectedMethod === 'cash' && styles.methodBtnActive,
+                    pressed && { transform: [{ scale: Motion.pressScale }] },
+                  ]}
+                >
+                  <Text style={styles.methodBtnText}>{t(language, 'markPaidCash')}</Text>
+                </Pressable>
+              </View>
+
+              {hasPaidSelf && (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    triggerHaptic('warning');
+                    setPaymentStatus('member-you', 'refunded', selectedMethod);
+                  }}
+                  style={styles.secondaryAction}
+                >
+                  <Text style={styles.secondaryActionText}>{t(language, 'markRefunded')}</Text>
+                </Pressable>
+              )}
+
+              <NeoButton
+                label={t(language, 'viewRecap')}
+                onPress={() => router.push('/recap')}
+                backgroundColor={Colors.primaryLight}
+                textColor={Colors.primary}
+                borderColor="transparent"
+                height={TouchTarget.minSize}
+                fontSize={14}
+              />
+            </NeoCard>
           </StaggerItem>
         </ScrollView>
       </SafeAreaView>
@@ -275,6 +417,59 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: Colors.ink,
+  },
+  taxDividerRow: {
+    backgroundColor: Colors.surfaceSubtle,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radii.sm,
+  },
+  moodCaption: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+  },
+  methodsContent: {
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  methodsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  methodsGrid: {
+    gap: Spacing.sm,
+  },
+  methodBtn: {
+    minHeight: TouchTarget.minSize,
+    borderRadius: Radii.pill,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceSubtle,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+  },
+  methodBtnActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  methodBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.ink,
+  },
+  secondaryAction: {
+    minHeight: TouchTarget.minSize,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  secondaryActionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textSecondary,
   },
   heroWrap: {
     marginTop: 56,

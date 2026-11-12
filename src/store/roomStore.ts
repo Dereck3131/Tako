@@ -355,7 +355,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
         : status === 'failed'
         ? { label: 'Failed', variant: 'amber' as const }
         : status === 'refunded'
-        ? { label: 'Refunded', variant: 'blue' as const }
+        ? { label: 'Refunded', variant: 'amber' as const }
         : { label: 'Pending', variant: 'amber' as const };
 
     const newActivity: ActivityEvent = {
@@ -438,7 +438,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       actorAvatar: 'you',
       title: `Tako squirted playful ink at ${member.displayName}`,
       subtitle: 'Gentle 24h reminder',
-      badge: { label: 'Nudged', variant: 'blue' },
+      badge: { label: 'Nudged', variant: 'amber' },
       relativeTime: 'just now',
       createdAt: new Date(now).toISOString(),
     };

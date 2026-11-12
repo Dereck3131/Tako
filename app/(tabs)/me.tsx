@@ -3,6 +3,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -46,7 +47,18 @@ function ChevronRight() {
 
 export default function MeScreen() {
   const router = useRouter();
-  const { selectedAnimal, setSelectedAnimal } = useRoomStore();
+  const {
+    selectedAnimal,
+    setSelectedAnimal,
+    currency,
+    language,
+    roundToPeso,
+    soundEnabled,
+    hapticsEnabled,
+    muteNudges,
+    optOutAwards,
+    setSetting,
+  } = useRoomStore();
 
   return (
     <DotGridBackground>
@@ -171,6 +183,8 @@ export default function MeScreen() {
 
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="Toggle currency between PHP and USD"
+                onPress={() => setSetting('currency', currency === 'PHP' ? 'USD' : 'PHP')}
                 style={({ pressed }) => [
                   styles.menuRow,
                   styles.menuRowBorder,
@@ -182,11 +196,97 @@ export default function MeScreen() {
                 </Text>
                 <View style={styles.menuRight}>
                   <Text style={styles.menuValue} numberOfLines={1}>
-                    USD $
+                    {currency === 'PHP' ? 'PHP ₱' : 'USD $'}
                   </Text>
                   <ChevronRight />
                 </View>
               </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Toggle language between English and Taglish"
+                onPress={() => setSetting('language', language === 'en' ? 'tl' : 'en')}
+                style={({ pressed }) => [
+                  styles.menuRow,
+                  styles.menuRowBorder,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={styles.menuLabel} numberOfLines={1}>
+                  Language
+                </Text>
+                <View style={styles.menuRight}>
+                  <Text style={styles.menuValue} numberOfLines={1}>
+                    {language === 'en' ? 'English' : 'Taglish'}
+                  </Text>
+                  <ChevronRight />
+                </View>
+              </Pressable>
+
+              <View style={[styles.menuRow, styles.menuRowBorder]}>
+                <Text style={styles.menuLabel} numberOfLines={1}>
+                  Round to nearest peso
+                </Text>
+                <Switch
+                  accessibilityLabel="Round to nearest peso"
+                  value={roundToPeso}
+                  onValueChange={(v) => setSetting('roundToPeso', v)}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+
+              <View style={[styles.menuRow, styles.menuRowBorder]}>
+                <Text style={styles.menuLabel} numberOfLines={1}>
+                  Soft UI sounds
+                </Text>
+                <Switch
+                  accessibilityLabel="Soft UI sounds"
+                  value={soundEnabled}
+                  onValueChange={(v) => setSetting('soundEnabled', v)}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+
+              <View style={[styles.menuRow, styles.menuRowBorder]}>
+                <Text style={styles.menuLabel} numberOfLines={1}>
+                  Haptics
+                </Text>
+                <Switch
+                  accessibilityLabel="Haptics"
+                  value={hapticsEnabled}
+                  onValueChange={(v) => setSetting('hapticsEnabled', v)}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+
+              <View style={[styles.menuRow, styles.menuRowBorder]}>
+                <Text style={styles.menuLabel} numberOfLines={1}>
+                  Mute squirt-ink nudges
+                </Text>
+                <Switch
+                  accessibilityLabel="Mute squirt-ink nudges"
+                  value={muteNudges}
+                  onValueChange={(v) => setSetting('muteNudges', v)}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+
+              <View style={[styles.menuRow, styles.menuRowBorder]}>
+                <Text style={styles.menuLabel} numberOfLines={1}>
+                  Opt out of awards naming
+                </Text>
+                <Switch
+                  accessibilityLabel="Opt out of awards naming"
+                  value={optOutAwards}
+                  onValueChange={(v) => setSetting('optOutAwards', v)}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
 
               <Pressable
                 accessibilityRole="button"
