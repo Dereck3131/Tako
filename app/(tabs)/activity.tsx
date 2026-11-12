@@ -1,18 +1,34 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  Animated,
+  Easing,
+  LayoutChangeEvent,
+  Platform,
   ScrollView,
-  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoomStore } from '../../src/store/roomStore';
-import { Colors, Radii } from '../../src/constants/theme';
+import {
+  Border,
+  Colors,
+  Motion,
+  Radii,
+  Spacing,
+  Typography,
+} from '../../src/constants/theme';
+import { DotGridBackground } from '../../src/components/DotGridBackground';
+import { NeoCard } from '../../src/components/NeoUI';
 import { Badge } from '../../src/components/Badge';
 import { MemojiAvatar, MemojiId } from '../../src/components/MemojiAvatar';
+import { StaggerItem, useReducedMotion } from '../../src/components/MotionPrimitives';
 
 export default function ActivityScreen() {
-  const { activities } = useRoomStore();
+  const { activities, members, selectedAnimal } = useRoomStore();
+  const reducedMotion = useReducedMotion();
+  const [trackWidth, setTrackWidth] = useState(0);
 
   const getMemojiId = (name: string): MemojiId => {
     const lower = name.toLowerCase();
@@ -20,207 +36,277 @@ export default function ActivityScreen() {
     if (lower.includes('jonas')) return 'jonas';
     if (lower.includes('aly')) return 'aly';
     if (lower.includes('ken')) return 'ken';
-    return 'you';
+    return selectedAnimal;
   };
 
+  const paidMembers = members.filter((m) => m.paymentStatus === 'paid');
+  const paidCount = paidMembers.length;
+  const totalMembers = Math.max(1, members.length - 1); // exclude host or show total
+  const paidCents = paidMembers.reduce((sum, m) => sum + m.totalOwedCents, 0);
+  const totalCents = 21000;
+  const ratio = Math.min(1, Math.max(0, paidCents / totalCents));
+
+  const progressAnim = useRef(new Animated.Value(ratio)).current;
+
+  useEffect(() => {
+    const anim = Animated.timing(progressAnim, {
+      toValue: ratio,
+      duration: reducedMotion ? 0 : Motion.durationNormal,
+      easing: Easing.bezier(0.23, 1, 0.32, 1),
+      useNativeDriver: Platform.OS !== 'web',
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [ratio, progressAnim, reducedMotion]);
+
+  const translateX = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-(trackWidth / 2), 0],
+  });
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>Activity</Text>
-          <View style={styles.liveBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>Live</Text>
+    <DotGridBackground>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Activity</Text>
+            <Badge label="Live" variant="emerald" />
           </View>
-        </View>
 
-        {/* Settlement Progress Card matching Page 3 */}
-        <View style={styles.settlementCard}>
-          <View style={styles.settlementTopRow}>
-            <Text style={styles.settlementLabel}>SETTLEMENT</Text>
-            <Badge label="2 of 4 paid" variant="emerald" />
-          </View>
-          <View style={styles.amountRatioRow}>
-            <Text style={styles.boldAmount}>$105.00</Text>
-            <Text style={styles.totalAmount}> of $210.00</Text>
-          </View>
-          {/* Dual-color Progress Bar */}
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: '50%' }]} />
-          </View>
-        </View>
-
-        {/* Section Today matching Page 3 */}
-        <Text style={styles.sectionHeader}>Today</Text>
-        <View style={styles.feedCard}>
-          {activities.map((act, idx) => {
-            const memojiId = getMemojiId(act.actorName);
-
-            return (
-              <View
-                key={act.id}
-                style={[
-                  styles.eventRow,
-                  idx < activities.length - 1 && styles.eventBorder,
-                ]}
-              >
-                <View style={styles.avatarWrapper}>
-                  <MemojiAvatar id={memojiId} size={44} />
-                </View>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={styles.eventTitle}>{act.title}</Text>
-                  {act.subtitle && (
-                    <Text style={styles.eventSubtitle}>{act.subtitle}</Text>
-                  )}
-                </View>
-                <View style={styles.badgeTimeCol}>
-                  {act.badge && (
-                    <Badge label={act.badge.label} variant={act.badge.variant} />
-                  )}
-                  <Text style={styles.timeText}>{act.relativeTime}</Text>
-                </View>
+          {/* Settlement Progress Card */}
+          <StaggerItem index={0} distance={8}>
+            <NeoCard
+              style={{ marginTop: 18 }}
+              borderRadius={Radii.card}
+              contentStyle={styles.settlementContent}
+            >
+              <View style={styles.settlementTopRow}>
+                <Text style={styles.settlementLabel}>SETTLEMENT</Text>
+                <Badge
+                  label={`${paidCount} of ${totalMembers} paid`}
+                  variant="emerald"
+                />
               </View>
-            );
-          })}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+
+              <View style={styles.amountRow}>
+                <Text
+                  style={styles.boldAmount}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  ${(paidCents / 100).toFixed(2)}
+                </Text>
+                <Text style={styles.totalAmount} numberOfLines={1}>
+                  {' '}
+                  of ${(totalCents / 100).toFixed(2)}
+                </Text>
+              </View>
+
+              <View
+                style={styles.progressTrack}
+                onLayout={(e: LayoutChangeEvent) =>
+                  setTrackWidth(e.nativeEvent.layout.width)
+                }
+              >
+                {trackWidth > 0 && (
+                  <Animated.View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: trackWidth,
+                        transform: [{ translateX }, { scaleX: progressAnim }],
+                      },
+                    ]}
+                  />
+                )}
+              </View>
+            </NeoCard>
+          </StaggerItem>
+
+          {/* Today Section */}
+          <Text style={styles.sectionHeader}>Today</Text>
+          {activities.length === 0 ? (
+            <NeoCard borderRadius={Radii.card} contentStyle={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>No activity yet</Text>
+              <Text style={styles.emptySub}>
+                Claims, splits, and payments will show up here in real time.
+              </Text>
+            </NeoCard>
+          ) : (
+            <StaggerItem index={1} distance={10}>
+              <NeoCard borderRadius={Radii.card} contentStyle={styles.feedContent}>
+                {activities.map((act, idx) => {
+                  const memojiId = getMemojiId(act.actorName);
+                  return (
+                    <View
+                      key={act.id}
+                      style={[
+                        styles.eventRow,
+                        idx > 0 && styles.eventRowBorder,
+                      ]}
+                    >
+                      <View style={styles.avatarShrink}>
+                        <MemojiAvatar id={memojiId} size={40} />
+                      </View>
+                      <View style={styles.eventTextCol}>
+                        <Text style={styles.eventTitle} numberOfLines={2}>
+                          {act.title}
+                        </Text>
+                        {act.subtitle ? (
+                          <Text style={styles.eventSubtitle} numberOfLines={1}>
+                            {act.subtitle}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.eventRightCol}>
+                        {act.badge && (
+                          <Badge label={act.badge.label} variant={act.badge.variant} />
+                        )}
+                        <Text style={styles.timeText} numberOfLines={1}>
+                          {act.relativeTime}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </NeoCard>
+            </StaggerItem>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </DotGridBackground>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   container: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xxxl,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingTop: 8,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: Colors.textPrimary,
+    ...Typography.screenTitle,
   },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.emerald,
-    marginRight: 6,
-  },
-  liveText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: Colors.emerald,
-  },
-  settlementCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radii.card,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: '#2F65F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
+  settlementContent: {
+    paddingHorizontal: 18,
+    paddingVertical: Spacing.lg,
   },
   settlementTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    gap: Spacing.sm,
   },
   settlementLabel: {
+    ...Typography.micro,
     fontSize: 12,
-    fontWeight: '800',
-    color: Colors.textSecondary,
-    letterSpacing: 0.5,
+    color: Colors.ink,
   },
-  amountRatioRow: {
+  amountRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 16,
+    marginTop: 4,
+    flexWrap: 'wrap',
   },
   boldAmount: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: Colors.textPrimary,
+    ...Typography.currencyLg,
+    color: Colors.ink,
   },
   totalAmount: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: Colors.textSecondary,
+    fontVariant: ['tabular-nums'],
   },
   progressTrack: {
-    height: 8,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 4,
+    height: 16,
+    borderWidth: Border.width,
+    borderColor: Colors.ink,
+    borderRadius: Radii.pill,
+    backgroundColor: '#FFFFFF',
+    marginTop: 10,
     overflow: 'hidden',
+    position: 'relative',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: Colors.emerald,
-    borderRadius: 4,
+    backgroundColor: Colors.mintProgress,
+    borderRightWidth: Border.width,
+    borderRightColor: Colors.ink,
   },
   sectionHeader: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: 12,
+    ...Typography.sectionTitle,
+    marginTop: 18,
+    marginBottom: Spacing.sm,
   },
-  feedCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radii.card,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    shadowColor: '#2F65F6',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+  emptyCard: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    ...Typography.cardTitle,
+  },
+  emptySub: {
+    ...Typography.caption,
+    marginTop: Spacing.xs,
+    textAlign: 'center',
+  },
+  feedContent: {
+    paddingHorizontal: 18,
+    paddingVertical: 2,
   },
   eventRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+    paddingVertical: 12,
   },
-  eventBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
+  eventRowBorder: {
+    borderTopWidth: 2,
+    borderStyle: 'dashed',
+    borderTopColor: Colors.ink,
   },
-  avatarWrapper: {
-    marginRight: 12,
+  avatarShrink: {
+    flexShrink: 0,
+  },
+  eventTextCol: {
+    flex: 1,
+    minWidth: 0,
   },
   eventTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 2,
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 19,
+    color: Colors.ink,
   },
   eventSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '600',
     color: Colors.textSecondary,
-    fontWeight: '500',
+    marginTop: 2,
   },
-  badgeTimeCol: {
-    alignItems: 'flex-end',
-    gap: 4,
+  eventRightCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flexShrink: 0,
   },
   timeText: {
     fontSize: 12,
+    fontWeight: '700',
     color: Colors.textSecondary,
-    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
   },
 });
