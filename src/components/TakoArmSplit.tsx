@@ -9,6 +9,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
@@ -542,10 +543,27 @@ export function TakoArmSplit({
               <MemojiAvatar id={p.avatarId} size={30} />
               <View style={styles.stepperInfo}>
                 <Text style={styles.stepperName}>{p.name}</Text>
-                <Text style={styles.stepperAmount}>
-                  {pct}% · {formatMoney(cents, currency, { roundToWhole: roundToPeso })}
-                </Text>
+                <Text style={styles.stepperAmount}>{pct}%</Text>
               </View>
+              <TypeableAmountInput
+                memberName={p.name}
+                cents={cents}
+                itemPriceCents={itemPriceCents}
+                currency={currency}
+                onCommitCents={(typedCents) => {
+                  if (itemPriceCents <= 0) return;
+                  const targetBps = Math.max(
+                    0,
+                    Math.min(10000, Math.round((typedCents / itemPriceCents) * 10000))
+                  );
+                  setShowDragHint(false);
+                  triggerHaptic('tick');
+                  onChangeShare(p.id, targetBps);
+                  setLiveAnnouncement(
+                    `${p.name} updated to ${formatMoney(typedCents, currency)}`
+                  );
+                }}
+              />
               <View style={styles.stepperControls}>
                 <Pressable
                   accessibilityRole="button"
@@ -580,6 +598,65 @@ export function TakoArmSplit({
           );
         })}
       </View>
+    </View>
+  );
+}
+
+interface TypeableAmountInputProps {
+  memberName: string;
+  cents: number;
+  itemPriceCents: number;
+  currency: CurrencyCode;
+  onCommitCents: (cents: number) => void;
+}
+
+function TypeableAmountInput({
+  memberName,
+  cents,
+  itemPriceCents,
+  currency,
+  onCommitCents,
+}: TypeableAmountInputProps) {
+  const formatted = (cents / 100).toFixed(2);
+  const [draft, setDraft] = useState(formatted);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setDraft((cents / 100).toFixed(2));
+    }
+  }, [cents, isFocused]);
+
+  const commit = () => {
+    setIsFocused(false);
+    const cleaned = draft.replace(/[^0-9.]/g, '');
+    const parsed = Number.parseFloat(cleaned);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      setDraft((cents / 100).toFixed(2));
+      return;
+    }
+    const clampedCents = Math.max(0, Math.min(itemPriceCents, Math.round(parsed * 100)));
+    setDraft((clampedCents / 100).toFixed(2));
+    if (clampedCents !== cents) {
+      onCommitCents(clampedCents);
+    }
+  };
+
+  return (
+    <View style={[styles.amountInputWrap, isFocused && styles.amountInputWrapFocused]}>
+      <Text style={styles.amountPrefix}>{currency === 'PHP' ? '₱' : '$'}</Text>
+      <TextInput
+        value={draft}
+        onChangeText={setDraft}
+        onFocus={() => setIsFocused(true)}
+        onBlur={commit}
+        onSubmitEditing={commit}
+        keyboardType="decimal-pad"
+        returnKeyType="done"
+        selectTextOnFocus
+        accessibilityLabel={`Amount for ${memberName}`}
+        style={styles.amountInput}
+      />
     </View>
   );
 }
@@ -863,5 +940,37 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: Colors.ink,
+  },
+  amountInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: TouchTarget.minSize,
+    minWidth: 92,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radii.md,
+    backgroundColor: Colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  amountInputWrapFocused: {
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.card,
+  },
+  amountPrefix: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    marginRight: 2,
+  },
+  amountInput: {
+    flex: 1,
+    minWidth: 56,
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.ink,
+    fontVariant: ['tabular-nums'],
+    paddingVertical: 6,
+    textAlign: 'right',
   },
 });
