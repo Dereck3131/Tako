@@ -1,88 +1,93 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import { Colors, Radii } from '../constants/theme';
+import { StyleSheet, Text, View } from 'react-native';
+import { Colors, Radii, Shadows, Typography } from '../constants/theme';
+import { NeoButton } from './NeoUI';
 
 interface SettlementHeroProps {
   amountCents: number;
-  splitCount: number;
+  splitWays: number;
   roomTitle: string;
   onPayNow: () => void;
+  hasPaid?: boolean;
 }
 
-export const SettlementHero: React.FC<SettlementHeroProps> = ({
+export function SettlementHero({
   amountCents,
-  splitCount,
+  splitWays,
   roomTitle,
   onPayNow,
-}) => {
-  const handlePress = () => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch {
-      // Haptics fallback for web
-    }
-    onPayNow();
-  };
-
+  hasPaid = false,
+}: SettlementHeroProps) {
   return (
-    <View style={styles.card}>
-      <Text style={styles.sublabel}>Your share to pay</Text>
-      <Text style={styles.currency}>${(amountCents / 100).toFixed(2)}</Text>
-      <Text style={styles.detail}>
-        Split {splitCount} ways · {roomTitle}
-      </Text>
-      <TouchableOpacity
-        style={styles.payButton}
-        activeOpacity={0.85}
-        onPress={handlePress}
-      >
-        <Text style={styles.payButtonText}>Pay Now</Text>
-      </TouchableOpacity>
+    <View style={[styles.wrapper, Shadows.card]}>
+      {/* Amber hard offset shadow */}
+      <View style={styles.amberShadow} />
+
+      <View style={styles.card}>
+        <Text style={styles.label}>Your share to pay</Text>
+        <Text
+          style={styles.amount}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
+          ${(amountCents / 100).toFixed(2)}
+        </Text>
+        <Text style={styles.subtext} numberOfLines={1} ellipsizeMode="tail">
+          Split {splitWays} {splitWays === 1 ? 'way' : 'ways'} · {roomTitle}
+        </Text>
+
+        <View style={{ marginTop: 16 }}>
+          <NeoButton
+            label={hasPaid ? 'Paid ✓' : 'Pay Now'}
+            onPress={onPayNow}
+            disabled={hasPaid}
+            backgroundColor={hasPaid ? Colors.mint : Colors.amber}
+            textColor={Colors.ink}
+            shadowColor={Colors.primary}
+            shadowOffset={3}
+            height={58}
+            fontSize={19}
+          />
+        </View>
+      </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.cardMidnight,
-    borderRadius: Radii.card,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    elevation: 4,
+  wrapper: {
+    position: 'relative',
   },
-  sublabel: {
-    color: '#94A3B8',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  currency: {
-    color: Colors.textWhite,
-    fontSize: 44,
-    fontWeight: '900',
-    letterSpacing: -1.2,
-    marginBottom: 8,
-  },
-  detail: {
-    color: '#94A3B8',
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 20,
-  },
-  payButton: {
+  amberShadow: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    right: -5,
+    bottom: -5,
+    borderRadius: Radii.cardLg,
     backgroundColor: Colors.amber,
-    borderRadius: Radii.pill,
-    minHeight: 52, // >= 48px touch target
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  payButtonText: {
-    color: Colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '800',
+  card: {
+    backgroundColor: Colors.ink,
+    borderRadius: Radii.cardLg,
+    padding: 22,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textOnDarkMuted,
+  },
+  amount: {
+    ...Typography.currencyHero,
+    fontSize: 56,
+    lineHeight: 62,
+    color: Colors.textWhite,
+    marginTop: 2,
+  },
+  subtext: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textOnDarkSubtle,
   },
 });

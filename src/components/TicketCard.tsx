@@ -1,102 +1,105 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import Svg, { Line, Path } from 'react-native-svg';
-import { Colors, Radii } from '../constants/theme';
+import { StyleSheet, View, ViewStyle } from 'react-native';
+import { Border, Colors, Radii, Shadows } from '../constants/theme';
 
 interface TicketCardProps {
   childrenTop: React.ReactNode;
-  childrenBottom?: React.ReactNode;
+  childrenBottom: React.ReactNode;
   style?: ViewStyle;
+  topStyle?: ViewStyle;
+  bottomStyle?: ViewStyle;
 }
 
-export const TicketCard: React.FC<TicketCardProps> = ({
+export function TicketCard({
   childrenTop,
   childrenBottom,
   style,
-}) => {
+  topStyle,
+  bottomStyle,
+}: TicketCardProps) {
   return (
-    <View style={[styles.cardContainer, style]}>
-      {/* Top Ticket Content */}
-      <View style={styles.topContent}>{childrenTop}</View>
+    <View style={[styles.wrapper, Shadows.card, style]}>
+      {/* Hard offset shadow */}
+      <View style={styles.shadow} />
 
-      {childrenBottom && (
-        <>
-          {/* Perforation Separator with Realistic Notches */}
-          <View style={styles.separatorRow}>
-            {/* Left Circular Bite */}
-            <View style={styles.notchLeft} />
+      <View style={styles.card}>
+        <View style={[styles.topSection, topStyle]}>{childrenTop}</View>
 
-            {/* Dashed Vector Line */}
-            <View style={styles.dashedLineContainer}>
-              <Svg height="2" width="100%">
-                <Line
-                  x1="0"
-                  y1="1"
-                  x2="100%"
-                  y2="1"
-                  stroke={Colors.borderDashed}
-                  strokeWidth="2"
-                  strokeDasharray="6, 5"
-                />
-              </Svg>
-            </View>
+        {/* Perforated dashed divider with side notches */}
+        <View style={styles.dividerRow}>
+          <View style={styles.notchLeft} />
+          <View style={styles.dashedLine} />
+          <View style={styles.notchRight} />
+        </View>
 
-            {/* Right Circular Bite */}
-            <View style={styles.notchRight} />
-          </View>
-
-          {/* Bottom Ticket Content */}
-          <View style={styles.bottomContent}>{childrenBottom}</View>
-        </>
-      )}
+        <View style={[styles.bottomSection, bottomStyle]}>{childrenBottom}</View>
+      </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  cardContainer: {
+  wrapper: {
+    position: 'relative',
+  },
+  shadow: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    right: -4,
+    bottom: -4,
+    borderRadius: Radii.card,
+    backgroundColor: Colors.ink,
+  },
+  card: {
     backgroundColor: Colors.card,
     borderRadius: Radii.card,
+    borderWidth: Border.width,
+    borderColor: Colors.ink,
     overflow: 'hidden',
-    shadowColor: '#2F65F6',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 3,
-    marginBottom: 16,
   },
-  topContent: {
-    padding: 18,
-    paddingBottom: 14,
+  topSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    minWidth: 0,
   },
-  separatorRow: {
+  dividerRow: {
+    height: 22,
     flexDirection: 'row',
     alignItems: 'center',
-    height: 22,
-    marginVertical: -11,
-    zIndex: 10,
+    position: 'relative',
+  },
+  dashedLine: {
+    flex: 1,
+    height: 0,
+    borderTopWidth: 2.5,
+    borderStyle: 'dashed',
+    borderColor: Colors.ink,
+    marginHorizontal: 14,
   },
   notchLeft: {
-    width: 14,
+    position: 'absolute',
+    left: -12,
+    width: 22,
     height: 22,
+    borderRadius: 11,
     backgroundColor: Colors.background,
-    borderTopRightRadius: 11,
-    borderBottomRightRadius: 11,
-  },
-  dashedLineContainer: {
-    flex: 1,
-    paddingHorizontal: 8,
-    justifyContent: 'center',
+    borderWidth: Border.width,
+    borderColor: Colors.ink,
   },
   notchRight: {
-    width: 14,
+    position: 'absolute',
+    right: -12,
+    width: 22,
     height: 22,
+    borderRadius: 11,
     backgroundColor: Colors.background,
-    borderTopLeftRadius: 11,
-    borderBottomLeftRadius: 11,
+    borderWidth: Border.width,
+    borderColor: Colors.ink,
   },
-  bottomContent: {
-    padding: 18,
-    paddingTop: 14,
+  bottomSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    minWidth: 0,
   },
 });

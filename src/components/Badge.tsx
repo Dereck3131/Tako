@@ -1,47 +1,65 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Radii } from '../constants/theme';
+import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Border, Colors, Radii } from '../constants/theme';
+
+export type BadgeVariant = 'emerald' | 'amber' | 'blue' | 'neutral' | 'dark';
 
 interface BadgeProps {
   label: string;
-  variant?: 'emerald' | 'amber' | 'blue' | 'gray';
+  variant?: BadgeVariant;
+  style?: ViewStyle;
 }
 
-export const Badge: React.FC<BadgeProps> = ({ label, variant = 'amber' }) => {
-  const getColors = () => {
+export function Badge({ label, variant = 'neutral', style }: BadgeProps) {
+  const getBg = () => {
     switch (variant) {
       case 'emerald':
-        return { bg: Colors.emeraldLight, text: Colors.emerald };
+        return Colors.mint;
       case 'amber':
-        // Impeccable contrast fix: use #B45309 for WCAG AA >= 4.5:1
-        return { bg: Colors.amberLight, text: Colors.amberText };
+        return Colors.amber;
       case 'blue':
-        return { bg: Colors.primaryLight, text: Colors.primary };
-      case 'gray':
+        return Colors.primary;
+      case 'dark':
+        return Colors.ink;
+      case 'neutral':
       default:
-        return { bg: '#F1F5F9', text: Colors.textSecondary };
+        return Colors.card;
     }
   };
 
-  const c = getColors();
+  const getTextColor = () => {
+    switch (variant) {
+      case 'blue':
+      case 'dark':
+        return Colors.textWhite;
+      default:
+        return Colors.ink;
+    }
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: c.bg }]}>
-      <Text style={[styles.text, { color: c.text }]}>{label}</Text>
+    <View style={[styles.chip, { backgroundColor: getBg() }, style]}>
+      <Text numberOfLines={1} style={[styles.label, { color: getTextColor() }]}>
+        {label}
+      </Text>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  chip: {
+    borderWidth: Border.chipWidth,
+    borderColor: Colors.ink,
     borderRadius: Radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     alignSelf: 'flex-start',
+    flexShrink: 0,
+    maxWidth: '100%',
   },
-  text: {
-    fontSize: 12,
+  label: {
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.3,
+    fontVariant: ['tabular-nums'],
   },
 });
