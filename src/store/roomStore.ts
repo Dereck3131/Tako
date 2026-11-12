@@ -1,8 +1,24 @@
 import { create } from 'zustand';
-import { Room, RoomMember, Item, ItemShare, ActivityEvent } from '../types/database';
-import { rebalanceSliders, calculateItemCents } from '../services/splitEngine';
+import { Room, RoomMember, Item, ItemShare, ActivityEvent, PaymentStatus, PaymentMethod } from '../types/database';
+import { rebalanceSliders, calculateItemCents, splitEqualCents } from '../services/splitEngine';
+import { CurrencyCode, formatMoney } from '../services/currency';
+import { AppLanguage } from '../constants/i18n';
 
-interface RoomState {
+export const NUDGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+export interface AppSettings {
+  currency: CurrencyCode;
+  language: AppLanguage;
+  roundToPeso: boolean;
+  soundEnabled: boolean;
+  hapticsEnabled: boolean;
+  muteNudges: boolean;
+  optOutAwards: boolean;
+  serviceChargeBps: number; // e.g. 1000 = 10%
+  vatBps: number; // e.g. 1200 = 12%
+}
+
+interface RoomState extends AppSettings {
   currentRoom: Room;
   members: RoomMember[];
   items: Item[];
@@ -10,17 +26,41 @@ interface RoomState {
   activities: ActivityEvent[];
   myUserId: string;
   selectedAnimal: 'bear' | 'fox' | 'panda' | 'frog' | 'cat';
+  lastNudgedAt: Record<string, number>;
+  adjustmentCountByMember: Record<string, number>;
 
   // Actions
   updateSliderShare: (itemId: string, memberId: string, targetBps: number) => void;
-  markMemberPaid: (memberId: string) => void;
+  splitItemEvenly: (itemId: string) => void;
+  markMemberPaid: (memberId: string, method?: PaymentMethod) => void;
+  setPaymentStatus: (memberId: string, status: PaymentStatus, method?: PaymentMethod) => void;
   addItem: (title: string, priceCents: number, quantity?: number) => void;
   setSelectedAnimal: (animal: 'bear' | 'fox' | 'panda' | 'frog' | 'cat') => void;
+  setSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void;
+  canNudgeMember: (memberId: string, now?: number) => boolean;
+  nudgeMember: (memberId: string, now?: number) => { sent: boolean; reason?: 'muted' | 'cooldown' | 'not_found' };
 }
 
 export const useRoomStore = create<RoomState>((set, get) => ({
   myUserId: 'user-you',
   selectedAnimal: 'bear',
+  currency: 'PHP',
+  language: 'en',
+  roundToPeso: false,
+  soundEnabled: false,
+  hapticsEnabled: true,
+  muteNudges: false,
+  optOutAwards: false,
+  serviceChargeBps: 1000,
+  vatBps: 1200,
+  lastNudgedAt: {},
+  adjustmentCountByMember: {
+    'member-you': 2,
+    'member-mia': 1,
+    'member-jonas': 4,
+    'member-aly': 0,
+    'member-ken': 3,
+  },
   currentRoom: {
     id: 'room-0412',
     title: 'Friday Night Dinner',
@@ -28,9 +68,9 @@ export const useRoomStore = create<RoomState>((set, get) => ({
     qrSlug: 'DINE-4821',
     hostId: 'user-you',
     status: 'active',
-    taxRateBps: 8875,
-    tipRateBps: 1800,
-    currency: 'USD',
+    taxRateBps: 1200,
+    tipRateBps: 1000,
+    currency: 'PHP',
     createdAt: new Date().toISOString(),
   },
   members: [
@@ -224,7 +264,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   ],
 
   updateSliderShare: (itemId, memberId, targetBps) => {
-    const { shares, items } = get();
+    const { shares, items, adjustmentCountByMember } = get();
     const item = items.find((i) => i.id === itemId);
     const currentShares = shares[itemId] || [];
     if (!item || currentShares.length === 0) return;
@@ -243,19 +283,80 @@ export const useRoomStore = create<RoomState>((set, get) => ({
         ...shares,
         [itemId]: updatedShares,
       },
+      adjustmentCountByMember: {
+        ...adjustmentCountByMember,
+        [memberId]: (adjustmentCountByMember[memberId] ?? 0) + 1,
+      },
     });
   },
 
-  markMemberPaid: (memberId) => {
-    const { members, activities } = get();
+  splitItemEvenly: (itemId) => {
+    const { shares, items } = get();
+    const item = items.find((i) => i.id === itemId);
+    const currentShares = shares[itemId] || [];
+    if (!item || currentShares.length === 0) return;
+
+    const even = splitEqualCents(
+      item.priceCents,
+      currentShares.map((s) => s.memberId)
+    );
+    const evenMap = new Map(even.map((e) => [e.memberId, e]));
+    const updatedShares = currentShares.map((s) => {
+      const alloc = evenMap.get(s.memberId);
+      return {
+        ...s,
+        basisPoints: alloc?.basisPoints ?? s.basisPoints,
+        allocatedCents: alloc?.cents ?? 0,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    set({
+      shares: {
+        ...shares,
+        [itemId]: updatedShares,
+      },
+    });
+  },
+
+  markMemberPaid: (memberId, method) => {
+    get().setPaymentStatus(memberId, 'paid', method);
+  },
+
+  setPaymentStatus: (memberId, status, method) => {
+    const { members, activities, currency } = get();
     const member = members.find((m) => m.id === memberId);
     if (!member) return;
 
     const updatedMembers = members.map((m) =>
       m.id === memberId
-        ? { ...m, paymentStatus: 'paid' as const, paidAt: new Date().toISOString() }
+        ? {
+            ...m,
+            paymentStatus: status,
+            paidAt: status === 'paid' ? new Date().toISOString() : m.paidAt,
+          }
         : m
     );
+
+    const methodLabel = method === 'gcash' ? ' via GCash' : method === 'maya' ? ' via Maya' : method === 'cash' ? ' in cash' : '';
+    const amountLabel = formatMoney(member.totalOwedCents, currency);
+    const title =
+      status === 'paid'
+        ? `${member.displayName} paid ${amountLabel}${methodLabel}`
+        : status === 'failed'
+        ? `${member.displayName}'s payment failed${methodLabel}`
+        : status === 'refunded'
+        ? `${member.displayName} was refunded ${amountLabel}`
+        : `${member.displayName} payment pending`;
+
+    const badge =
+      status === 'paid'
+        ? { label: 'Paid', variant: 'emerald' as const }
+        : status === 'failed'
+        ? { label: 'Failed', variant: 'amber' as const }
+        : status === 'refunded'
+        ? { label: 'Refunded', variant: 'blue' as const }
+        : { label: 'Pending', variant: 'amber' as const };
 
     const newActivity: ActivityEvent = {
       id: `act-${Date.now()}`,
@@ -263,8 +364,8 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       actorId: member.userId,
       actorName: member.displayName,
       actorAvatar: member.displayName.toLowerCase(),
-      title: `${member.displayName} paid $${(member.totalOwedCents / 100).toFixed(2)}`,
-      badge: { label: 'Paid', variant: 'emerald' },
+      title,
+      badge,
       relativeTime: 'just now',
       createdAt: new Date().toISOString(),
     };
@@ -297,5 +398,55 @@ export const useRoomStore = create<RoomState>((set, get) => ({
 
   setSelectedAnimal: (animal) => {
     set({ selectedAnimal: animal });
+  },
+
+  setSetting: (key, value) => {
+    if (key === 'currency') {
+      const { currentRoom } = get();
+      set({
+        [key]: value,
+        currentRoom: { ...currentRoom, currency: value as CurrencyCode },
+      } as Partial<RoomState>);
+      return;
+    }
+    set({ [key]: value } as Partial<RoomState>);
+  },
+
+  canNudgeMember: (memberId, now = Date.now()) => {
+    const { muteNudges, lastNudgedAt } = get();
+    if (muteNudges) return false;
+    const prev = lastNudgedAt[memberId];
+    if (!prev) return true;
+    return now - prev >= NUDGE_COOLDOWN_MS;
+  },
+
+  nudgeMember: (memberId, now = Date.now()) => {
+    const { muteNudges, lastNudgedAt, members, activities } = get();
+    const member = members.find((m) => m.id === memberId);
+    if (!member) return { sent: false, reason: 'not_found' };
+    if (muteNudges) return { sent: false, reason: 'muted' };
+    const prev = lastNudgedAt[memberId];
+    if (prev && now - prev < NUDGE_COOLDOWN_MS) {
+      return { sent: false, reason: 'cooldown' };
+    }
+
+    const newActivity: ActivityEvent = {
+      id: `act-${now}`,
+      roomId: member.roomId,
+      actorId: 'user-you',
+      actorName: 'You',
+      actorAvatar: 'you',
+      title: `Tako squirted playful ink at ${member.displayName}`,
+      subtitle: 'Gentle 24h reminder',
+      badge: { label: 'Nudged', variant: 'blue' },
+      relativeTime: 'just now',
+      createdAt: new Date(now).toISOString(),
+    };
+
+    set({
+      lastNudgedAt: { ...lastNudgedAt, [memberId]: now },
+      activities: [newActivity, ...activities],
+    });
+    return { sent: true };
   },
 }));

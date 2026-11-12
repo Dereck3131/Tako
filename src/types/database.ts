@@ -1,6 +1,7 @@
 export type RoomStatus = 'active' | 'settling' | 'settled' | 'archived';
 export type MemberRole = 'host' | 'guest';
-export type PaymentStatus = 'pending' | 'paid' | 'verified';
+export type PaymentStatus = 'pending' | 'paid' | 'verified' | 'failed' | 'refunded';
+export type PaymentMethod = 'gcash' | 'maya' | 'cash';
 
 export interface Profile {
   id: string;
