@@ -1,24 +1,33 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
   ScrollView,
-  TouchableOpacity,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useRoomStore } from '../src/store/roomStore';
-import { Colors, Radii } from '../src/constants/theme';
-import { TicketCard } from '../src/components/TicketCard';
+import Svg, { Path } from 'react-native-svg';
+import {
+  Colors,
+  Radii,
+  Spacing,
+  TouchTarget,
+  Typography,
+} from '../src/constants/theme';
+import { DotGridBackground } from '../src/components/DotGridBackground';
+import { NeoCard } from '../src/components/NeoUI';
 import { Badge } from '../src/components/Badge';
-import { SettlementHero } from '../src/components/SettlementHero';
 import { MemojiAvatar } from '../src/components/MemojiAvatar';
+import { TakoMascot } from '../src/components/TakoMascot';
+import { SettlementHero } from '../src/components/SettlementHero';
+import { StaggerItem } from '../src/components/MotionPrimitives';
+import { useRoomStore } from '../src/store/roomStore';
 
 export default function SettleUpScreen() {
   const router = useRouter();
-  const { markMemberPaid } = useRoomStore();
+  const { currentRoom, members, markMemberPaid } = useRoomStore();
   const [hasPaidSelf, setHasPaidSelf] = useState(false);
 
   const handlePayNow = () => {
@@ -32,199 +41,253 @@ export default function SettleUpScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header matching Page 7 */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backChevron}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settle up</Text>
-          <View style={styles.roomCountBadge}>
-            <View style={styles.greenDot} />
-            <Text style={styles.roomCountText}>4 in room</Text>
-          </View>
-        </View>
-
-        {/* Celebration Banner when Paid */}
-        {hasPaidSelf && (
-          <View style={styles.celebrationBanner}>
-            <Text style={styles.celebrationText}>🎉 Your share of $52.50 is settled!</Text>
-          </View>
-        )}
-
-        {/* Breakdown Ticket Card matching Page 7 */}
-        <TicketCard
-          childrenTop={
-            <View>
-              <Text style={styles.cardSectionLabel}>YOUR ITEMS · 25% EACH</Text>
-              <View style={styles.itemRow}>
-                <Text style={styles.itemName}>Burgers</Text>
-                <Text style={styles.itemPrice}>$30.00</Text>
-              </View>
-              <View style={styles.itemRow}>
-                <Text style={styles.itemName}>Drinks</Text>
-                <Text style={styles.itemPrice}>$15.00</Text>
-              </View>
-              <View style={styles.itemRow}>
-                <Text style={styles.itemName}>Fries</Text>
-                <Text style={styles.itemPrice}>$7.50</Text>
-              </View>
+    <DotGridBackground>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.headerRow}>
+            <View style={styles.headerLeft}>
+              <NeoCard
+                onPress={() => router.back()}
+                accessibilityLabel="Back"
+                borderRadius={Radii.md}
+                shadowOffset={3}
+                contentStyle={styles.backBtnBox}
+              >
+                <Svg
+                  width={18}
+                  height={18}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={Colors.ink}
+                  strokeWidth={3}
+                >
+                  <Path d="m15 5-7 7 7 7" />
+                </Svg>
+              </NeoCard>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                Settle up
+              </Text>
             </View>
-          }
-          childrenBottom={
-            <View>
-              <Text style={styles.cardSectionLabel}>THE ROOM</Text>
+            <Badge label={`${members.length} in the room`} variant="emerald" />
+          </View>
 
-              {/* Mia */}
-              <View style={styles.memberStatusRow}>
-                <View style={styles.memberInfo}>
-                  <View style={styles.avatarWrap}>
-                    <MemojiAvatar id="mia" size={38} />
-                  </View>
-                  <Text style={styles.memberName}>Mia</Text>
+          {/* YOUR PLATE Card */}
+          <StaggerItem index={0} distance={8}>
+            <NeoCard
+              style={{ marginTop: 18 }}
+              borderRadius={Radii.card}
+              contentStyle={styles.plateContent}
+            >
+              <Text style={styles.sectionLabel}>YOUR PLATE</Text>
+
+              <View style={styles.plateRow}>
+                <Text style={styles.plateItem} numberOfLines={2}>
+                  Burgers
+                  <Text style={styles.platePct}> 25% of $120.00</Text>
+                </Text>
+                <Text style={styles.platePrice} numberOfLines={1}>
+                  $30.00
+                </Text>
+              </View>
+
+              <View style={styles.plateRow}>
+                <Text style={styles.plateItem} numberOfLines={2}>
+                  Drinks
+                  <Text style={styles.platePct}> 25% of $60.00</Text>
+                </Text>
+                <Text style={styles.platePrice} numberOfLines={1}>
+                  $15.00
+                </Text>
+              </View>
+
+              <View style={styles.plateRow}>
+                <Text style={styles.plateItem} numberOfLines={2}>
+                  Fries
+                  <Text style={styles.platePct}> 25% of $30.00</Text>
+                </Text>
+                <Text style={styles.platePrice} numberOfLines={1}>
+                  $7.50
+                </Text>
+              </View>
+            </NeoCard>
+          </StaggerItem>
+
+          {/* THE ROOM Card */}
+          <StaggerItem index={1} distance={8}>
+            <NeoCard
+              style={{ marginTop: Spacing.lg }}
+              borderRadius={Radii.card}
+              contentStyle={styles.roomContent}
+            >
+              <Text style={[styles.sectionLabel, { marginBottom: 4 }]}>
+                THE ROOM
+              </Text>
+
+              <View style={styles.roomRow}>
+                <View style={styles.avatarShrink}>
+                  <MemojiAvatar id="mia" size={36} />
                 </View>
+                <Text style={styles.roomName} numberOfLines={1}>
+                  Mia
+                </Text>
                 <Badge label="Paid" variant="emerald" />
               </View>
 
-              {/* Jonas */}
-              <View style={styles.memberStatusRow}>
-                <View style={styles.memberInfo}>
-                  <View style={styles.avatarWrap}>
-                    <MemojiAvatar id="jonas" size={38} />
-                  </View>
-                  <Text style={styles.memberName}>Jonas</Text>
+              <View style={styles.roomRow}>
+                <View style={styles.avatarShrink}>
+                  <MemojiAvatar id="jonas" size={36} />
                 </View>
+                <Text style={styles.roomName} numberOfLines={1}>
+                  Jonas
+                </Text>
                 <Badge label="Paid" variant="emerald" />
               </View>
 
-              {/* Aly */}
-              <View style={styles.memberStatusRow}>
-                <View style={styles.memberInfo}>
-                  <View style={styles.avatarWrap}>
-                    <MemojiAvatar id="aly" size={38} />
-                  </View>
-                  <Text style={styles.memberName}>Aly</Text>
+              <View style={styles.roomRow}>
+                <View style={styles.avatarShrink}>
+                  <MemojiAvatar id="aly" size={36} />
                 </View>
+                <Text style={styles.roomName} numberOfLines={1}>
+                  Aly
+                </Text>
                 <Badge
                   label={hasPaidSelf ? 'Paid' : 'Pending'}
                   variant={hasPaidSelf ? 'emerald' : 'amber'}
                 />
               </View>
-            </View>
-          }
-        />
+            </NeoCard>
+          </StaggerItem>
 
-        {/* Midnight Navy Hero Card with Amber Pay Now button matching Page 7 */}
-        <SettlementHero
-          amountCents={5250}
-          splitCount={4}
-          roomTitle="Friday Night Dinner"
-          onPayNow={handlePayNow}
-        />
-      </ScrollView>
-    </SafeAreaView>
+          {/* Peeking Tako Mascot + Dark Settlement Hero */}
+          <StaggerItem index={2} distance={10}>
+            <View style={styles.heroWrap}>
+              <View style={styles.takoPeek} pointerEvents="none">
+                <TakoMascot size={98} />
+              </View>
+              <SettlementHero
+                amountCents={5250}
+                splitWays={4}
+                roomTitle={currentRoom.title}
+                onPayNow={handlePayNow}
+                hasPaid={hasPaidSelf}
+              />
+            </View>
+          </StaggerItem>
+        </ScrollView>
+      </SafeAreaView>
+    </DotGridBackground>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   container: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xxxl,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingTop: 8,
+    gap: Spacing.sm,
   },
-  backButton: {
-    width: 48,
-    height: 48,
+  headerLeft: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  backBtnBox: {
+    width: TouchTarget.minSize,
+    height: TouchTarget.minSize,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backChevron: {
-    fontSize: 32,
-    color: Colors.textPrimary,
-    fontWeight: '600',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    letterSpacing: -0.6,
+    color: Colors.ink,
+    flex: 1,
+    minWidth: 0,
   },
-  roomCountBadge: {
+  plateContent: {
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  sectionLabel: {
+    ...Typography.micro,
+    fontSize: 12,
+    color: Colors.ink,
+    marginBottom: 6,
+  },
+  plateRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: 9,
+    borderTopWidth: 2,
+    borderStyle: 'dashed',
+    borderTopColor: Colors.ink,
   },
-  greenDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.emerald,
-    marginRight: 6,
+  plateItem: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.ink,
   },
-  roomCountText: {
-    fontSize: 13,
+  platePct: {
     fontWeight: '600',
     color: Colors.textSecondary,
-  },
-  celebrationBanner: {
-    backgroundColor: Colors.emeraldLight,
-    borderRadius: Radii.md,
-    padding: 14,
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  celebrationText: {
-    color: Colors.emerald,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  cardSectionLabel: {
     fontSize: 12,
-    fontWeight: '800',
-    color: Colors.textSecondary,
-    letterSpacing: 0.5,
-    marginBottom: 12,
+    fontVariant: ['tabular-nums'],
   },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 7,
+  platePrice: {
+    ...Typography.currencyMd,
+    fontSize: 17,
+    color: Colors.ink,
+    flexShrink: 0,
   },
-  itemName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+  roomContent: {
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 8,
   },
-  itemPrice: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-  },
-  memberStatusRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  memberInfo: {
+  roomRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: 6,
   },
-  avatarWrap: {
-    marginRight: 10,
+  avatarShrink: {
+    flexShrink: 0,
   },
-  memberName: {
+  roomName: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    fontWeight: '800',
+    color: Colors.ink,
+  },
+  heroWrap: {
+    marginTop: 54,
+    position: 'relative',
+  },
+  takoPeek: {
+    position: 'absolute',
+    right: 24,
+    top: -68,
+    zIndex: 1,
   },
 });
