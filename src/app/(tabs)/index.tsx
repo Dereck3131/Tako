@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,26 +11,33 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SplitRowSkeleton } from '@/components/Skeleton';
 import { TakoMascot } from '@/components/TakoMascot';
+import { useToast } from '@/components/Toast';
 import { MemberPalette, Radii, TakoFonts, formatPeso } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useTakoTheme } from '@/context/ThemeContext';
-import { computeMemberBalances } from '@/lib/split';
+import { computeMemberBalances, computeSimplifiedDebts } from '@/lib/split';
 import { supabase } from '@/lib/supabase';
-import type { Expense, ExpenseSplit, Group, GroupMember, Settlement } from '@/types/tako';
+import type { Expense, ExpenseSplit, Group, GroupMember, Settlement, SimplifiedDebt } from '@/types/tako';
 
 interface GroupSummary {
   group: Group;
   members: GroupMember[];
   totalSpentCents: number;
   myBalanceCents: number;
+  debts: SimplifiedDebt[];
+  myMemberId?: string;
 }
 
 export default function SplitsHomeScreen() {
-  const { palette } = useTakoTheme();
+  const { palette, isDark } = useTakoTheme();
   const { user, profile } = useAuth();
+  const { showToast } = useToast();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const [summaries, setSummaries] = useState<GroupSummary[]>([]);
@@ -87,6 +95,7 @@ export default function SplitsHomeScreen() {
       const settlements = allSettlements.filter((st) => st.group_id === g.id);
 
       const balances = computeMemberBalances(members, expenses, splits, settlements);
+      const debts = computeSimplifiedDebts(members, balances);
       const myMember = members.find((m) => m.user_id === user.id);
       const myBalanceCents = myMember ? (balances[myMember.id] ?? 0) : 0;
       const totalSpentCents = expenses.reduce((sum, e) => sum + e.amount_cents, 0);
@@ -96,6 +105,8 @@ export default function SplitsHomeScreen() {
         members,
         totalSpentCents,
         myBalanceCents,
+        debts,
+        myMemberId: myMember?.id,
       };
     });
 
@@ -103,6 +114,55 @@ export default function SplitsHomeScreen() {
     setLoading(false);
     setRefreshing(false);
   }, [user]);
+
+  const handleQuickSettle = async (group: Group, debt: SimplifiedDebt) => {
+    const { data: inserted, error } = await supabase
+      .from('settlements')
+      .insert({
+        group_id: group.id,
+        from_member_id: debt.from.id,
+        to_member_id: debt.to.id,
+        amount_cents: debt.amountCents,
+        note: 'Settled via Tako',
+      })
+      .select()
+      .single();
+
+    if (error || !inserted) {
+      showToast({ message: error?.message ?? 'Could not record settlement.', tone: 'error' });
+      return;
+    }
+
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
+
+    await loadGroups();
+    showToast({
+      message: `Settled ${formatPeso(debt.amountCents)} in ${group.name}`,
+      tone: 'success',
+      actionLabel: 'Undo',
+      onAction: async () => {
+        await supabase.from('settlements').delete().eq('id', inserted.id);
+        await loadGroups();
+      },
+    });
+  };
+
+  const handleDeleteGroup = async (group: Group) => {
+    const prev = summaries;
+    setSummaries((curr) => curr.filter((s) => s.group.id !== group.id));
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+    const { error } = await supabase.from('groups').delete().eq('id', group.id);
+    if (error) {
+      setSummaries(prev);
+      showToast({ message: error.message, tone: 'error' });
+      return;
+    }
+    showToast({ message: `Deleted "${group.name}"` });
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -112,10 +172,34 @@ export default function SplitsHomeScreen() {
 
   const initial = (profile?.display_name || user?.email || 'A').trim().charAt(0).toUpperCase();
 
+  const cardElevation = isDark
+    ? {}
+    : Platform.select({
+        ios: {
+          shadowColor: '#2B1B3D',
+          shadowOpacity: 0.06,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 3 },
+        },
+        android: { elevation: 2 },
+        web: { boxShadow: '0 2px 10px rgba(43, 27, 61, 0.06)' },
+      });
+
+  const actionDebts = summaries.flatMap((s) =>
+    s.debts.map((debt) => ({
+      group: s.group,
+      debt,
+      myMemberId: s.myMemberId,
+    }))
+  );
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: Math.max(insets.bottom, 16) + 96 },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -129,7 +213,6 @@ export default function SplitsHomeScreen() {
         {/* Top Header */}
         <View style={styles.header}>
           <View style={styles.brandRow}>
-            <TakoMascot state="idle" size={38} interactive={false} />
             <Text style={[styles.wordmark, { color: palette.ink, fontFamily: TakoFonts.black }]}>
               tako
             </Text>
@@ -137,6 +220,8 @@ export default function SplitsHomeScreen() {
 
           <Pressable
             onPress={() => router.push('/(tabs)/profile')}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
             style={[styles.avatarBtn, { backgroundColor: palette.coralSoft }]}>
             <Text style={[styles.avatarText, { color: palette.plum, fontFamily: TakoFonts.black }]}>
               {initial}
@@ -155,9 +240,11 @@ export default function SplitsHomeScreen() {
                 Share a QR. Everyone joins.
               </Text>
             </View>
-            <View style={styles.heroMascotWrap}>
-              <TakoMascot state="idle" size={112} interactive />
-            </View>
+            {summaries.length > 0 && (
+              <View style={styles.heroMascotWrap}>
+                <TakoMascot state="idle" size={112} interactive />
+              </View>
+            )}
           </View>
 
           <View style={styles.heroActions}>
@@ -188,13 +275,93 @@ export default function SplitsHomeScreen() {
           </View>
         </View>
 
+        {/* Who owes whom (primary when splits have open balances) */}
+        {!loading && actionDebts.length > 0 && (
+          <View style={styles.debtsSection}>
+            <Text style={[styles.sectionTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+              Who owes whom
+            </Text>
+            <View style={styles.list}>
+              {actionDebts.slice(0, 4).map(({ group, debt, myMemberId }, idx) => {
+                const iOwe = debt.from.id === myMemberId;
+                const owedToMe = debt.to.id === myMemberId;
+                const headline = owedToMe
+                  ? `${debt.from.name} owes you ${formatPeso(debt.amountCents)}`
+                  : iOwe
+                    ? `You owe ${debt.to.name} ${formatPeso(debt.amountCents)}`
+                    : `${debt.from.name} owes ${debt.to.name} ${formatPeso(debt.amountCents)}`;
+
+                return (
+                  <Swipeable
+                    key={`debt-${group.id}-${debt.from.id}-${debt.to.id}-${idx}`}
+                    overshootRight={false}
+                    renderRightActions={() => (
+                      <Pressable
+                        onPress={() => handleQuickSettle(group, debt)}
+                        style={[styles.swipeAction, { backgroundColor: palette.teal }]}>
+                        <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />
+                        <Text style={[styles.swipeText, { fontFamily: TakoFonts.bold }]}>Settle</Text>
+                      </Pressable>
+                    )}>
+                    <View
+                      style={[
+                        styles.debtCard,
+                        { backgroundColor: palette.surface, borderColor: palette.border },
+                        cardElevation,
+                      ]}>
+                      <View
+                        style={[
+                          styles.debtBadge,
+                          { backgroundColor: owedToMe ? palette.tealSoft : palette.coralSoft },
+                        ]}>
+                        <Ionicons
+                          name={owedToMe ? 'arrow-down-outline' : 'arrow-up-outline'}
+                          size={18}
+                          color={owedToMe ? palette.teal : palette.coralAccent}
+                        />
+                      </View>
+                      <Pressable
+                        onPress={() => router.push(`/group/${group.id}`)}
+                        style={styles.splitInfo}>
+                        <Text
+                          style={[styles.debtHeadline, { color: palette.ink, fontFamily: TakoFonts.bold }]}
+                          numberOfLines={1}>
+                          {headline}
+                        </Text>
+                        <Text
+                          style={[styles.splitMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}
+                          numberOfLines={1}>
+                          {group.name}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => handleQuickSettle(group, debt)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Settle ${headline}`}
+                        style={({ pressed }) => [
+                          styles.settleChip,
+                          { backgroundColor: palette.tealSoft },
+                          pressed && { opacity: 0.85 },
+                        ]}>
+                        <Text style={[styles.settleChipText, { color: palette.teal, fontFamily: TakoFonts.bold }]}>
+                          Settle
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </Swipeable>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         {/* Section Header */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
             Active splits
           </Text>
           {summaries.length > 0 && (
-            <Pressable onPress={() => router.push('/(tabs)/activity')}>
+            <Pressable onPress={() => router.push('/(tabs)/activity')} hitSlop={10}>
               <Text style={[styles.seeAll, { color: palette.coralAccent, fontFamily: TakoFonts.bold }]}>
                 See all
               </Text>
@@ -204,22 +371,39 @@ export default function SplitsHomeScreen() {
 
         {/* Splits List */}
         {loading ? (
-          <View style={styles.centerState}>
-            <ActivityIndicator size="large" color={palette.coralAccent} />
+          <View style={styles.list}>
+            <SplitRowSkeleton />
+            <SplitRowSkeleton />
+            <SplitRowSkeleton />
           </View>
         ) : summaries.length === 0 ? (
           <View
             style={[
               styles.emptyCard,
               { backgroundColor: palette.surface, borderColor: palette.border },
+              cardElevation,
             ]}>
-            <TakoMascot state="sad" size={116} interactive />
+            <TakoMascot state="wave" size={116} interactive />
             <Text style={[styles.emptyTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
               No active splits yet
             </Text>
             <Text style={[styles.emptyBody, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
-              Tap “+ New split” above to create a bill and get a QR code, or “Scan to join” to hop into a friend’s split.
+              Split dinner, groceries, or barkada trips in seconds and share a QR to join.
             </Text>
+            <Pressable
+              onPress={() => router.push('/group/new-split')}
+              accessibilityRole="button"
+              accessibilityLabel="Create your first split"
+              style={({ pressed }) => [
+                styles.emptyCta,
+                { backgroundColor: palette.coral },
+                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+              ]}>
+              <Ionicons name="add" size={18} color={palette.plum} />
+              <Text style={[styles.emptyCtaText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
+                Create a split
+              </Text>
+            </Pressable>
           </View>
         ) : (
           <View style={styles.list}>
@@ -237,49 +421,65 @@ export default function SplitsHomeScreen() {
               const displayAmt = Math.abs(myBalanceCents) <= 1 ? 0 : Math.abs(myBalanceCents);
 
               return (
-                <Pressable
+                <Swipeable
                   key={group.id}
-                  onPress={() => router.push(`/group/${group.id}`)}
-                  style={({ pressed }) => [
-                    styles.splitCard,
-                    { backgroundColor: palette.surface, borderColor: palette.border },
-                    pressed && { transform: [{ scale: 0.985 }], opacity: 0.94 },
-                  ]}>
-                  <View style={[styles.letterBadge, { backgroundColor: avatarBg }]}>
-                    <Text style={[styles.letterText, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-                      {badgeLetter}
-                    </Text>
-                  </View>
-
-                  <View style={styles.splitInfo}>
-                    <Text
-                      style={[styles.splitName, { color: palette.ink, fontFamily: TakoFonts.bold }]}
-                      numberOfLines={1}>
-                      {group.name}
-                    </Text>
-                    <Text style={[styles.splitMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
-                      {members.length} {members.length === 1 ? 'person' : 'people'} · {formatPeso(totalSpentCents)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.splitRight}>
-                    <Text style={[styles.splitAmt, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-                      {formatPeso(displayAmt)}
-                    </Text>
-                    <View style={[styles.statusPill, { backgroundColor: badgeBg }]}>
-                      <Text
-                        style={[
-                          styles.statusText,
-                          {
-                            color: isOwe ? palette.coralAccent : palette.teal,
-                            fontFamily: TakoFonts.bold,
-                          },
-                        ]}>
-                        {isOwe ? 'You owe' : isOwed ? "You're owed" : 'Settled'}
+                  overshootRight={false}
+                  renderRightActions={() => (
+                    <Pressable
+                      onPress={() => handleDeleteGroup(group)}
+                      style={[styles.swipeAction, { backgroundColor: palette.destructive }]}>
+                      <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
+                      <Text style={[styles.swipeText, { fontFamily: TakoFonts.bold }]}>Delete</Text>
+                    </Pressable>
+                  )}>
+                  <Pressable
+                    onPress={() => router.push(`/group/${group.id}`)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open split ${group.name}`}
+                    style={({ pressed }) => [
+                      styles.splitCard,
+                      { backgroundColor: palette.surface, borderColor: palette.border },
+                      cardElevation,
+                      pressed && { transform: [{ scale: 0.985 }], opacity: 0.94 },
+                    ]}>
+                    <View style={[styles.letterBadge, { backgroundColor: avatarBg }]}>
+                      <Text style={[styles.letterText, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+                        {badgeLetter}
                       </Text>
                     </View>
-                  </View>
-                </Pressable>
+
+                    <View style={styles.splitInfo}>
+                      <Text
+                        style={[styles.splitName, { color: palette.ink, fontFamily: TakoFonts.bold }]}
+                        numberOfLines={1}>
+                        {group.name}
+                      </Text>
+                      <Text
+                        style={[styles.splitMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}
+                        numberOfLines={1}>
+                        {members.length} {members.length === 1 ? 'person' : 'people'} · {formatPeso(totalSpentCents)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.splitRight}>
+                      <Text style={[styles.splitAmt, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+                        {formatPeso(displayAmt)}
+                      </Text>
+                      <View style={[styles.statusPill, { backgroundColor: badgeBg }]}>
+                        <Text
+                          style={[
+                            styles.statusText,
+                            {
+                              color: isOwe ? palette.coralAccent : palette.teal,
+                              fontFamily: TakoFonts.bold,
+                            },
+                          ]}>
+                          {isOwe ? 'You owe' : isOwed ? "You're owed" : 'Settled'}
+                        </Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                </Swipeable>
               );
             })}
           </View>
@@ -316,9 +516,9 @@ const styles = StyleSheet.create({
     letterSpacing: -1.4,
   },
   avatarBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -414,6 +614,66 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  emptyCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 22,
+    minHeight: 46,
+    borderRadius: Radii.pill,
+  },
+  emptyCtaText: {
+    fontSize: 15,
+  },
+  debtsSection: {
+    gap: 10,
+  },
+  debtCard: {
+    borderRadius: Radii.xl,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  debtBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  debtHeadline: {
+    fontSize: 14,
+    fontVariant: ['tabular-nums'],
+  },
+  settleChip: {
+    paddingHorizontal: 14,
+    minHeight: 38,
+    borderRadius: Radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  settleChipText: {
+    fontSize: 13,
+  },
+  swipeAction: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    borderRadius: Radii.xl,
+    marginLeft: 8,
+    gap: 2,
+  },
+  swipeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+  },
   list: {
     gap: 12,
   },
@@ -438,6 +698,7 @@ const styles = StyleSheet.create({
   },
   splitInfo: {
     flex: 1,
+    flexShrink: 1,
     gap: 2,
   },
   splitName: {
@@ -445,13 +706,16 @@ const styles = StyleSheet.create({
   },
   splitMeta: {
     fontSize: 13,
+    fontVariant: ['tabular-nums'],
   },
   splitRight: {
     alignItems: 'flex-end',
+    flexShrink: 0,
     gap: 4,
   },
   splitAmt: {
     fontSize: 16,
+    fontVariant: ['tabular-nums'],
   },
   statusPill: {
     paddingHorizontal: 9,
