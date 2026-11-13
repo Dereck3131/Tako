@@ -9,6 +9,11 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   Border,
   Colors,
@@ -18,6 +23,8 @@ import {
   Spacing,
   TouchTarget,
 } from '../constants/theme';
+import { MotionTokens } from '../constants/motion';
+import { useReducedMotion } from './MotionPrimitives';
 
 interface NeoCardProps {
   children: React.ReactNode;
@@ -117,43 +124,71 @@ export function NeoButton({
     backgroundColor === Colors.surfaceSubtle;
   const resolvedBorderColor =
     borderColor ?? (isLight ? Colors.border : 'transparent');
+  const reducedMotion = useReducedMotion();
+  const scale = useSharedValue(1);
+
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    if (disabled || reducedMotion) return;
+    scale.value = withTiming(MotionTokens.scale.press, {
+      duration: MotionTokens.duration.press,
+      easing: MotionTokens.easing.reanimatedOut,
+    });
+  };
+
+  const handlePressOut = () => {
+    if (reducedMotion) {
+      scale.value = 1;
+      return;
+    }
+    scale.value = withTiming(1, {
+      duration: MotionTokens.duration.fast,
+      easing: MotionTokens.easing.reanimatedOut,
+    });
+  };
 
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled }}
-      style={({ pressed }) => [
-        styles.buttonBase,
-        !isLight && Shadows.button,
-        isLight && Shadows.cardSoft,
-        {
-          height: effectiveHeight,
-          backgroundColor,
-          borderRadius: Radii.pill,
-          borderWidth: resolvedBorderColor === 'transparent' ? 0 : Border.width,
-          borderColor: resolvedBorderColor,
-        },
-        disabled && styles.disabled,
-        pressed && !disabled && { transform: [{ scale: Motion.pressScale }] },
-        style,
-      ]}
-    >
-      {children ?? (
-        <Text
-          numberOfLines={1}
-          style={[
-            styles.buttonText,
-            { color: textColor, fontSize },
-            textStyle,
-          ]}
-        >
-          {label}
-        </Text>
-      )}
-    </Pressable>
+    <Animated.View style={pressStyle}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityState={{ disabled }}
+        style={[
+          styles.buttonBase,
+          !isLight && Shadows.button,
+          isLight && Shadows.cardSoft,
+          {
+            height: effectiveHeight,
+            backgroundColor,
+            borderRadius: Radii.pill,
+            borderWidth: resolvedBorderColor === 'transparent' ? 0 : Border.width,
+            borderColor: resolvedBorderColor,
+          },
+          disabled && styles.disabled,
+          style,
+        ]}
+      >
+        {children ?? (
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.buttonText,
+              { color: textColor, fontSize },
+              textStyle,
+            ]}
+          >
+            {label}
+          </Text>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 
