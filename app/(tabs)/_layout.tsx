@@ -1,13 +1,22 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Tabs } from 'expo-router';
 import {
+  LayoutChangeEvent,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { Border, Colors, Motion, Radii, TouchTarget } from '../../src/constants/theme';
+import { MotionTokens } from '../../src/constants/motion';
+import { useReducedMotion } from '../../src/components/MotionPrimitives';
 import {
   ActivityIcon,
   HomeIcon,
@@ -29,9 +38,45 @@ interface NeoTabBarProps {
 }
 
 function NeoTabBar({ state, descriptors, navigation }: NeoTabBarProps) {
+  const reducedMotion = useReducedMotion();
+  const [barWidth, setBarWidth] = useState(0);
+  const routeCount = Math.max(state.routes.length, 1);
+  const horizontalPad = 10;
+  const innerWidth = Math.max(0, barWidth - horizontalPad * 2);
+  const slotWidth = innerWidth / routeCount;
+  const pillWidth = Math.min(76, Math.max(60, slotWidth - 8));
+
+  const pillX = useSharedValue(0);
+
+  useEffect(() => {
+    if (slotWidth <= 0) return;
+    const targetX = horizontalPad + state.index * slotWidth + (slotWidth - pillWidth) / 2;
+    if (reducedMotion) {
+      pillX.value = targetX;
+    } else {
+      pillX.value = withSpring(targetX, MotionTokens.spring.tabPill);
+    }
+  }, [pillWidth, pillX, reducedMotion, slotWidth, state.index]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: slotWidth > 0 ? 1 : 0,
+    width: pillWidth,
+    transform: [{ translateX: pillX.value }],
+  }));
+
+  const onBarLayout = (e: LayoutChangeEvent) => {
+    setBarWidth(e.nativeEvent.layout.width);
+  };
+
   return (
     <SafeAreaView edges={['bottom']} style={styles.safeWrap}>
-      <View style={styles.bar}>
+      <View style={styles.bar} onLayout={onBarLayout}>
+        {/* Gliding active pill */}
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.glidingPill, pillStyle]}
+        />
+
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const label =
@@ -79,7 +124,6 @@ function NeoTabBar({ state, descriptors, navigation }: NeoTabBarProps) {
               accessibilityLabel={label}
               style={({ pressed }) => [
                 styles.tabPill,
-                isFocused && styles.tabPillActive,
                 pressed && { transform: [{ scale: Motion.pressScale }] },
               ]}
             >
@@ -102,9 +146,14 @@ function NeoTabBar({ state, descriptors, navigation }: NeoTabBarProps) {
 }
 
 export default function TabsLayout() {
+  const reducedMotion = useReducedMotion();
+
   return (
     <Tabs
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        animation: reducedMotion ? 'none' : 'fade',
+      }}
       tabBar={(props) => <NeoTabBar {...props} />}
     >
       <Tabs.Screen name="index" options={{ title: 'Room' }} />
@@ -128,20 +177,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: 10,
+    position: 'relative',
+  },
+  glidingPill: {
+    position: 'absolute',
+    left: 0,
+    height: 50,
+    borderRadius: Radii.md,
+    backgroundColor: Colors.primaryLight,
   },
   tabPill: {
+    flex: 1,
     minHeight: TouchTarget.minSize,
-    minWidth: 68,
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: Radii.md,
-  },
-  tabPillActive: {
-    backgroundColor: Colors.primaryLight,
   },
   tabLabel: {
     fontSize: 11,
