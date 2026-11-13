@@ -1,10 +1,10 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +17,7 @@ import { TakoMascot } from '@/components/TakoMascot';
 import { Radii, TakoFonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useTakoTheme } from '@/context/ThemeContext';
+import { supabase } from '@/lib/supabase';
 import type { TakoState } from '@/types/tako';
 
 export function AuthScreen() {
@@ -27,17 +28,34 @@ export function AuthScreen() {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<'name' | 'email' | 'password' | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [takoState, setTakoState] = useState<TakoState>('wave');
 
+  const validateFields = () => {
+    const next: { email?: string; password?: string } = {};
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      next.email = 'Enter a valid email address.';
+    }
+    if (!password) {
+      next.password = 'Enter your password.';
+    } else if (mode === 'signup' && password.length < 6) {
+      next.password = 'Password must be at least 6 characters.';
+    }
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
   const handleSubmit = async () => {
     setError(null);
     setNotice(null);
 
-    if (!email.trim() || !password) {
-      setError('Please enter your email and password.');
+    if (!validateFields()) {
       return;
     }
 
@@ -68,6 +86,24 @@ export function AuthScreen() {
     setBusy(false);
   };
 
+  const handleForgotPassword = async () => {
+    setError(null);
+    setNotice(null);
+    const trimmed = email.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setFieldErrors({ email: 'Enter your email above to reset your password.' });
+      return;
+    }
+    setBusy(true);
+    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmed);
+    setBusy(false);
+    if (resetErr) {
+      setError(resetErr.message);
+    } else {
+      setNotice('Password reset link sent. Check your inbox.');
+    }
+  };
+
   const handleGuest = async () => {
     setError(null);
     setNotice(null);
@@ -88,12 +124,10 @@ export function AuthScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled">
-          <AmbientGlow size={360} style={{ top: 10, alignSelf: 'center' }} />
+        <View style={styles.scroll}>
+          <AmbientGlow size={320} style={{ top: 0, alignSelf: 'center' }} />
 
-          <TakoMascot state={takoState} size={160} />
+          <TakoMascot state={takoState} size={118} />
 
           <Text style={[styles.wordmark, { color: palette.ink, fontFamily: TakoFonts.black }]}>
             tako
@@ -109,10 +143,13 @@ export function AuthScreen() {
               return (
                 <Pressable
                   key={m}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
                   onPress={() => {
                     setMode(m);
                     setError(null);
                     setNotice(null);
+                    setFieldErrors({});
                   }}
                   style={[
                     styles.segBtn,
@@ -146,6 +183,8 @@ export function AuthScreen() {
                 <TextInput
                   value={displayName}
                   onChangeText={setDisplayName}
+                  onFocus={() => setFocusedField('name')}
+                  onBlur={() => setFocusedField((f) => (f === 'name' ? null : f))}
                   placeholder="e.g. Mika"
                   placeholderTextColor={palette.mute}
                   autoCapitalize="words"
@@ -155,6 +194,7 @@ export function AuthScreen() {
                       backgroundColor: palette.surfaceAlt,
                       color: palette.ink,
                       fontFamily: TakoFonts.regular,
+                      borderColor: focusedField === 'name' ? palette.coralAccent : 'transparent',
                     },
                   ]}
                 />
@@ -167,7 +207,12 @@ export function AuthScreen() {
               </Text>
               <TextInput
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(txt) => {
+                  setEmail(txt);
+                  if (fieldErrors.email) setFieldErrors((e) => ({ ...e, email: undefined }));
+                }}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField((f) => (f === 'email' ? null : f))}
                 placeholder="you@example.com"
                 placeholderTextColor={palette.mute}
                 keyboardType="email-address"
@@ -179,30 +224,82 @@ export function AuthScreen() {
                     backgroundColor: palette.surfaceAlt,
                     color: palette.ink,
                     fontFamily: TakoFonts.regular,
+                    borderColor: fieldErrors.email
+                      ? palette.destructive
+                      : focusedField === 'email'
+                        ? palette.coralAccent
+                        : 'transparent',
                   },
                 ]}
               />
+              {fieldErrors.email && (
+                <Text style={[styles.fieldError, { color: palette.destructive, fontFamily: TakoFonts.bold }]}>
+                  {fieldErrors.email}
+                </Text>
+              )}
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
-                Password
-              </Text>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                placeholderTextColor={palette.mute}
-                secureTextEntry
+              <View style={styles.labelRow}>
+                <Text style={[styles.label, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
+                  Password
+                </Text>
+                {mode === 'signin' && (
+                  <Pressable onPress={handleForgotPassword} hitSlop={8}>
+                    <Text style={[styles.forgotText, { color: palette.coralAccent, fontFamily: TakoFonts.bold }]}>
+                      Forgot password?
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+              <View
                 style={[
-                  styles.input,
+                  styles.passwordWrap,
                   {
                     backgroundColor: palette.surfaceAlt,
-                    color: palette.ink,
-                    fontFamily: TakoFonts.regular,
+                    borderColor: fieldErrors.password
+                      ? palette.destructive
+                      : focusedField === 'password'
+                        ? palette.coralAccent
+                        : 'transparent',
                   },
-                ]}
-              />
+                ]}>
+                <TextInput
+                  value={password}
+                  onChangeText={(txt) => {
+                    setPassword(txt);
+                    if (fieldErrors.password) setFieldErrors((e) => ({ ...e, password: undefined }));
+                  }}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField((f) => (f === 'password' ? null : f))}
+                  placeholder="••••••••"
+                  placeholderTextColor={palette.mute}
+                  secureTextEntry={!showPassword}
+                  style={[
+                    styles.passwordInput,
+                    {
+                      color: palette.ink,
+                      fontFamily: TakoFonts.regular,
+                    },
+                  ]}
+                />
+                <Pressable
+                  onPress={() => setShowPassword((s) => !s)}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                  style={styles.eyeBtn}>
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={palette.mute}
+                  />
+                </Pressable>
+              </View>
+              {fieldErrors.password && (
+                <Text style={[styles.fieldError, { color: palette.destructive, fontFamily: TakoFonts.bold }]}>
+                  {fieldErrors.password}
+                </Text>
+              )}
             </View>
 
             {error && (
@@ -242,16 +339,19 @@ export function AuthScreen() {
           <Pressable
             onPress={handleGuest}
             disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel="Continue as Guest"
             style={({ pressed }) => [
               styles.guestBtn,
-              { backgroundColor: palette.chip },
+              { backgroundColor: palette.surface, borderColor: palette.border },
               pressed && { opacity: 0.85 },
             ]}>
+            <Ionicons name="person-outline" size={16} color={palette.ink} />
             <Text style={[styles.guestText, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
               Continue as Guest
             </Text>
           </Pressable>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -261,42 +361,43 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
   scroll: {
-    flexGrow: 1,
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 20,
-    paddingVertical: 28,
+    paddingTop: 24,
+    paddingBottom: 16,
   },
   glow: {
     position: 'absolute',
-    top: 24,
+    top: 10,
     width: 320,
     height: 320,
     borderRadius: 160,
     opacity: 0.7,
   },
   wordmark: {
-    fontSize: 56,
-    lineHeight: 60,
-    letterSpacing: -3,
-    marginTop: 2,
+    fontSize: 44,
+    lineHeight: 48,
+    letterSpacing: -2.4,
+    marginTop: 0,
   },
   tagline: {
-    fontSize: 15,
-    marginTop: 4,
-    marginBottom: 22,
+    fontSize: 14,
+    marginTop: 2,
+    marginBottom: 14,
   },
   segment: {
     flexDirection: 'row',
-    padding: 5,
+    padding: 4,
     borderRadius: Radii.pill,
-    marginBottom: 16,
+    marginBottom: 12,
     width: '100%',
     maxWidth: 400,
   },
   segBtn: {
     flex: 1,
-    paddingVertical: 11,
+    paddingVertical: 10,
     borderRadius: Radii.pill,
     alignItems: 'center',
   },
@@ -308,20 +409,52 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: Radii.xl,
     borderWidth: 1,
-    padding: 20,
-    gap: 14,
+    padding: 16,
+    gap: 10,
   },
   field: {
-    gap: 6,
+    gap: 4,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   label: {
-    fontSize: 13,
+    fontSize: 12,
+  },
+  forgotText: {
+    fontSize: 12,
+  },
+  fieldError: {
+    fontSize: 11,
+    marginTop: 2,
   },
   input: {
     borderRadius: Radii.md,
+    borderWidth: 1.5,
     paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingVertical: 11,
     fontSize: 16,
+  },
+  passwordWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: Radii.md,
+    borderWidth: 1.5,
+    paddingLeft: 14,
+    paddingRight: 4,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 11,
+    fontSize: 16,
+  },
+  eyeBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   banner: {
     borderRadius: Radii.md,
@@ -343,10 +476,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   guestBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     marginTop: 14,
     paddingHorizontal: 22,
-    paddingVertical: 12,
+    minHeight: 46,
     borderRadius: Radii.pill,
+    borderWidth: 1,
   },
   guestText: {
     fontSize: 14,
