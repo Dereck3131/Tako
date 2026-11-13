@@ -1,10 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -16,9 +18,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Skeleton, SplitRowSkeleton } from '@/components/Skeleton';
 import { TakoMascot } from '@/components/TakoMascot';
+import { useToast } from '@/components/Toast';
 import { MemberPalette, Radii, TakoFonts, formatPeso } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useTakoTheme } from '@/context/ThemeContext';
@@ -36,8 +41,10 @@ import type {
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { palette } = useTakoTheme();
+  const { palette, isDark } = useTakoTheme();
   const { user } = useAuth();
+  const { showToast } = useToast();
+  const insets = useSafeAreaInsets();
 
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -50,6 +57,10 @@ export default function GroupDetailScreen() {
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [addingMember, setAddingMember] = useState(false);
+
+  const [settleTarget, setSettleTarget] = useState<SimplifiedDebt | null>(null);
+  const [recipientHandle, setRecipientHandle] = useState<string | null>(null);
+  const [settling, setSettling] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -122,21 +133,76 @@ export default function GroupDetailScreen() {
     return debts.find((d) => d.from.id === myMember.id) ?? debts[0] ?? null;
   }, [debts, myMember]);
 
+  const openSettleSheet = async (debt: SimplifiedDebt) => {
+    setSettleTarget(debt);
+    setRecipientHandle(null);
+    if (debt.to.user_id) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('payment_handle')
+        .eq('id', debt.to.user_id)
+        .maybeSingle();
+      if (data?.payment_handle) {
+        setRecipientHandle(data.payment_handle);
+      }
+    }
+  };
+
   const handleSettleDebt = async (debt: SimplifiedDebt) => {
     if (!group) return;
-    const { error } = await supabase.from('settlements').insert({
-      group_id: group.id,
-      from_member_id: debt.from.id,
-      to_member_id: debt.to.id,
-      amount_cents: debt.amountCents,
-      note: 'Settled via Tako',
-    });
+    setSettling(true);
+    const { data: inserted, error } = await supabase
+      .from('settlements')
+      .insert({
+        group_id: group.id,
+        from_member_id: debt.from.id,
+        to_member_id: debt.to.id,
+        amount_cents: debt.amountCents,
+        note: 'Settled via Tako',
+      })
+      .select()
+      .single();
 
-    if (!error) {
+    setSettling(false);
+    setSettleTarget(null);
+
+    if (!error && inserted) {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
       await loadData();
+      showToast({
+        message: `${debt.from.name} paid ${debt.to.name} ${formatPeso(debt.amountCents)}`,
+        tone: 'success',
+        actionLabel: 'Undo',
+        onAction: async () => {
+          await supabase.from('settlements').delete().eq('id', inserted.id);
+          await loadData();
+        },
+      });
+    } else if (error) {
+      showToast({ message: error.message, tone: 'error' });
+    }
+  };
+
+  const handleCopyHandle = async () => {
+    if (!recipientHandle) return;
+    await Clipboard.setStringAsync(recipientHandle);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    showToast({ message: `Copied ${recipientHandle}`, tone: 'success' });
+  };
+
+  const handleOpenWallet = async (app: 'gcash' | 'maya') => {
+    const url = app === 'gcash' ? 'gcash://' : 'maya://';
+    const supported = await Linking.canOpenURL(url).catch(() => false);
+    if (supported) {
+      await Linking.openURL(url).catch(() => {});
+    } else {
+      showToast({
+        message: `${app === 'gcash' ? 'GCash' : 'Maya'} app not detected — copy the account number instead.`,
+      });
     }
   };
 
@@ -149,20 +215,34 @@ export default function GroupDetailScreen() {
       name: newMemberName.trim(),
       color,
     });
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
     setAddingMember(false);
     setNewMemberName('');
     setShowAddMember(false);
     await loadData();
   };
 
-  const handleDeleteExpense = (exp: Expense) => {
+  const handleDeleteExpense = async (exp: Expense, skipConfirm = false) => {
     const doDelete = async () => {
-      await supabase.from('expenses').delete().eq('id', exp.id);
+      const prevExpenses = expenses;
+      setExpenses((curr) => curr.filter((e) => e.id !== exp.id));
+      const { error } = await supabase.from('expenses').delete().eq('id', exp.id);
+      if (error) {
+        setExpenses(prevExpenses);
+        showToast({ message: error.message, tone: 'error' });
+        return;
+      }
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      }
       await loadData();
+      showToast({ message: `Removed "${exp.title}"` });
     };
 
-    if (Platform.OS === 'web') {
-      doDelete();
+    if (skipConfirm || Platform.OS === 'web') {
+      await doDelete();
       return;
     }
 
@@ -181,9 +261,13 @@ export default function GroupDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={palette.coralAccent} />
+      <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top']}>
+        <View style={styles.skeletonPage}>
+          <Skeleton height={44} borderRadius={Radii.lg} />
+          <Skeleton height={124} borderRadius={Radii.xl} />
+          <Skeleton height={86} borderRadius={Radii.xl} />
+          <SplitRowSkeleton />
+          <SplitRowSkeleton />
         </View>
       </SafeAreaView>
     );
@@ -209,12 +293,27 @@ export default function GroupDetailScreen() {
     );
   }
 
+  const cardShadow = isDark
+    ? {}
+    : Platform.select({
+        ios: {
+          shadowColor: '#2B1B3D',
+          shadowOpacity: 0.06,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 3 },
+        },
+        android: { elevation: 2 },
+        web: { boxShadow: '0 2px 10px rgba(43, 27, 61, 0.06)' },
+      });
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top']}>
       {/* Top Bar */}
       <View style={styles.topBar}>
         <Pressable
           onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
           style={[styles.iconBtn, { backgroundColor: palette.surface, borderColor: palette.border }]}
           hitSlop={8}>
           <Ionicons name="chevron-back" size={20} color={palette.ink} />
@@ -228,6 +327,8 @@ export default function GroupDetailScreen() {
 
         <Pressable
           onPress={handleShareCode}
+          accessibilityRole="button"
+          accessibilityLabel="Share split code"
           style={[styles.iconBtn, { backgroundColor: palette.surface, borderColor: palette.border }]}
           hitSlop={8}>
           <Ionicons name="share-outline" size={18} color={palette.ink} />
@@ -235,7 +336,10 @@ export default function GroupDetailScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: Math.max(insets.bottom, 16) + 96 },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -251,6 +355,7 @@ export default function GroupDetailScreen() {
           style={[
             styles.totalCard,
             { backgroundColor: palette.surface, borderColor: palette.border },
+            cardShadow,
           ]}>
           <Text style={[styles.totalLabel, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
             Total bill
@@ -279,7 +384,9 @@ export default function GroupDetailScreen() {
                 <Ionicons name="add" size={14} color={palette.ink} />
               </Pressable>
             </View>
-            <Text style={[styles.joinedMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
+            <Text
+              style={[styles.joinedMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}
+              numberOfLines={1}>
               {members.length} joined · {formatPeso(perPersonCents)} each
             </Text>
           </View>
@@ -344,6 +451,7 @@ export default function GroupDetailScreen() {
             style={[
               styles.itemsCard,
               { backgroundColor: palette.surface, borderColor: palette.border },
+              cardShadow,
             ]}>
             {expenses.map((exp, idx) => {
               const payer = memberMap.get(exp.paid_by_member_id);
@@ -357,32 +465,43 @@ export default function GroupDetailScreen() {
                       .join(', ') || `Paid by ${payer?.name ?? 'Someone'}`;
 
               return (
-                <Pressable
+                <Swipeable
                   key={exp.id}
-                  onLongPress={() => handleDeleteExpense(exp)}
-                  style={[
-                    styles.itemRow,
-                    idx < expenses.length - 1 && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: palette.border,
-                    },
-                  ]}>
-                  <View style={styles.itemInfo}>
-                    <Text
-                      style={[styles.itemTitle, { color: palette.ink, fontFamily: TakoFonts.bold }]}
-                      numberOfLines={1}>
-                      {exp.title}
+                  overshootRight={false}
+                  renderRightActions={() => (
+                    <Pressable
+                      onPress={() => handleDeleteExpense(exp, true)}
+                      style={[styles.swipeDelete, { backgroundColor: palette.destructive }]}>
+                      <Ionicons name="trash-outline" size={18} color="#FFFFFF" />
+                    </Pressable>
+                  )}>
+                  <Pressable
+                    onLongPress={() => handleDeleteExpense(exp)}
+                    style={[
+                      styles.itemRow,
+                      { backgroundColor: palette.surface },
+                      idx < expenses.length - 1 && {
+                        borderBottomWidth: 1,
+                        borderBottomColor: palette.border,
+                      },
+                    ]}>
+                    <View style={styles.itemInfo}>
+                      <Text
+                        style={[styles.itemTitle, { color: palette.ink, fontFamily: TakoFonts.bold }]}
+                        numberOfLines={1}>
+                        {exp.title}
+                      </Text>
+                      <Text
+                        style={[styles.itemSub, { color: palette.mute, fontFamily: TakoFonts.regular }]}
+                        numberOfLines={1}>
+                        {splitNames}
+                      </Text>
+                    </View>
+                    <Text style={[styles.itemAmt, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+                      {formatPeso(exp.amount_cents)}
                     </Text>
-                    <Text
-                      style={[styles.itemSub, { color: palette.mute, fontFamily: TakoFonts.regular }]}
-                      numberOfLines={1}>
-                      {splitNames}
-                    </Text>
-                  </View>
-                  <Text style={[styles.itemAmt, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-                    {formatPeso(exp.amount_cents)}
-                  </Text>
-                </Pressable>
+                  </Pressable>
+                </Swipeable>
               );
             })}
           </View>
@@ -415,7 +534,7 @@ export default function GroupDetailScreen() {
                     {debt.to.name} · {formatPeso(debt.amountCents)}
                   </Text>
                   <Pressable
-                    onPress={() => handleSettleDebt(debt)}
+                    onPress={() => openSettleSheet(debt)}
                     style={[styles.miniSettleBtn, { backgroundColor: palette.tealSoft }]}>
                     <Text style={[styles.miniSettleText, { color: palette.teal, fontFamily: TakoFonts.bold }]}>
                       Settle
@@ -429,10 +548,14 @@ export default function GroupDetailScreen() {
       </ScrollView>
 
       {/* Bottom Primary CTA */}
-      <View style={[styles.bottomBar, { backgroundColor: palette.bg }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          { backgroundColor: palette.bg, paddingBottom: Math.max(insets.bottom, 16) },
+        ]}>
         {myDebt ? (
           <Pressable
-            onPress={() => handleSettleDebt(myDebt)}
+            onPress={() => openSettleSheet(myDebt)}
             style={({ pressed }) => [
               styles.ctaBtn,
               { backgroundColor: palette.coral },
@@ -461,6 +584,100 @@ export default function GroupDetailScreen() {
           </Pressable>
         )}
       </View>
+
+      {/* Settle Up Bottom Sheet */}
+      <Modal
+        visible={!!settleTarget}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSettleTarget(null)}>
+        <View style={styles.modalBackdrop}>
+          <View
+            style={[
+              styles.sheetCard,
+              {
+                backgroundColor: palette.surface,
+                paddingBottom: Math.max(insets.bottom, 24) + 10,
+              },
+            ]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+                Settle up
+              </Text>
+              <Pressable
+                onPress={() => setSettleTarget(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color={palette.mute} />
+              </Pressable>
+            </View>
+
+            {settleTarget && (
+              <>
+                <View style={[styles.settleSummaryBox, { backgroundColor: palette.surfaceAlt }]}>
+                  <Text style={[styles.settlePair, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
+                    {settleTarget.from.name} pays {settleTarget.to.name}
+                  </Text>
+                  <Text style={[styles.settleBigAmt, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+                    {formatPeso(settleTarget.amountCents)}
+                  </Text>
+                </View>
+
+                {recipientHandle ? (
+                  <Pressable
+                    onPress={handleCopyHandle}
+                    style={[
+                      styles.copyHandleBtn,
+                      { backgroundColor: palette.chip, borderColor: palette.border },
+                    ]}>
+                    <Ionicons name="copy-outline" size={18} color={palette.ink} />
+                    <Text style={[styles.copyHandleText, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
+                      Copy account: {recipientHandle}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Text style={[styles.noHandleNote, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
+                    No GCash/Maya number saved for {settleTarget.to.name}. Pay directly and mark settled below.
+                  </Text>
+                )}
+
+                <View style={styles.walletRow}>
+                  <Pressable
+                    onPress={() => handleOpenWallet('gcash')}
+                    style={[styles.walletBtn, { backgroundColor: palette.tealSoft }]}>
+                    <Ionicons name="phone-portrait-outline" size={16} color={palette.teal} />
+                    <Text style={[styles.walletText, { color: palette.teal, fontFamily: TakoFonts.bold }]}>
+                      Open GCash
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleOpenWallet('maya')}
+                    style={[styles.walletBtn, { backgroundColor: palette.lavenderSoft }]}>
+                    <Ionicons name="wallet-outline" size={16} color={palette.lavender} />
+                    <Text style={[styles.walletText, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
+                      Open Maya
+                    </Text>
+                  </Pressable>
+                </View>
+
+                <Pressable
+                  onPress={() => handleSettleDebt(settleTarget)}
+                  disabled={settling}
+                  style={[styles.ctaBtn, { backgroundColor: palette.coral }]}>
+                  {settling ? (
+                    <ActivityIndicator color={palette.plum} />
+                  ) : (
+                    <Text style={[styles.ctaText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
+                      Mark as settled
+                    </Text>
+                  )}
+                </Pressable>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Add Member Modal */}
       <Modal
@@ -526,12 +743,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  skeletonPage: {
+    padding: 20,
+    gap: 14,
   },
   topTitle: {
     flex: 1,
@@ -552,7 +773,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   totalLabel: { fontSize: 13 },
-  totalAmount: { fontSize: 34 },
+  totalAmount: { fontSize: 34, fontVariant: ['tabular-nums'] },
   membersSummaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -584,7 +805,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  joinedMeta: { fontSize: 13 },
+  joinedMeta: { fontSize: 13, flexShrink: 1, fontVariant: ['tabular-nums'] },
   inviteCard: {
     borderRadius: Radii.xl,
     padding: 16,
@@ -627,10 +848,55 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 12,
   },
-  itemInfo: { flex: 1, gap: 2 },
+  itemInfo: { flex: 1, flexShrink: 1, gap: 2 },
   itemTitle: { fontSize: 15 },
   itemSub: { fontSize: 12 },
-  itemAmt: { fontSize: 15 },
+  itemAmt: { fontSize: 15, fontVariant: ['tabular-nums'], flexShrink: 0 },
+  swipeDelete: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+  },
+  closeBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settleSummaryBox: {
+    borderRadius: Radii.xl,
+    padding: 18,
+    alignItems: 'center',
+    gap: 4,
+  },
+  settlePair: { fontSize: 13 },
+  settleBigAmt: { fontSize: 32, fontVariant: ['tabular-nums'] },
+  copyHandleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: Radii.lg,
+    borderWidth: 1,
+  },
+  copyHandleText: { fontSize: 14 },
+  noHandleNote: { fontSize: 13, textAlign: 'center', lineHeight: 18 },
+  walletRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  walletBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 46,
+    borderRadius: Radii.pill,
+  },
+  walletText: { fontSize: 14 },
   emptyFeedText: {
     fontSize: 14,
     textAlign: 'center',

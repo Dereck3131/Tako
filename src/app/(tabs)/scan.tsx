@@ -49,14 +49,12 @@ export default function ScanScreen() {
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scannedLock, setScannedLock] = useState(false);
+  const [shakeTick, setShakeTick] = useState(0);
 
   const shakeX = useSharedValue(0);
 
-  const triggerShake = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-    }
-    if (reducedMotion) return;
+  React.useEffect(() => {
+    if (shakeTick === 0 || reducedMotion) return;
     shakeX.value = withSequence(
       withTiming(-8, { duration: 45 }),
       withTiming(8, { duration: 45 }),
@@ -64,7 +62,14 @@ export default function ScanScreen() {
       withTiming(6, { duration: 45 }),
       withTiming(0, { duration: 45 })
     );
-  }, [reducedMotion, shakeX]);
+  }, [reducedMotion, shakeTick, shakeX]);
+
+  const triggerShake = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+    }
+    setShakeTick((t) => t + 1);
+  }, []);
 
   const shakeStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shakeX.value }],
