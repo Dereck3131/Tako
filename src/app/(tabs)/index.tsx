@@ -12,9 +12,11 @@ import {
   View,
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SplitRowSkeleton } from '@/components/Skeleton';
+import { SpringPressable } from '@/components/SpringPressable';
 import { TakoMascot } from '@/components/TakoMascot';
 import { useToast } from '@/components/Toast';
 import { MemberPalette, Radii, TakoFonts, formatPeso } from '@/constants/theme';
@@ -38,6 +40,7 @@ export default function SplitsHomeScreen() {
   const { user, profile } = useAuth();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
   const router = useRouter();
 
   const [summaries, setSummaries] = useState<GroupSummary[]>([]);
@@ -248,30 +251,23 @@ export default function SplitsHomeScreen() {
           </View>
 
           <View style={styles.heroActions}>
-            <Pressable
+            <SpringPressable
               onPress={() => router.push('/group/new-split')}
-              style={({ pressed }) => [
-                styles.heroPrimaryBtn,
-                { backgroundColor: palette.coral },
-                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-              ]}>
+              style={[styles.heroPrimaryBtn, { backgroundColor: palette.coral }]}>
               <Ionicons name="add" size={18} color={palette.plum} />
               <Text style={[styles.heroPrimaryText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
                 New split
               </Text>
-            </Pressable>
+            </SpringPressable>
 
-            <Pressable
+            <SpringPressable
               onPress={() => router.push('/(tabs)/scan')}
-              style={({ pressed }) => [
-                styles.heroOutlineBtn,
-                pressed && { opacity: 0.8 },
-              ]}>
+              style={styles.heroOutlineBtn}>
               <Ionicons name="qr-code-outline" size={16} color="#FFF6EE" />
               <Text style={[styles.heroOutlineText, { fontFamily: TakoFonts.bold }]}>
                 Scan to join
               </Text>
-            </Pressable>
+            </SpringPressable>
           </View>
         </View>
 
@@ -421,65 +417,71 @@ export default function SplitsHomeScreen() {
               const displayAmt = Math.abs(myBalanceCents) <= 1 ? 0 : Math.abs(myBalanceCents);
 
               return (
-                <Swipeable
+                <Animated.View
                   key={group.id}
-                  overshootRight={false}
-                  renderRightActions={() => (
-                    <Pressable
-                      onPress={() => handleDeleteGroup(group)}
-                      style={[styles.swipeAction, { backgroundColor: palette.destructive }]}>
-                      <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
-                      <Text style={[styles.swipeText, { fontFamily: TakoFonts.bold }]}>Delete</Text>
-                    </Pressable>
-                  )}>
-                  <Pressable
-                    onPress={() => router.push(`/group/${group.id}`)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Open split ${group.name}`}
-                    style={({ pressed }) => [
-                      styles.splitCard,
-                      { backgroundColor: palette.surface, borderColor: palette.border },
-                      cardElevation,
-                      pressed && { transform: [{ scale: 0.985 }], opacity: 0.94 },
-                    ]}>
-                    <View style={[styles.letterBadge, { backgroundColor: avatarBg }]}>
-                      <Text style={[styles.letterText, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-                        {badgeLetter}
-                      </Text>
-                    </View>
-
-                    <View style={styles.splitInfo}>
-                      <Text
-                        style={[styles.splitName, { color: palette.ink, fontFamily: TakoFonts.bold }]}
-                        numberOfLines={1}>
-                        {group.name}
-                      </Text>
-                      <Text
-                        style={[styles.splitMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}
-                        numberOfLines={1}>
-                        {members.length} {members.length === 1 ? 'person' : 'people'} · {formatPeso(totalSpentCents)}
-                      </Text>
-                    </View>
-
-                    <View style={styles.splitRight}>
-                      <Text style={[styles.splitAmt, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-                        {formatPeso(displayAmt)}
-                      </Text>
-                      <View style={[styles.statusPill, { backgroundColor: badgeBg }]}>
-                        <Text
-                          style={[
-                            styles.statusText,
-                            {
-                              color: isOwe ? palette.coralAccent : palette.teal,
-                              fontFamily: TakoFonts.bold,
-                            },
-                          ]}>
-                          {isOwe ? 'You owe' : isOwed ? "You're owed" : 'Settled'}
+                  entering={
+                    reducedMotion
+                      ? undefined
+                      : FadeInDown.delay(Math.min(idx, 5) * 40).duration(220)
+                  }>
+                  <Swipeable
+                    overshootRight={false}
+                    renderRightActions={() => (
+                      <Pressable
+                        onPress={() => handleDeleteGroup(group)}
+                        style={[styles.swipeAction, { backgroundColor: palette.destructive }]}>
+                        <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
+                        <Text style={[styles.swipeText, { fontFamily: TakoFonts.bold }]}>Delete</Text>
+                      </Pressable>
+                    )}>
+                    <SpringPressable
+                      onPress={() => router.push(`/group/${group.id}`)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open split ${group.name}`}
+                      style={[
+                        styles.splitCard,
+                        { backgroundColor: palette.surface, borderColor: palette.border },
+                        cardElevation,
+                      ]}>
+                      <View style={[styles.letterBadge, { backgroundColor: avatarBg }]}>
+                        <Text style={[styles.letterText, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+                          {badgeLetter}
                         </Text>
                       </View>
-                    </View>
-                  </Pressable>
-                </Swipeable>
+
+                      <View style={styles.splitInfo}>
+                        <Text
+                          style={[styles.splitName, { color: palette.ink, fontFamily: TakoFonts.bold }]}
+                          numberOfLines={1}>
+                          {group.name}
+                        </Text>
+                        <Text
+                          style={[styles.splitMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}
+                          numberOfLines={1}>
+                          {members.length} {members.length === 1 ? 'person' : 'people'} · {formatPeso(totalSpentCents)}
+                        </Text>
+                      </View>
+
+                      <View style={styles.splitRight}>
+                        <Text style={[styles.splitAmt, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+                          {formatPeso(displayAmt)}
+                        </Text>
+                        <View style={[styles.statusPill, { backgroundColor: badgeBg }]}>
+                          <Text
+                            style={[
+                              styles.statusText,
+                              {
+                                color: isOwe ? palette.coralAccent : palette.teal,
+                                fontFamily: TakoFonts.bold,
+                              },
+                            ]}>
+                            {isOwe ? 'You owe' : isOwed ? "You're owed" : 'Settled'}
+                          </Text>
+                        </View>
+                      </View>
+                    </SpringPressable>
+                  </Swipeable>
+                </Animated.View>
               );
             })}
           </View>

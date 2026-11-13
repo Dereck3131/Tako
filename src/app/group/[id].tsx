@@ -21,7 +21,9 @@ import {
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AnimatedPeso } from '@/components/AnimatedPeso';
 import { Skeleton, SplitRowSkeleton } from '@/components/Skeleton';
+import { SpringPressable } from '@/components/SpringPressable';
 import { TakoMascot } from '@/components/TakoMascot';
 import { useToast } from '@/components/Toast';
 import { MemberPalette, Radii, TakoFonts, formatPeso } from '@/constants/theme';
@@ -61,6 +63,7 @@ export default function GroupDetailScreen() {
   const [settleTarget, setSettleTarget] = useState<SimplifiedDebt | null>(null);
   const [recipientHandle, setRecipientHandle] = useState<string | null>(null);
   const [settling, setSettling] = useState(false);
+  const [showCelebrate, setShowCelebrate] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -170,6 +173,8 @@ export default function GroupDetailScreen() {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
+      setShowCelebrate(true);
+      setTimeout(() => setShowCelebrate(false), 1800);
       await loadData();
       showToast({
         message: `${debt.from.name} paid ${debt.to.name} ${formatPeso(debt.amountCents)}`,
@@ -360,9 +365,10 @@ export default function GroupDetailScreen() {
           <Text style={[styles.totalLabel, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
             Total bill
           </Text>
-          <Text style={[styles.totalAmount, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-            {formatPeso(totalSpentCents)}
-          </Text>
+          <AnimatedPeso
+            cents={totalSpentCents}
+            style={[styles.totalAmount, { color: palette.ink, fontFamily: TakoFonts.black }]}
+          />
 
           <View style={styles.membersSummaryRow}>
             <View style={styles.avatarStack}>
@@ -554,36 +560,34 @@ export default function GroupDetailScreen() {
           { backgroundColor: palette.bg, paddingBottom: Math.max(insets.bottom, 16) },
         ]}>
         {myDebt ? (
-          <Pressable
+          <SpringPressable
             onPress={() => openSettleSheet(myDebt)}
-            style={({ pressed }) => [
-              styles.ctaBtn,
-              { backgroundColor: palette.coral },
-              pressed && { opacity: 0.9 },
-            ]}>
+            style={[styles.ctaBtn, { backgroundColor: palette.coral }]}>
             <Text style={[styles.ctaText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
               Settle up · {formatPeso(myDebt.amountCents)}
             </Text>
-          </Pressable>
+          </SpringPressable>
         ) : (
-          <Pressable
+          <SpringPressable
             onPress={() =>
               router.push({
                 pathname: '/group/add-expense',
                 params: { groupId: group.id },
               })
             }
-            style={({ pressed }) => [
-              styles.ctaBtn,
-              { backgroundColor: palette.coral },
-              pressed && { opacity: 0.9 },
-            ]}>
+            style={[styles.ctaBtn, { backgroundColor: palette.coral }]}>
             <Text style={[styles.ctaText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
               + Add item
             </Text>
-          </Pressable>
+          </SpringPressable>
         )}
       </View>
+
+      {showCelebrate && (
+        <View style={styles.celebrateOverlay} pointerEvents="none">
+          <TakoMascot state="celebrate" size={96} interactive={false} />
+        </View>
+      )}
 
       {/* Settle Up Bottom Sheet */}
       <Modal
@@ -897,6 +901,12 @@ const styles = StyleSheet.create({
     borderRadius: Radii.pill,
   },
   walletText: { fontSize: 14 },
+  celebrateOverlay: {
+    position: 'absolute',
+    top: 72,
+    alignSelf: 'center',
+    zIndex: 50,
+  },
   emptyFeedText: {
     fontSize: 14,
     textAlign: 'center',
