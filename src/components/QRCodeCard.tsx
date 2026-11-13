@@ -1,67 +1,40 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Rect } from 'react-native-svg';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
+import React, { useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 
+import { TakoMascot } from '@/components/TakoMascot';
 import { Radii, TakoFonts } from '@/constants/theme';
 import { useTakoTheme } from '@/context/ThemeContext';
 
 interface QRCodeCardProps {
   code: string;
+  joinUrl: string;
   groupName: string;
-  emoji: string;
+  onRegenerate?: () => void;
+  regenerating?: boolean;
 }
 
-/**
- * Generates a deterministic 15x15 QR-inspired matrix seeded by `code`,
- * with authentic finder patterns in the three corners.
- */
-function buildMatrix(code: string): boolean[][] {
-  const size = 15;
-  const grid: boolean[][] = Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => false)
-  );
+export function QRCodeCard({
+  code,
+  joinUrl,
+  groupName,
+  onRegenerate,
+  regenerating,
+}: QRCodeCardProps) {
+  const { palette, isDark } = useTakoTheme();
+  const [copied, setCopied] = useState(false);
 
-  const stampFinder = (r0: number, c0: number) => {
-    for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 5; c++) {
-        const isBorder = r === 0 || r === 4 || c === 0 || c === 4;
-        const isCenter = r === 2 && c === 2;
-        grid[r0 + r][c0 + c] = isBorder || isCenter;
-      }
+  const handleCopy = async () => {
+    await Clipboard.setStringAsync(code);
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
-
-  stampFinder(0, 0);
-  stampFinder(0, size - 5);
-  stampFinder(size - 5, 0);
-
-  let seed = 2166136261;
-  for (let i = 0; i < code.length; i++) {
-    seed ^= code.charCodeAt(i);
-    seed = Math.imul(seed, 16777619);
-  }
-
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      const inTopLeft = r < 6 && c < 6;
-      const inTopRight = r < 6 && c >= size - 6;
-      const inBottomLeft = r >= size - 6 && c < 6;
-      if (inTopLeft || inTopRight || inBottomLeft) continue;
-      seed ^= seed << 13;
-      seed ^= seed >>> 17;
-      seed ^= seed << 5;
-      grid[r][c] = (seed & 1) === 1;
-    }
-  }
-
-  return grid;
-}
-
-export function QRCodeCard({ code, groupName, emoji }: QRCodeCardProps) {
-  const { palette } = useTakoTheme();
-  const matrix = useMemo(() => buildMatrix(code), [code]);
-  const cellSize = 10;
-  const svgSize = matrix.length * cellSize;
 
   return (
     <View
@@ -71,43 +44,85 @@ export function QRCodeCard({ code, groupName, emoji }: QRCodeCardProps) {
           backgroundColor: palette.surface,
           borderColor: palette.border,
         },
+        !isDark && styles.lightShadow,
       ]}>
-      <View style={styles.header}>
-        <Text style={styles.emoji}>{emoji}</Text>
-        <Text
-          style={[styles.groupName, { color: palette.ink, fontFamily: TakoFonts.black }]}
-          numberOfLines={1}>
-          {groupName}
-        </Text>
-      </View>
-
-      <View style={[styles.qrWrap, { backgroundColor: '#FFF6EE' }]}>
-        <Svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`}>
-          {matrix.map((row, r) =>
-            row.map((filled, c) =>
-              filled ? (
-                <Rect
-                  key={`${r}-${c}`}
-                  x={c * cellSize}
-                  y={r * cellSize}
-                  width={cellSize - 1}
-                  height={cellSize - 1}
-                  rx={2}
-                  fill="#2B1B3D"
-                />
-              ) : null
-            )
-          )}
-        </Svg>
+      {/* Always light QR background with dark modules in BOTH themes for reliable scanning */}
+      <View
+        style={styles.qrFrame}
+        accessible
+        accessibilityRole="image"
+        accessibilityLabel={`QR code to join ${groupName}. Invite code ${code}`}>
+        <QRCode
+          value={joinUrl}
+          size={196}
+          color="#2B1B3D"
+          backgroundColor="#FFFFFF"
+          quietZone={12}
+          ecl="H"
+        />
+        <View style={styles.centerBadge} pointerEvents="none">
+          <TakoMascot state="idle" size={34} interactive={false} />
+        </View>
       </View>
 
       <Text style={[styles.codeLabel, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
         INVITE CODE
       </Text>
-      <View style={[styles.codePill, { backgroundColor: palette.chip }]}>
-        <Text style={[styles.codeText, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-          {code}
-        </Text>
+
+      <View style={styles.codeActions}>
+        <Pressable
+          onPress={handleCopy}
+          accessibilityRole="button"
+          accessibilityLabel={`Copy invite code ${code}`}
+          style={({ pressed }) => [
+            styles.codePill,
+            {
+              backgroundColor: copied ? palette.tealSoft : palette.chip,
+              borderColor: copied ? palette.teal : palette.border,
+            },
+            pressed && { opacity: 0.85 },
+          ]}>
+          <Text
+            selectable
+            style={[
+              styles.codeText,
+              {
+                color: copied ? palette.teal : palette.ink,
+                fontFamily: TakoFonts.black,
+              },
+            ]}>
+            {code}
+          </Text>
+          <Ionicons
+            name={copied ? 'checkmark-circle' : 'copy-outline'}
+            size={18}
+            color={copied ? palette.teal : palette.mute}
+          />
+          {copied && (
+            <Text style={[styles.copiedBadge, { color: palette.teal, fontFamily: TakoFonts.bold }]}>
+              Copied
+            </Text>
+          )}
+        </Pressable>
+
+        {onRegenerate && (
+          <Pressable
+            onPress={onRegenerate}
+            disabled={regenerating}
+            accessibilityRole="button"
+            accessibilityLabel="Regenerate invite code"
+            style={({ pressed }) => [
+              styles.regenBtn,
+              { backgroundColor: palette.surfaceAlt, borderColor: palette.border },
+              pressed && { opacity: 0.8 },
+            ]}>
+            <Ionicons
+              name="refresh-outline"
+              size={18}
+              color={palette.ink}
+            />
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -121,32 +136,65 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  header: {
+  lightShadow: Platform.select({
+    ios: {
+      shadowColor: '#2B1B3D',
+      shadowOpacity: 0.08,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 5 },
+    },
+    android: { elevation: 3 },
+    web: { boxShadow: '0 4px 16px rgba(43, 27, 61, 0.08)' },
+  }),
+  qrFrame: {
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: Radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerBadge: {
+    position: 'absolute',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  codeLabel: {
+    fontSize: 11,
+    letterSpacing: 1.4,
+    marginTop: 2,
+  },
+  codeActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  emoji: {
-    fontSize: 22,
-  },
-  groupName: {
-    fontSize: 18,
-  },
-  qrWrap: {
-    padding: 16,
-    borderRadius: Radii.lg,
-  },
-  codeLabel: {
-    fontSize: 11,
-    letterSpacing: 1.5,
-  },
   codePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 18,
-    paddingVertical: 8,
+    minHeight: 46,
     borderRadius: Radii.pill,
+    borderWidth: 1,
   },
   codeText: {
     fontSize: 20,
-    letterSpacing: 4,
+    letterSpacing: 2,
+    fontVariant: ['tabular-nums'],
+  },
+  copiedBadge: {
+    fontSize: 12,
+  },
+  regenBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
