@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tako – splash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@800;1000&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FAFAF7;--ink:#2B2B2B;--mute:#6A6A6A;--glow:#E6E3D5;--chip:#EEECE3;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1B1424;--ink:#FFF6EE;--mute:#B9ABC9;--glow:#2E2042;--chip:#2C2139}}
+:root[data-theme="dark"]{--bg:#1B1424;--ink:#FFF6EE;--mute:#B9ABC9;--glow:#2E2042;--chip:#2C2139}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:"Nunito",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;display:flex;align-items:center;justify-content:center;overflow-x:hidden}
+main{position:relative;width:100%;max-width:640px;min-height:100svh;padding:24px 20px 28px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.glow{position:absolute;top:50%;left:50%;width:min(130vw,640px);aspect-ratio:1;transform:translate(-50%,-56%);background:radial-gradient(closest-side,var(--glow),transparent);opacity:.95;pointer-events:none}
+h1{position:relative;margin:.8em 0 0;font-size:clamp(104px,37vw,184px);line-height:1;font-weight:1000;letter-spacing:-.05em;display:flex}
+.l{position:relative;display:inline-block;opacity:0;transform:translateY(.4em) scale(.8)}
+.tg{position:relative;margin:18px 0 0;color:var(--mute);font-weight:800;font-size:15px;letter-spacing:.14em;text-transform:uppercase;opacity:0}
+.replay{position:absolute;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);font:inherit;font-weight:800;font-size:14px;color:var(--ink);background:var(--chip);border:0;border-radius:999px;padding:11px 20px;min-height:44px;cursor:pointer}
+.replay:focus-visible{outline:3px solid #E5405E;outline-offset:2px}
+/* Tako perch: sits on top of the "o" */
+.perch{position:absolute;left:50%;margin-left:-.28em;bottom:calc(100% - .37em);width:.66em;pointer-events:none;letter-spacing:0}
+.hx,.hy{display:block}
+svg.tk{display:block;width:100%;height:auto;overflow:visible;transform-origin:50% 100%}
+.fb{transform-box:fill-box}
+.bob,.t,.tw,.eye{transform-box:fill-box}
+.bob{transform-origin:50% 100%}
+.t,.tw{transform-origin:50% 0}
+.eye{transform-origin:50% 50%}
+.mo{opacity:0}
+/* ---------- sequence (plays when .go is on) ---------- */
+.go .l{animation:pop .55s cubic-bezier(.2,1.5,.4,1) forwards;animation-delay:calc(var(--i)*.12s + .15s)}
+@keyframes pop{to{opacity:1;transform:none}}
+.go .hx{animation:hx .8s linear 1.15s both}
+@keyframes hx{0%{opacity:0;transform:translateX(160%)}6%{opacity:1}100%{opacity:1;transform:translateX(0)}}
+.go .hy{animation:hy .8s 1.15s both}
+@keyframes hy{0%{transform:translateY(-25%);animation-timing-function:cubic-bezier(.2,.7,.4,1)}50%{transform:translateY(-135%);animation-timing-function:cubic-bezier(.6,0,.8,.4)}100%{transform:translateY(0)}}
+.go svg.tk{animation:squash .55s ease-out 1.92s both}
+@keyframes squash{0%{transform:scale(1.14,.86)}40%{transform:scale(.94,1.08)}70%{transform:scale(1.02,.98)}100%{transform:scale(1)}}
+.go .l.o{animation:pop .55s cubic-bezier(.2,1.5,.4,1) .51s forwards,press .45s ease-out 1.92s}
+@keyframes press{0%,100%{transform:none}35%{transform:translateY(.03em) scaleY(.95)}}
+.go .bob{animation:bob 3.2s ease-in-out 2.5s infinite}
+@keyframes bob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3%) scale(.985,1.02)}}
+.go .t{animation:sway 2.6s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.go .t:nth-of-type(odd){animation-delay:-1.3s}
+.go .tw{animation:wave 1.1s ease-in-out 2.5s 3}
+@keyframes wave{0%,100%{transform:rotate(0)}30%{transform:rotate(-58deg)}60%{transform:rotate(-24deg)}80%{transform:rotate(-54deg)}}
+.go .eye{animation:blink 4.4s 2.4s infinite}
+@keyframes blink{0%,91%,100%{transform:scaleY(1)}94.5%{transform:scaleY(.08)}}
+.go .mo{animation:mo 1.2s 1.15s}
+@keyframes mo{0%,80%{opacity:1}100%{opacity:0}}
+.go .tg{animation:fade .7s ease-out 2.7s forwards}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.l,.tg{opacity:1!important;transform:none!important}}
+</style>
+</head>
+<body>
+<main class="go" id="m">
+<div class="glow" aria-hidden="true"></div>
+<h1 aria-label="tako">
+<span class="l" style="--i:0" aria-hidden="true">t</span><span class="l" style="--i:1" aria-hidden="true">a</span><span class="l" style="--i:2" aria-hidden="true">k</span><span class="l o" style="--i:3" aria-hidden="true">o<span class="perch"><span class="hx"><span class="hy">
+<svg class="tk" viewBox="0 0 124 122" aria-hidden="true">
+<g class="bob">
+<g class="t"><ellipse cx="14" cy="92" rx="12" ry="24" fill="#F0627A"/><circle cx="14" cy="98" r="4" fill="#FFB3BC"/><circle cx="14" cy="108" r="3.5" fill="#FFB3BC"/></g>
+<g class="t"><ellipse cx="38" cy="89" rx="12" ry="27" fill="#F0627A"/><circle cx="38" cy="98" r="4" fill="#FFB3BC"/><circle cx="38" cy="109" r="3.5" fill="#FFB3BC"/></g>
+<g class="t"><ellipse cx="62" cy="87" rx="12" ry="29" fill="#F0627A"/><circle cx="62" cy="98" r="4" fill="#FFB3BC"/><circle cx="62" cy="109" r="3.5" fill="#FFB3BC"/></g>
+<g class="t"><ellipse cx="86" cy="89" rx="12" ry="27" fill="#F0627A"/><circle cx="86" cy="98" r="4" fill="#FFB3BC"/><circle cx="86" cy="109" r="3.5" fill="#FFB3BC"/></g>
+<g class="tw"><g class="t"><ellipse cx="110" cy="92" rx="12" ry="24" fill="#F0627A"/><circle cx="110" cy="98" r="4" fill="#FFB3BC"/><circle cx="110" cy="108" r="3.5" fill="#FFB3BC"/></g></g>
+<ellipse cx="62" cy="48" rx="52" ry="46" fill="#FF7A8A"/>
+<ellipse cx="41" cy="18" rx="13" ry="6" fill="#FF9AA6"/>
+<g class="eye"><ellipse cx="44" cy="52" rx="12" ry="14" fill="#fff"/><ellipse cx="46" cy="55" rx="5.5" ry="7.5" fill="#2B1B3D"/><circle cx="47.5" cy="52" r="2" fill="#fff"/></g>
+<g class="eye"><ellipse cx="80" cy="52" rx="12" ry="14" fill="#fff"/><ellipse cx="82" cy="55" rx="5.5" ry="7.5" fill="#2B1B3D"/><circle cx="83.5" cy="52" r="2" fill="#fff"/></g>
+<ellipse cx="28" cy="72" rx="7.5" ry="4.5" fill="#FF9FAA"/><ellipse cx="96" cy="72" rx="7.5" ry="4.5" fill="#FF9FAA"/>
+<path d="M52 72Q62 82 72 72" fill="none" stroke="#2B1B3D" stroke-width="3" stroke-linecap="round"/>
+<path class="mo" d="M53 71Q62 90 71 71Z" fill="#2B1B3D"/>
+</g>
+</svg>
+</span></span></span></span>
+</h1>
+<p class="tg">Split the bill. Keep the friends.</p>
+<button type="button" class="replay" id="r">Replay</button>
+</main>
+<script>
+const m=document.getElementById('m');
+document.getElementById('r').addEventListener('click',()=>{m.classList.remove('go');void m.offsetWidth;m.classList.add('go');});
+</script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tako – animated mascot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;1000&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FAFAF7;--ink:#2B2B2B;--mute:#6A6A6A;--glow:#E6E3D5;--chip:#EEECE3;--chipOn:#2B2B2B;--chipOnInk:#FAFAF7;--shadow:rgba(43,27,61,.14);
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1B1424;--ink:#FFF6EE;--mute:#B9ABC9;--glow:#2E2042;--chip:#2C2139;--chipOn:#FFF6EE;--chipOnInk:#1B1424;--shadow:rgba(0,0,0,.4)}}
+:root[data-theme="dark"]{--bg:#1B1424;--ink:#FFF6EE;--mute:#B9ABC9;--glow:#2E2042;--chip:#2C2139;--chipOn:#FFF6EE;--chipOnInk:#1B1424;--shadow:rgba(0,0,0,.4)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:"Nunito",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow-x:hidden}
+main{position:relative;width:100%;max-width:520px;padding:24px 20px 32px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.glow{position:absolute;top:0;left:50%;width:460px;max-width:120vw;aspect-ratio:1;transform:translateX(-50%);background:radial-gradient(closest-side,var(--glow),transparent);opacity:.9;pointer-events:none}
+.stage{position:relative;width:min(78vw,380px);cursor:pointer;-webkit-tap-highlight-color:transparent;border:0;background:none;padding:0;color:inherit}
+.stage:focus-visible{outline:3px solid #E5405E;outline-offset:6px;border-radius:24px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+h1{position:relative;margin:4px 0 0;font-size:clamp(88px,26vw,132px);line-height:1;font-weight:1000;letter-spacing:-.06em}
+.tag{position:relative;margin:6px 0 28px;color:var(--mute);font-weight:800;font-size:15px;letter-spacing:.01em}
+.ctl{position:relative;display:flex;gap:6px;padding:5px;background:var(--chip);border-radius:999px;flex-wrap:wrap;justify-content:center}
+.ctl button{font:inherit;font-weight:800;font-size:15px;color:var(--ink);background:transparent;border:0;border-radius:999px;padding:11px 18px;min-height:44px;cursor:pointer;transition:background .2s,color .2s}
+.ctl button[aria-pressed="true"]{background:var(--chipOn);color:var(--chipOnInk)}
+.ctl button:focus-visible{outline:3px solid #E5405E;outline-offset:2px}
+.hint{position:relative;margin:18px 0 0;font-size:14px;color:var(--mute);font-weight:600}
+/* ---------- Tako motion ---------- */
+.fb{transform-box:fill-box}
+.tako{transform-box:fill-box;transform-origin:50% 100%;animation:bob 3.2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-6px) scale(.985,1.02)}}
+.shadow{transform-box:fill-box;transform-origin:50% 50%;fill:var(--shadow);animation:shd 3.2s ease-in-out infinite}
+@keyframes shd{0%,100%{transform:scale(1)}50%{transform:scale(.9);opacity:.8}}
+.t{transform-box:fill-box;transform-origin:50% 0;animation:sway 2.6s ease-in-out infinite}
+.t:nth-of-type(odd){animation-delay:-1.3s}
+.t:nth-of-type(3){animation-duration:3s}
+@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.eye{transform-box:fill-box;transform-origin:50% 50%;animation:blink 4.6s infinite}
+.eye.r{animation-delay:.04s}
+@keyframes blink{0%,91%,100%{transform:scaleY(1)}94.5%{transform:scaleY(.08)}}
+.mo,.q,.cf,.coin,.z,.qrc{opacity:0}
+.z{font:800 15px Nunito,system-ui,sans-serif;fill:#B9A5E8}
+.ct{font:800 9px Nunito,system-ui,sans-serif;fill:#8A5A00}
+.coin{transform-box:fill-box;transform-origin:50% 50%}
+/* wave */
+[data-state="wave"] .t5{animation:wave .75s ease-in-out infinite}
+@keyframes wave{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(-62deg)}}
+[data-state="wave"] .tako{animation-duration:2.4s}
+/* celebrate */
+[data-state="celebrate"] .tako{animation:jump .95s cubic-bezier(.3,0,.3,1) infinite}
+@keyframes jump{0%{transform:translateY(0) scale(1.08,.9)}18%{transform:translateY(0) scale(.94,1.08)}55%{transform:translateY(-38px) scale(.96,1.05)}85%{transform:translateY(0) scale(1.06,.92)}100%{transform:translateY(0) scale(1.08,.9)}}
+[data-state="celebrate"] .shadow{animation:shdj .95s cubic-bezier(.3,0,.3,1) infinite}
+@keyframes shdj{0%,100%{transform:scale(1)}55%{transform:scale(.62);opacity:.5}}
+[data-state="celebrate"] .t{animation-duration:.5s}
+[data-state="celebrate"] .sm{opacity:0}
+[data-state="celebrate"] .mo{opacity:1}
+[data-state="celebrate"] .cf{animation:burst 1.1s ease-out infinite}
+@keyframes burst{0%{opacity:0;transform:translate(0,0) scale(.4)}12%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1) rotate(200deg)}}
+/* think */
+[data-state="think"] .pp{animation:look 3.4s ease-in-out infinite}
+@keyframes look{0%,100%{transform:translate(0,0)}25%{transform:translate(-3.5px,-3px)}60%{transform:translate(3.5px,-3px)}}
+[data-state="think"] .tako{animation-duration:4.2s}
+[data-state="think"] .q{animation:dots 1.6s infinite}
+[data-state="think"] .q:nth-of-type(2){animation-delay:.25s}
+[data-state="think"] .q:nth-of-type(3){animation-delay:.5s}
+@keyframes dots{0%,15%{opacity:0;transform:translateY(4px)}40%,80%{opacity:1;transform:translateY(0)}100%{opacity:0}}
+/* sleep */
+[data-state="sleep"] .eye{animation:none;transform:scaleY(.1)}
+[data-state="sleep"] .tako{animation:snooze 5s ease-in-out infinite}
+@keyframes snooze{0%,100%{transform:scale(1,.985)}50%{transform:scale(1.035,1.04)}}
+[data-state="sleep"] .shadow{animation-duration:5s}
+[data-state="sleep"] .t{animation-duration:6s}
+[data-state="sleep"] .z{animation:zzz 3.6s ease-out infinite}
+[data-state="sleep"] .z2{animation-delay:1.2s}
+[data-state="sleep"] .z3{animation-delay:2.4s}
+@keyframes zzz{0%{opacity:0;transform:translate(0,0) scale(.7)}20%{opacity:1}100%{opacity:0;transform:translate(16px,-34px) scale(1.3)}}
+/* coins: split the bill */
+[data-state="coins"] .coin{animation:coin 3.4s ease-in-out infinite}
+@keyframes coin{0%{opacity:0;transform:translate(0,0) scale(.3)}12%{opacity:1;transform:translate(0,0) scale(1.6)}30%{opacity:1;transform:translate(0,-6px) scale(1.6)}58%,88%{opacity:1;transform:translate(var(--dx),var(--dy)) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1)}}
+[data-state="coins"] .pp{animation:coinlook 3.4s ease-in-out infinite}
+@keyframes coinlook{0%,30%{transform:translate(0,-4px)}45%,70%{transform:translate(-4px,1px)}85%,100%{transform:translate(4px,1px)}}
+[data-state="coins"] .tako{animation-duration:1.8s}
+/* peek: rises from behind a QR card */
+[data-state="peek"] .qrc{opacity:1}
+[data-state="peek"] .shadow{opacity:0;animation:none}
+[data-state="peek"] .tako{animation:peek 3.8s ease-in-out infinite}
+@keyframes peek{0%,10%{transform:translateY(74px)}28%,72%{transform:translateY(26px)}90%,100%{transform:translateY(74px)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+</head>
+<body>
+<main>
+<div class="glow" aria-hidden="true"></div>
+<button class="stage" id="stage" data-state="idle" aria-label="Tako the octopus. Tap to make Tako celebrate.">
+<svg viewBox="-34 -62 192 214" role="img" aria-hidden="true">
+<ellipse class="shadow" cx="62" cy="124" rx="46" ry="6"/>
+<g class="cfs">
+<circle class="cf" cx="62" cy="30" r="4" fill="#FF7A8A" style="--dx:-62px;--dy:-44px"/>
+<rect class="cf" x="60" y="28" width="7" height="7" rx="2" fill="#2EC4B6" style="--dx:-34px;--dy:-66px"/>
+<circle class="cf" cx="62" cy="30" r="3.5" fill="#FFC857" style="--dx:-8px;--dy:-72px"/>
+<rect class="cf" x="60" y="28" width="7" height="7" rx="2" fill="#B9A5E8" style="--dx:22px;--dy:-68px"/>
+<circle class="cf" cx="62" cy="30" r="4" fill="#2EC4B6" style="--dx:50px;--dy:-52px"/>
+<rect class="cf" x="60" y="28" width="7" height="7" rx="2" fill="#FF7A8A" style="--dx:70px;--dy:-26px"/>
+<circle class="cf" cx="62" cy="30" r="3" fill="#B9A5E8" style="--dx:-72px;--dy:-18px"/>
+<rect class="cf" x="60" y="28" width="6" height="6" rx="2" fill="#FFC857" style="--dx:42px;--dy:-78px"/>
+</g>
+<g class="tako">
+<g class="t t1"><ellipse cx="14" cy="92" rx="12" ry="24" fill="#F0627A"/><circle cx="14" cy="98" r="4" fill="#FFB3BC"/><circle cx="14" cy="108" r="3.5" fill="#FFB3BC"/></g>
+<g class="t t2"><ellipse cx="38" cy="89" rx="12" ry="27" fill="#F0627A"/><circle cx="38" cy="98" r="4" fill="#FFB3BC"/><circle cx="38" cy="109" r="3.5" fill="#FFB3BC"/></g>
+<g class="t t3"><ellipse cx="62" cy="87" rx="12" ry="29" fill="#F0627A"/><circle cx="62" cy="98" r="4" fill="#FFB3BC"/><circle cx="62" cy="109" r="3.5" fill="#FFB3BC"/></g>
+<g class="t t4"><ellipse cx="86" cy="89" rx="12" ry="27" fill="#F0627A"/><circle cx="86" cy="98" r="4" fill="#FFB3BC"/><circle cx="86" cy="109" r="3.5" fill="#FFB3BC"/></g>
+<g class="t t5"><ellipse cx="110" cy="92" rx="12" ry="24" fill="#F0627A"/><circle cx="110" cy="98" r="4" fill="#FFB3BC"/><circle cx="110" cy="108" r="3.5" fill="#FFB3BC"/></g>
+<ellipse cx="62" cy="48" rx="52" ry="46" fill="#FF7A8A"/>
+<ellipse cx="41" cy="18" rx="13" ry="6" fill="#FF9AA6"/>
+<g class="eye l"><ellipse cx="44" cy="52" rx="12" ry="14" fill="#fff"/><g class="pp"><ellipse cx="46" cy="55" rx="5.5" ry="7.5" fill="#2B1B3D"/><circle cx="47.5" cy="52" r="2" fill="#fff"/></g></g>
+<g class="eye r"><ellipse cx="80" cy="52" rx="12" ry="14" fill="#fff"/><g class="pp"><ellipse cx="82" cy="55" rx="5.5" ry="7.5" fill="#2B1B3D"/><circle cx="83.5" cy="52" r="2" fill="#fff"/></g></g>
+<ellipse cx="28" cy="72" rx="7.5" ry="4.5" fill="#FF9FAA"/><ellipse cx="96" cy="72" rx="7.5" ry="4.5" fill="#FF9FAA"/>
+<path class="sm" d="M52 72Q62 82 72 72" fill="none" stroke="#2B1B3D" stroke-width="3" stroke-linecap="round"/>
+<path class="mo" d="M53 71Q62 90 71 71Z" fill="#2B1B3D"/>
+<circle class="q" cx="108" cy="2" r="3" fill="#B9A5E8"/><circle class="q" cx="118" cy="-10" r="4.5" fill="#B9A5E8"/><circle class="q" cx="130" cy="-26" r="6.5" fill="#B9A5E8"/>
+</g>
+<text class="z z1" x="104" y="8">Z</text><text class="z z2" x="104" y="8">Z</text><text class="z z3" x="104" y="8">Z</text>
+<g class="coin" style="--dx:-80px;--dy:42px;animation-delay:0s"><circle cx="62" cy="-22" r="9" fill="#FFC857"/><circle cx="62" cy="-22" r="6.5" fill="none" stroke="#E0A526" stroke-width="1.5"/><text class="ct" x="62" y="-18.6" text-anchor="middle">₱</text></g>
+<g class="coin" style="--dx:-76px;--dy:98px;animation-delay:.12s"><circle cx="62" cy="-22" r="9" fill="#FFC857"/><circle cx="62" cy="-22" r="6.5" fill="none" stroke="#E0A526" stroke-width="1.5"/><text class="ct" x="62" y="-18.6" text-anchor="middle">₱</text></g>
+<g class="coin" style="--dx:76px;--dy:42px;animation-delay:.24s"><circle cx="62" cy="-22" r="9" fill="#FFC857"/><circle cx="62" cy="-22" r="6.5" fill="none" stroke="#E0A526" stroke-width="1.5"/><text class="ct" x="62" y="-18.6" text-anchor="middle">₱</text></g>
+<g class="coin" style="--dx:72px;--dy:98px;animation-delay:.36s"><circle cx="62" cy="-22" r="9" fill="#FFC857"/><circle cx="62" cy="-22" r="6.5" fill="none" stroke="#E0A526" stroke-width="1.5"/><text class="ct" x="62" y="-18.6" text-anchor="middle">₱</text></g>
+<g class="qrc"><rect x="-6" y="96" width="136" height="60" rx="14" fill="#FFF6EE"/><rect x="10" y="106" width="18" height="18" rx="3" fill="#2B1B3D"/><rect x="14" y="110" width="10" height="10" rx="1.5" fill="#FFF6EE"/><rect x="17" y="113" width="4" height="4" fill="#2B1B3D"/><rect x="96" y="106" width="18" height="18" rx="3" fill="#2B1B3D"/><rect x="100" y="110" width="10" height="10" rx="1.5" fill="#FFF6EE"/><rect x="103" y="113" width="4" height="4" fill="#2B1B3D"/><g fill="#2B1B3D"><rect x="38" y="108" width="7" height="7"/><rect x="50" y="114" width="7" height="7"/><rect x="64" y="107" width="7" height="7"/><rect x="78" y="114" width="7" height="7"/><rect x="12" y="132" width="7" height="7"/><rect x="28" y="130" width="7" height="7"/><rect x="46" y="128" width="7" height="7"/><rect x="62" y="134" width="7" height="7"/><rect x="80" y="128" width="7" height="7"/><rect x="98" y="132" width="7" height="7"/></g></g>
+</svg>
+</button>
+<h1>tako</h1>
+<p class="tag">Split the bill. Keep the friends.</p>
+<div class="ctl" role="group" aria-label="Tako animation">
+<button type="button" data-s="idle" aria-pressed="true">Idle</button>
+<button type="button" data-s="wave" aria-pressed="false">Wave</button>
+<button type="button" data-s="celebrate" aria-pressed="false">Celebrate</button>
+<button type="button" data-s="think" aria-pressed="false">Think</button>
+<button type="button" data-s="coins" aria-pressed="false">Split</button>
+<button type="button" data-s="peek" aria-pressed="false">Peek</button>
+<button type="button" data-s="sleep" aria-pressed="false">Sleep</button>
+</div>
+<p class="hint">Tap Tako to cheer.</p>
+</main>
+<script>
+const stage=document.getElementById('stage'),btns=[...document.querySelectorAll('.ctl button')];
+let timer;
+function set(s){stage.dataset.state=s;btns.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.s===s)));}
+btns.forEach(b=>b.addEventListener('click',()=>{clearTimeout(timer);set(b.dataset.s);}));
+stage.addEventListener('click',()=>{const prev=stage.dataset.state==='celebrate'?'idle':stage.dataset.state;clearTimeout(timer);set('celebrate');timer=setTimeout(()=>set(prev),2000);});
+</script>
+</body>
+</html>

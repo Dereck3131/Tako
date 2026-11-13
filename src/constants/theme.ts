@@ -1,196 +1,122 @@
-import { Platform, TextStyle, ViewStyle } from 'react-native';
+import { Platform } from 'react-native';
+
+export const TakoColors = {
+  light: {
+    bg: '#FAFAF7',
+    surface: '#FFFFFF',
+    surfaceAlt: '#F3F1E9',
+    ink: '#2B2B2B',
+    mute: '#6A6A6A',
+    glow: '#E6E3D5',
+    chip: '#EEECE3',
+    chipOn: '#2B2B2B',
+    chipOnInk: '#FAFAF7',
+    border: '#E5E1D5',
+    shadow: 'rgba(43, 27, 61, 0.14)',
+    // Semantic
+    coral: '#FF7A8A',
+    coralDeep: '#F0627A',
+    coralAccent: '#E5405E',
+    coralSoft: '#FFE8EC',
+    teal: '#2EC4B6',
+    tealSoft: '#E2F8F5',
+    gold: '#FFC857',
+    goldSoft: '#FFF5DA',
+    lavender: '#B9A5E8',
+    lavenderSoft: '#F1ECFC',
+    plum: '#2B1B3D',
+  },
+  dark: {
+    bg: '#1B1424',
+    surface: '#241B30',
+    surfaceAlt: '#2C2139',
+    ink: '#FFF6EE',
+    mute: '#B9ABC9',
+    glow: '#2E2042',
+    chip: '#2C2139',
+    chipOn: '#FFF6EE',
+    chipOnInk: '#1B1424',
+    border: '#3A2C4D',
+    shadow: 'rgba(0, 0, 0, 0.42)',
+    // Semantic
+    coral: '#FF7A8A',
+    coralDeep: '#F0627A',
+    coralAccent: '#FF6B84',
+    coralSoft: '#3D2234',
+    teal: '#2EC4B6',
+    tealSoft: '#19353B',
+    gold: '#FFC857',
+    goldSoft: '#3A2F1C',
+    lavender: '#B9A5E8',
+    lavenderSoft: '#2E2447',
+    plum: '#2B1B3D',
+  },
+} as const;
+
+export type TakoPalette = typeof TakoColors.light | typeof TakoColors.dark;
 
 export const Colors = {
-  // Canvas & Surfaces
-  background: '#F6F7FB',
-  card: '#FFFFFF',
-  cardDark: '#14123A',
-  cardMidnight: '#14123A',
-  surfaceSubtle: '#F0F2F8',
+  light: {
+    text: TakoColors.light.ink,
+    background: TakoColors.light.bg,
+    backgroundElement: TakoColors.light.chip,
+    backgroundSelected: TakoColors.light.glow,
+    textSecondary: TakoColors.light.mute,
+  },
+  dark: {
+    text: TakoColors.dark.ink,
+    background: TakoColors.dark.bg,
+    backgroundElement: TakoColors.dark.chip,
+    backgroundSelected: TakoColors.dark.glow,
+    textSecondary: TakoColors.dark.mute,
+  },
+} as const;
 
-  // Brand Primaries
-  primary: '#2F65F6',
-  primaryGradientStart: '#4A7BFF',
-  primaryGradientEnd: '#2F65F6',
-  primaryLight: '#EAF0FF',
-
-  // Accents & Status (Pastel tints + high-contrast text)
-  amber: '#FFB400',
-  amberLight: '#FFF5DB',
-  amberTint: '#FFF5DB',
-  amberText: '#8A5300',
-  mint: '#E6F9F0',
-  mintProgress: '#14B87A',
-  mintText: '#0B7A4B',
-  emerald: '#14B87A',
-  emeraldLight: '#E6F9F0',
-  danger: '#D92D20',
-  dangerLight: '#FEF3F2',
-
-  // Ink & Typography (WCAG AA)
-  ink: '#14123A',
-  textPrimary: '#14123A',
-  textSecondary: '#5B5880',
-  textBody: '#5B5880',
-  textMuted: '#5B5880',
-  textWhite: '#FFFFFF',
-  textOnDarkMuted: '#E2E6F5',
-  textOnDarkSubtle: '#C5CAE3',
-
-  // Hairline Borders
-  border: '#E4E8F2',
-  borderDashed: '#E4E8F2',
+export const TakoFonts = {
+  regular: 'Nunito_600SemiBold',
+  bold: 'Nunito_800ExtraBold',
+  black: 'Nunito_900Black',
+  fallback: Platform.select({
+    ios: 'ui-rounded',
+    android: 'sans-serif',
+    web: '"Nunito", ui-rounded, "SF Pro Rounded", system-ui, sans-serif',
+    default: 'sans-serif',
+  }),
 };
 
-export const Radii = {
-  xs: 8,
-  sm: 12,
-  md: 16, // inputs
-  lg: 20, // cards
-  card: 20,
-  cardLg: 24, // hero
-  sheet: 28,
-  pill: 999,
-};
+export const MemberPalette = [
+  '#FF7A8A',
+  '#2EC4B6',
+  '#FFC857',
+  '#B9A5E8',
+  '#6C9BFF',
+  '#F0627A',
+  '#45B7D1',
+  '#F79D65',
+] as const;
 
 export const Spacing = {
   xs: 4,
   sm: 8,
   md: 12,
   lg: 16,
-  xl: 20, // screen padding
-  xxl: 24,
-  xxxl: 32,
-};
+  xl: 24,
+  xxl: 32,
+} as const;
 
-export const Border = {
-  width: 1,
-  chipWidth: 0,
-};
+export const Radii = {
+  sm: 10,
+  md: 16,
+  lg: 22,
+  xl: 28,
+  pill: 999,
+} as const;
 
-export const TouchTarget = {
-  minSize: 44,
-};
-
-export const Shadows: Record<'card' | 'cardSoft' | 'button' | 'hero', ViewStyle> = {
-  card: {
-    shadowColor: '#14123A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 24,
-    elevation: 3,
-  },
-  cardSoft: {
-    shadowColor: '#14123A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  button: {
-    shadowColor: '#2F65F6',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
-    elevation: 3,
-  },
-  hero: {
-    shadowColor: '#14123A',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.1,
-    shadowRadius: 28,
-    elevation: 5,
-  },
-};
-
-export const Motion = {
-  easeOut: [0.23, 1, 0.32, 1] as const,
-  easeInOut: [0.77, 0, 0.175, 1] as const,
-  easeDrawer: [0.32, 0.72, 0, 1] as const,
-  durationFast: 160,
-  durationNormal: 240,
-  durationSlow: 280,
-  pressScale: 0.97,
-  staggerMs: 40,
-};
-
-const fontFamily = Platform.select({
-  web: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  default: undefined,
-});
-
-export const Typography: Record<string, TextStyle> = {
-  screenTitle: {
-    fontFamily,
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: -0.5,
-    lineHeight: 30,
-    color: Colors.ink,
-  },
-  sectionTitle: {
-    fontFamily,
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    lineHeight: 22,
-    color: Colors.ink,
-  },
-  cardTitle: {
-    fontFamily,
-    fontSize: 15,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    lineHeight: 20,
-    color: Colors.ink,
-  },
-  body: {
-    fontFamily,
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 20,
-    color: Colors.textSecondary,
-  },
-  caption: {
-    fontFamily,
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 16,
-    color: Colors.textSecondary,
-  },
-  micro: {
-    fontFamily,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.6,
-    lineHeight: 14,
-  },
-  currencyHero: {
-    fontFamily,
-    fontSize: 48,
-    fontWeight: '800',
-    letterSpacing: -1.5,
-    lineHeight: 54,
-    fontVariant: ['tabular-nums'],
-  },
-  currencyLg: {
-    fontFamily,
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -1,
-    lineHeight: 38,
-    fontVariant: ['tabular-nums'],
-  },
-  currencyMd: {
-    fontFamily,
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-    lineHeight: 22,
-    fontVariant: ['tabular-nums'],
-  },
-  tabular: {
-    fontFamily,
-    fontVariant: ['tabular-nums'],
-  },
-};
+export function formatPeso(cents: number): string {
+  const abs = Math.abs(cents) / 100;
+  const formatted = abs.toLocaleString('en-PH', {
+    minimumFractionDigits: abs % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+  return `${cents < 0 ? '-' : ''}₱${formatted}`;
+}

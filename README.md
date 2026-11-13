@@ -1,61 +1,82 @@
-# TabTogether 📱💸
+# tako
 
-> **Real-time collaborative bill splitter for dining out with friends.**  
-> Split items live, claim what you ate, adjust shares with intuitive sliders (always totaling 100%), and settle up in one tap.
+**Split the bill. Keep the friends.**
 
----
+A bill-splitting mobile & web app built with **Expo Router**, **React Native Reanimated + SVG**, and **Supabase**.
 
-## 🎨 Design & Visual Identity
+## Features
 
-TabTogether features a custom modern design matching the 13 designed screens:
-- **Background**: Soft Canvas (`#F4F7FC`)
-- **Cards**: Surface White (`#FFFFFF`) with ticket cutouts and perforated divider lines
-- **Brand Primary**: Cobalt Blue (`#2F65F6`)
-- **Settlement Hero**: Midnight Navy (`#0B1530`)
-- **Accents & CTAs**: Amber Gold (`#FFA800`) for "Pay Now" and badges; Emerald (`#10B981`) for "Paid" and "Connected"
-- **Typography**: Inter with heavy currency figures (e.g. **$310.00**, **$52.50**)
-- **Avatars**: Memoji-style avatars with real-time network presence tags (`Live · Wi-Fi`, `Live · 5G`, `Joining…`)
+- **Animated Tako Mascot & Intro Splash** — Recreated from `design-reference/` in Reanimated + `react-native-svg`, featuring all 7 mascot states (`idle`, `wave`, `celebrate`, `think`, `coins`, `peek`, `sleep`), radial ambient glow, light/dark themes, and reduced-motion support.
+- **Groups & Invite Codes** — Create expense groups with custom icons, add friends, or join existing groups via a 6-character invite code / QR card.
+- **Equal & Exact Splits** — Log `₱` expenses with categories, payer selection, and equal (remainder-safe) or exact per-person splits.
+- **Simplified Settle Up** — Automatically computes net balances and minimizes the number of transfers needed to settle a group, with 1-tap settlement recording.
+- **Supabase Auth & RLS** — Email/password authentication and guest sign-in backed by Row Level Security.
 
----
+## Project Structure
 
-## 📚 Complete Project Specifications & Architecture
+```text
+src/
+├── app/
+│   ├── _layout.tsx            # Root layout, Nunito font loading, Splash & Auth gate
+│   ├── (tabs)/
+│   │   ├── _layout.tsx        # Bottom tabs (Groups, Tako)
+│   │   ├── index.tsx          # Groups list, Create Group & Join by Code modals
+│   │   └── mascot.tsx         # Interactive Tako mascot playground, theme & profile
+│   └── group/
+│       ├── [id].tsx           # Group detail, balances, Settle Up, QR invite modal
+│       └── add-expense.tsx    # Add expense modal (equal & exact splits)
+├── components/
+│   ├── AmbientGlow.tsx        # Radial SVG gradient glow
+│   ├── AuthScreen.tsx         # Sign in / Sign up / Guest screen
+│   ├── QRCodeCard.tsx         # Deterministic invite QR card
+│   ├── TakoMascot.tsx         # 7-state animated SVG mascot
+│   └── TakoSplash.tsx         # Animated "tako" splash sequence
+├── constants/
+│   └── theme.ts               # Light/Dark palettes, Nunito fonts, formatPeso()
+├── context/
+│   ├── AuthContext.tsx        # Supabase session & profile state
+│   └── ThemeContext.tsx       # System / Light / Dark theme preference
+├── lib/
+│   ├── split.ts               # splitEqually, computeMemberBalances, computeSimplifiedDebts
+│   └── supabase.ts            # Supabase client with safe AsyncStorage persistence
+└── types/
+    └── tako.ts                # TypeScript domain types
+```
 
-Full architecture, product, and engineering documentation:
+## Supabase Setup
 
-1. [**PRD.md**](./PRD.md) - Vision, target personas, user stories, MVP scope, non-goals.
-2. [**FEATURES.md**](./FEATURES.md) - Acceptance criteria and edge cases for all 11 screens.
-3. [**TECH_STACK.md**](./TECH_STACK.md) - Expo (React Native) + Supabase architecture decision & free-tier optimization.
-4. [**ARCHITECTURE.md**](./ARCHITECTURE.md) - Two-tier real-time sync (Broadcast + Postgres CDC) & conflict resolution.
-5. [**DATA_MODEL.md**](./DATA_MODEL.md) - PostgreSQL DDL schemas (`rooms`, `items`, `item_shares`, `payments`).
-6. [**SPLIT_LOGIC.md**](./SPLIT_LOGIC.md) - Exact integer cent arithmetic, Largest Remainder penny allocation, proportional tax/tip formulas.
-7. [**API_REALTIME.md**](./API_REALTIME.md) - QR/PIN join protocol, Supabase RPC endpoints, and WebSocket channels.
-8. [**SECURITY.md**](./SECURITY.md) - Row Level Security (RLS) policies, PIN rate-limiting, and P2P payment safety.
-9. [**UI_PLAN.md**](./UI_PLAN.md) - Design tokens, screen-to-component mapping, ticket card specifications.
-10. [**ROADMAP.md**](./ROADMAP.md) - 4-phase rollout plan starting from the thinnest working vertical slice.
-11. [**TEST_PLAN.md**](./TEST_PLAN.md) - Math unit tests, dual-device real-time sync tests, and edge case matrix.
-12. [**RISKS.md**](./RISKS.md) - Top technical risks and operational mitigations.
+Connected to Supabase project `jdwoszkyonkzxhgzfgnb` via `.env`:
 
----
+```env
+EXPO_PUBLIC_SUPABASE_URL=https://jdwoszkyonkzxhgzfgnb.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_eYxe9Ek9ojWEJZoX1ewJcw_EvCtQAlE
+```
 
-## 🚀 Mobile App Architecture
+Database tables (`public` schema, RLS enabled):
+- `profiles` (auto-created via `handle_new_user` trigger)
+- `groups`
+- `group_members`
+- `expenses`
+- `expense_splits`
+- `settlements`
 
-- **Client**: React Native / Expo SDK 51+ (TypeScript, Expo Router)
-- **Styling**: Strict Design Tokens & `react-native-svg` (Ticket notch cards)
-- **Backend / Realtime**: Supabase (PostgreSQL, Supabase Realtime Broadcast & Presence, Row Level Security)
-- **State Management**: Zustand + TanStack Query
+RPCs & helpers:
+- `is_group_member(gid uuid)`
+- `join_group_by_code(p_code text, p_member_name text)`
 
----
+## Running Locally
 
-## 🛠️ Quickstart
+```powershell
+npm start
+```
 
-### Prerequisites
-- Node.js 18+
-- Expo Go app on iOS or Android
+- **Phone (Expo Go):** Scan the terminal QR code (or run `npx expo start --tunnel` if LAN is blocked).
+- **Web:** Press `w` or run `npm run web`.
+- **Android Emulator:** Press `a` or run `npm run android`.
 
-### Installation
-```bash
-git clone https://github.com/Dereck3131/Tab-Together.git
-cd Tab-Together
-npm install
-npx expo start
+## Checks
+
+```powershell
+npx tsc --noEmit
+npx eslint src
 ```
