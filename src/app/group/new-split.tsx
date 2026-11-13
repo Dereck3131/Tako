@@ -49,6 +49,7 @@ export default function NewSplitScreen() {
   const [newPersonName, setNewPersonName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState<string>(ANIMAL_AVATARS[1]);
   const [recentFriends, setRecentFriends] = useState<string[]>([]);
+  const [inviteLater, setInviteLater] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +124,11 @@ export default function NewSplitScreen() {
     addPersonWithName(newPersonName, selectedAvatar);
   };
 
-  const canCreate = totalCents > 0 && people.length >= 2 && !saving;
+  const canCreate =
+    totalCents > 0 &&
+    name.trim().length > 0 &&
+    (people.length >= 2 || inviteLater) &&
+    !saving;
 
   const amountFontSize = useMemo(() => {
     const len = amountText.length;
@@ -438,6 +443,36 @@ export default function NewSplitScreen() {
                 Add
               </Text>
             </Pressable>
+
+            {people.length < 2 && (
+              <Pressable
+                onPress={() => setInviteLater((v) => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: inviteLater }}
+                style={[
+                  styles.inviteLaterChip,
+                  {
+                    backgroundColor: inviteLater ? palette.coralSoft : palette.chip,
+                    borderColor: inviteLater ? palette.coralAccent : palette.border,
+                  },
+                ]}>
+                <Ionicons
+                  name={inviteLater ? 'checkmark-circle' : 'qr-code-outline'}
+                  size={16}
+                  color={inviteLater ? palette.coralAccent : palette.ink}
+                />
+                <Text
+                  style={[
+                    styles.inviteLaterText,
+                    {
+                      color: inviteLater ? palette.coralAccent : palette.ink,
+                      fontFamily: TakoFonts.bold,
+                    },
+                  ]}>
+                  Invite via QR later
+                </Text>
+              </Pressable>
+            )}
           </View>
 
           {splitMode === 'items' && (
@@ -585,9 +620,11 @@ export default function NewSplitScreen() {
                   ]}>
                   {totalCents <= 0
                     ? 'Enter an amount'
-                    : people.length < 2
-                      ? 'Add at least 1 friend'
-                      : 'Create split & get QR'}
+                    : !name.trim()
+                      ? 'Name this split'
+                      : people.length < 2 && !inviteLater
+                        ? 'Add a friend or tap Invite later'
+                        : 'Create split & get QR'}
                 </Text>
               </>
             )}
@@ -937,6 +974,19 @@ const styles = StyleSheet.create({
     borderRadius: Radii.pill,
   },
   recentChipText: {
+    fontSize: 13,
+  },
+  inviteLaterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    height: 46,
+    borderRadius: Radii.pill,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  inviteLaterText: {
     fontSize: 13,
   },
   ctaBtn: {
