@@ -202,6 +202,8 @@ export function TakoArmSplit({
   const [showDragHint, setShowDragHint] = useState(true);
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
+  const [takoWiggleKey, setTakoWiggleKey] = useState(0);
+  const prevEvenRef = useRef(false);
 
   // Largest-remainder math: whole % sums to 100 and centavos sum to itemPriceCents
   const allocations = useMemo(
@@ -231,6 +233,11 @@ export function TakoArmSplit({
 
   // Happy Tako wiggle when even or confirmed (250ms ease-out, transform only)
   useEffect(() => {
+    const justBalanced = isEvenSplit && !prevEvenRef.current;
+    prevEvenRef.current = isEvenSplit;
+    if (justBalanced || wiggleSignal > 0) {
+      setTakoWiggleKey((k) => k + 1);
+    }
     if (reducedMotion || (!isEvenSplit && wiggleSignal === 0)) return;
     wiggleAnim.setValue(0);
     const anim = Animated.sequence([
@@ -300,7 +307,7 @@ export function TakoArmSplit({
   if (participants.length < 2) {
     return (
       <View style={styles.stateBox}>
-        <TakoMascot size={72} mood="waiting" hideLegs />
+        <TakoMascot size={72} mood="loading" hideLegs />
         <Text style={styles.stateText}>
           Invite at least 2 people to fan out Tako&apos;s arms for {itemTitle}.
         </Text>
@@ -463,6 +470,14 @@ export function TakoArmSplit({
               size={TAKO_HEAD_SIZE}
               mood={isEvenSplit ? 'happy' : 'counting'}
               hideLegs
+              wiggleKey={takoWiggleKey}
+              lookAt={(() => {
+                if (!draggingId) return null;
+                const dragIdx = participants.findIndex((pt) => pt.id === draggingId);
+                if (dragIdx < 0) return null;
+                const dragAngle = angleOffset + (dragIdx / participants.length) * Math.PI * 2;
+                return { x: Math.cos(dragAngle), y: Math.sin(dragAngle) };
+              })()}
             />
           </Animated.View>
 
