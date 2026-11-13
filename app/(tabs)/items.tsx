@@ -162,7 +162,7 @@ export default function ItemsScreen() {
             /* Empty State with Tako */
             <StaggerItem index={0} distance={10}>
               <View style={[styles.emptyCard, Shadows.card]}>
-                <TakoMascot size={144} />
+                <TakoMascot size={144} mood="empty_pockets" interactive />
                 <Text style={styles.emptyTitle}>No items yet</Text>
                 <Text style={styles.emptySubtitle}>
                   Add the first dish and Tako will notify everyone in the room.
@@ -282,11 +282,15 @@ export default function ItemsScreen() {
                 {filteredItems.map((item, idx) => (
                   <StaggerItem key={item.id} index={idx} distance={8}>
                     <NeoCard
-                      onPress={() => router.push('/claim')}
                       borderRadius={Radii.card}
                       contentStyle={styles.itemCardContent}
                     >
-                      <View style={styles.itemTopRow}>
+                      <Pressable
+                        onPress={() => router.push('/claim')}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Open ${item.title}`}
+                        style={styles.itemTopRow}
+                      >
                         <View style={styles.itemInfoCol}>
                           <Text style={styles.itemTitle} numberOfLines={2}>
                             {item.title}
@@ -298,26 +302,33 @@ export default function ItemsScreen() {
                         <Text style={styles.itemPrice} numberOfLines={1}>
                           {item.price}
                         </Text>
-                      </View>
+                      </Pressable>
 
                       <View style={styles.itemBottomRow}>
-                        {item.isClaimed ? (
-                          <View style={styles.avatarStack}>
-                            {item.claimers.map((avatar, aIdx) => (
-                              <View
-                                key={`${avatar}-${aIdx}`}
-                                style={{
-                                  marginLeft: aIdx > 0 ? -9 : 0,
-                                  zIndex: 10 - aIdx,
-                                }}
-                              >
-                                <MemojiAvatar id={avatar} size={26} />
-                              </View>
-                            ))}
-                          </View>
-                        ) : (
-                          <Text style={styles.nobodyText}>Nobody yet</Text>
-                        )}
+                        <Pressable
+                          onPress={() => router.push('/claim')}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Open ${item.title}`}
+                          style={{ flex: 1, justifyContent: 'center' }}
+                        >
+                          {item.isClaimed ? (
+                            <View style={styles.avatarStack}>
+                              {item.claimers.map((avatar, aIdx) => (
+                                <View
+                                  key={`${avatar}-${aIdx}`}
+                                  style={{
+                                    marginLeft: aIdx > 0 ? -9 : 0,
+                                    zIndex: 10 - aIdx,
+                                  }}
+                                >
+                                  <MemojiAvatar id={avatar} size={26} />
+                                </View>
+                              ))}
+                            </View>
+                          ) : (
+                            <Text style={styles.nobodyText}>Nobody yet</Text>
+                          )}
+                        </Pressable>
 
                         {item.isClaimed ? (
                           <Badge label="Claimed" variant="emerald" />

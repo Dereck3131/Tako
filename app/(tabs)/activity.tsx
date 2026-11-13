@@ -68,6 +68,7 @@ export default function ActivityScreen() {
   const takoMood = getTakoMood(members, items, shares);
   const moodCopy = getTakoMoodCopy(takoMood, language, paidCount, totalMembers);
 
+  const [inkSquirtKey, setInkSquirtKey] = useState(0);
   const progressAnim = useRef(new Animated.Value(ratio)).current;
 
   useEffect(() => {
@@ -149,7 +150,7 @@ export default function ActivityScreen() {
 
               {/* Tako Mood Strip */}
               <View style={styles.moodRow}>
-                <TakoMascot size={46} mood={takoMood} />
+                <TakoMascot size={46} mood={takoMood} inkSquirtKey={inkSquirtKey} interactive />
                 <Text style={styles.moodText} numberOfLines={2}>
                   {moodCopy}
                 </Text>
@@ -174,7 +175,10 @@ export default function ActivityScreen() {
                           disabled={!allowed}
                           onPress={() => {
                             const res = nudgeMember(friend.id);
-                            if (res.sent) triggerHaptic('tick');
+                            if (res.sent) {
+                              triggerHaptic('tick');
+                              setInkSquirtKey((k) => k + 1);
+                            }
                           }}
                           style={({ pressed }) => [
                             styles.nudgeBtn,

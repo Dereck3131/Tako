@@ -23,7 +23,7 @@ import { Badge } from '../src/components/Badge';
 import { MemojiAvatar } from '../src/components/MemojiAvatar';
 import { TakoMascot, getTakoMood, getTakoMoodCopy } from '../src/components/TakoMascot';
 import { SettlementHero } from '../src/components/SettlementHero';
-import { StaggerItem } from '../src/components/MotionPrimitives';
+import { PopIn, StaggerItem } from '../src/components/MotionPrimitives';
 import { useRoomStore } from '../src/store/roomStore';
 import { calculatePHBillBreakdown, formatMoney } from '../src/services/currency';
 import { t } from '../src/constants/i18n';
@@ -206,10 +206,12 @@ export default function SettleUpScreen() {
                 <Text style={styles.roomName} numberOfLines={1}>
                   Aly
                 </Text>
-                <Badge
-                  label={hasPaidSelf ? 'Paid' : 'Pending'}
-                  variant={hasPaidSelf ? 'emerald' : 'amber'}
-                />
+                <PopIn triggerKey={hasPaidSelf ? 'paid' : 'pending'}>
+                  <Badge
+                    label={hasPaidSelf ? 'Paid' : 'Pending'}
+                    variant={hasPaidSelf ? 'emerald' : 'amber'}
+                  />
+                </PopIn>
               </View>
             </NeoCard>
           </StaggerItem>
@@ -217,8 +219,14 @@ export default function SettleUpScreen() {
           {/* Peeking Tako Mascot + Dark Navy Settlement Hero */}
           <StaggerItem index={2} distance={10}>
             <View style={styles.heroWrap}>
-              <View style={styles.takoPeek} pointerEvents="none">
-                <TakoMascot size={92} mood={takoMood} />
+              <View style={styles.takoPeek}>
+                <TakoMascot
+                  size={92}
+                  mood={takoMood}
+                  peekIn
+                  interactive
+                  wiggleKey={hasPaidSelf ? 1 : 0}
+                />
               </View>
               <SettlementHero
                 amountCents={breakdown.totalCents}
