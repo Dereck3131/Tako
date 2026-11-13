@@ -3,10 +3,10 @@ import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
+  FlatList,
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -196,9 +196,100 @@ export default function SplitsHomeScreen() {
     }))
   );
 
+  const renderSplitCard = ({
+    item,
+    index: idx,
+  }: {
+    item: GroupSummary;
+    index: number;
+  }) => {
+    const { group, members, totalSpentCents, myBalanceCents } = item;
+    const badgeLetter = group.name.trim().charAt(0).toUpperCase() || 'T';
+    const isOwe = myBalanceCents < -1;
+    const isOwed = myBalanceCents > 1;
+    const badgeBg = isOwe
+      ? palette.coralSoft
+      : isOwed
+        ? palette.tealSoft
+        : palette.tealSoft;
+    const avatarBg = idx % 2 === 0 ? palette.coralSoft : palette.tealSoft;
+    const displayAmt = Math.abs(myBalanceCents) <= 1 ? 0 : Math.abs(myBalanceCents);
+
+    return (
+      <Animated.View
+        entering={
+          reducedMotion
+            ? undefined
+            : FadeInDown.delay(Math.min(idx, 5) * 40).duration(220)
+        }>
+        <Swipeable
+          overshootRight={false}
+          renderRightActions={() => (
+            <Pressable
+              onPress={() => handleDeleteGroup(group)}
+              style={[styles.swipeAction, { backgroundColor: palette.destructive }]}>
+              <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
+              <Text style={[styles.swipeText, { fontFamily: TakoFonts.bold }]}>Delete</Text>
+            </Pressable>
+          )}>
+          <SpringPressable
+            onPress={() => router.push(`/group/${group.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`Open split ${group.name}`}
+            style={[
+              styles.splitCard,
+              { backgroundColor: palette.surface, borderColor: palette.border },
+              cardElevation,
+            ]}>
+            <View style={[styles.letterBadge, { backgroundColor: avatarBg }]}>
+              <Text style={[styles.letterText, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+                {badgeLetter}
+              </Text>
+            </View>
+
+            <View style={styles.splitInfo}>
+              <Text
+                style={[styles.splitName, { color: palette.ink, fontFamily: TakoFonts.bold }]}
+                numberOfLines={1}>
+                {group.name}
+              </Text>
+              <Text
+                style={[styles.splitMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}
+                numberOfLines={1}>
+                {members.length} {members.length === 1 ? 'person' : 'people'} · {formatPeso(totalSpentCents)}
+              </Text>
+            </View>
+
+            <View style={styles.splitRight}>
+              <Text style={[styles.splitAmt, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+                {formatPeso(displayAmt)}
+              </Text>
+              <View style={[styles.statusPill, { backgroundColor: badgeBg }]}>
+                <Text
+                  style={[
+                    styles.statusText,
+                    {
+                      color: isOwe ? palette.coralAccent : palette.teal,
+                      fontFamily: TakoFonts.bold,
+                    },
+                  ]}>
+                  {isOwe ? 'You owe' : isOwed ? "You're owed" : 'Settled'}
+                </Text>
+              </View>
+            </View>
+          </SpringPressable>
+        </Swipeable>
+      </Animated.View>
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top']}>
-      <ScrollView
+      <FlatList
+        data={loading ? [] : summaries}
+        keyExtractor={(item) => item.group.id}
+        renderItem={renderSplitCard}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         contentContainerStyle={[
           styles.scroll,
           { paddingBottom: Math.max(insets.bottom, 16) + 96 },
@@ -212,7 +303,9 @@ export default function SplitsHomeScreen() {
             }}
             tintColor={palette.coralAccent}
           />
-        }>
+        }
+        ListHeaderComponent={
+          <View style={styles.headerStack}>
         {/* Top Header */}
         <View style={styles.header}>
           <View style={styles.brandRow}>
@@ -364,129 +457,47 @@ export default function SplitsHomeScreen() {
             </Pressable>
           )}
         </View>
-
-        {/* Splits List */}
-        {loading ? (
-          <View style={styles.list}>
-            <SplitRowSkeleton />
-            <SplitRowSkeleton />
-            <SplitRowSkeleton />
           </View>
-        ) : summaries.length === 0 ? (
-          <View
-            style={[
-              styles.emptyCard,
-              { backgroundColor: palette.surface, borderColor: palette.border },
-              cardElevation,
-            ]}>
-            <TakoMascot state="wave" size={116} interactive />
-            <Text style={[styles.emptyTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-              No active splits yet
-            </Text>
-            <Text style={[styles.emptyBody, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
-              Split dinner, groceries, or barkada trips in seconds and share a QR to join.
-            </Text>
-            <Pressable
-              onPress={() => router.push('/group/new-split')}
-              accessibilityRole="button"
-              accessibilityLabel="Create your first split"
-              style={({ pressed }) => [
-                styles.emptyCta,
-                { backgroundColor: palette.coral },
-                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+        }
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.list}>
+              <SplitRowSkeleton />
+              <SplitRowSkeleton />
+              <SplitRowSkeleton />
+            </View>
+          ) : (
+            <View
+              style={[
+                styles.emptyCard,
+                { backgroundColor: palette.surface, borderColor: palette.border },
+                cardElevation,
               ]}>
-              <Ionicons name="add" size={18} color={palette.plum} />
-              <Text style={[styles.emptyCtaText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
-                Create a split
+              <TakoMascot state="wave" size={116} interactive />
+              <Text style={[styles.emptyTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+                No active splits yet
               </Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.list}>
-            {summaries.map(({ group, members, totalSpentCents, myBalanceCents }, idx) => {
-              const badgeLetter = group.name.trim().charAt(0).toUpperCase() || 'T';
-              const isOwe = myBalanceCents < -1;
-              const isOwed = myBalanceCents > 1;
-              const badgeBg = isOwe
-                ? palette.coralSoft
-                : isOwed
-                  ? palette.tealSoft
-                  : palette.tealSoft;
-              const avatarBg =
-                idx % 2 === 0 ? palette.coralSoft : palette.tealSoft;
-              const displayAmt = Math.abs(myBalanceCents) <= 1 ? 0 : Math.abs(myBalanceCents);
-
-              return (
-                <Animated.View
-                  key={group.id}
-                  entering={
-                    reducedMotion
-                      ? undefined
-                      : FadeInDown.delay(Math.min(idx, 5) * 40).duration(220)
-                  }>
-                  <Swipeable
-                    overshootRight={false}
-                    renderRightActions={() => (
-                      <Pressable
-                        onPress={() => handleDeleteGroup(group)}
-                        style={[styles.swipeAction, { backgroundColor: palette.destructive }]}>
-                        <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
-                        <Text style={[styles.swipeText, { fontFamily: TakoFonts.bold }]}>Delete</Text>
-                      </Pressable>
-                    )}>
-                    <SpringPressable
-                      onPress={() => router.push(`/group/${group.id}`)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Open split ${group.name}`}
-                      style={[
-                        styles.splitCard,
-                        { backgroundColor: palette.surface, borderColor: palette.border },
-                        cardElevation,
-                      ]}>
-                      <View style={[styles.letterBadge, { backgroundColor: avatarBg }]}>
-                        <Text style={[styles.letterText, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-                          {badgeLetter}
-                        </Text>
-                      </View>
-
-                      <View style={styles.splitInfo}>
-                        <Text
-                          style={[styles.splitName, { color: palette.ink, fontFamily: TakoFonts.bold }]}
-                          numberOfLines={1}>
-                          {group.name}
-                        </Text>
-                        <Text
-                          style={[styles.splitMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}
-                          numberOfLines={1}>
-                          {members.length} {members.length === 1 ? 'person' : 'people'} · {formatPeso(totalSpentCents)}
-                        </Text>
-                      </View>
-
-                      <View style={styles.splitRight}>
-                        <Text style={[styles.splitAmt, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-                          {formatPeso(displayAmt)}
-                        </Text>
-                        <View style={[styles.statusPill, { backgroundColor: badgeBg }]}>
-                          <Text
-                            style={[
-                              styles.statusText,
-                              {
-                                color: isOwe ? palette.coralAccent : palette.teal,
-                                fontFamily: TakoFonts.bold,
-                              },
-                            ]}>
-                            {isOwe ? 'You owe' : isOwed ? "You're owed" : 'Settled'}
-                          </Text>
-                        </View>
-                      </View>
-                    </SpringPressable>
-                  </Swipeable>
-                </Animated.View>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
+              <Text style={[styles.emptyBody, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
+                Split dinner, groceries, or barkada trips in seconds and share a QR to join.
+              </Text>
+              <Pressable
+                onPress={() => router.push('/group/new-split')}
+                accessibilityRole="button"
+                accessibilityLabel="Create your first split"
+                style={({ pressed }) => [
+                  styles.emptyCta,
+                  { backgroundColor: palette.coral },
+                  pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                ]}>
+                <Ionicons name="add" size={18} color={palette.plum} />
+                <Text style={[styles.emptyCtaText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
+                  Create a split
+                </Text>
+              </Pressable>
+            </View>
+          )
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -500,7 +511,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 112,
+  },
+  headerStack: {
     gap: 18,
+    marginBottom: 12,
   },
   header: {
     flexDirection: 'row',
