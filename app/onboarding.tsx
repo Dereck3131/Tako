@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -8,6 +8,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   Colors,
   Motion,
@@ -17,12 +23,13 @@ import {
   TouchTarget,
   Typography,
 } from '../src/constants/theme';
+import { MotionTokens } from '../src/constants/motion';
 import { DotGridBackground } from '../src/components/DotGridBackground';
-import { TakoMascot } from '../src/components/TakoMascot';
+import { Tako, TakoState } from '../src/components/Tako';
 import { BrandWordmark, NeoButton, NeoCard } from '../src/components/NeoUI';
 import { MemojiAvatar } from '../src/components/MemojiAvatar';
 import { Badge } from '../src/components/Badge';
-import { StaggerItem } from '../src/components/MotionPrimitives';
+import { useIsScreenActive, useReducedMotion } from '../src/components/MotionPrimitives';
 
 const SLIDES = [
   {
@@ -45,13 +52,96 @@ const SLIDES = [
   },
 ];
 
+const SLIDE_TAKO_STATE: TakoState[] = ['happy', 'counting', 'celebrating'];
+
+function OnboardingDot({
+  active,
+  index,
+  onPress,
+  reducedMotion,
+}: {
+  active: boolean;
+  index: number;
+  onPress: () => void;
+  reducedMotion: boolean;
+}) {
+  const width = useSharedValue(active ? 22 : 7);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      width.value = active ? 22 : 7;
+    } else {
+      width.value = withSpring(active ? 22 : 7, MotionTokens.spring.tabPill);
+    }
+  }, [active, reducedMotion, width]);
+
+  const dotStyle = useAnimatedStyle(() => ({
+    width: width.value,
+    backgroundColor: active ? Colors.primary : Colors.border,
+  }));
+
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`Slide ${index + 1}`}
+      onPress={onPress}
+      style={styles.dotHit}
+    >
+      <Animated.View style={[styles.pillDot, dotStyle]} />
+    </Pressable>
+  );
+}
+
 export default function OnboardingScreen() {
   const router = useRouter();
   const [slide, setSlide] = useState(0);
+  const [direction, setDirection] = useState(1);
+  const reducedMotion = useReducedMotion();
+  const isActive = useIsScreenActive();
+
+  const cardTranslateX = useSharedValue(0);
+  const cardOpacity = useSharedValue(1);
+  const takoScale = useSharedValue(1);
+
+  const goToSlide = (nextSlide: number) => {
+    if (nextSlide === slide) return;
+    setDirection(nextSlide > slide ? 1 : -1);
+    setSlide(nextSlide);
+  };
+
+  useEffect(() => {
+    if (reducedMotion) {
+      cardTranslateX.value = 0;
+      cardOpacity.value = 1;
+      takoScale.value = 1;
+      return;
+    }
+    cardOpacity.value = 0;
+    cardTranslateX.value = direction * MotionTokens.distance.slideX;
+    cardOpacity.value = withTiming(1, {
+      duration: MotionTokens.duration.normal,
+      easing: MotionTokens.easing.reanimatedOut,
+    });
+    cardTranslateX.value = withTiming(0, {
+      duration: MotionTokens.duration.normal,
+      easing: MotionTokens.easing.reanimatedOut,
+    });
+    takoScale.value = withSpring(slide === 0 ? 1 : 0.84, MotionTokens.spring.settle);
+  }, [cardOpacity, cardTranslateX, direction, reducedMotion, slide, takoScale]);
+
+  const cardAnimStyle = useAnimatedStyle(() => ({
+    opacity: cardOpacity.value,
+    transform: [{ translateX: cardTranslateX.value }],
+  }));
+
+  const takoWrapStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: takoScale.value }],
+  }));
 
   const handleNext = () => {
     if (slide < 2) {
-      setSlide(slide + 1);
+      goToSlide(slide + 1);
     } else {
       router.replace('/(tabs)');
     }
@@ -85,155 +175,147 @@ export default function OnboardingScreen() {
           </View>
 
           {/* Illustration Area */}
-          <StaggerItem key={`slide-art-${slide}`} index={0} distance={10}>
-            <View style={styles.illustrationArea}>
-              {slide === 0 && (
-                <View style={{ width: '100%' }}>
-                  <View style={{ alignItems: 'center', marginTop: 8 }}>
-                    <TakoMascot size={172} />
-                  </View>
+          <View style={styles.illustrationArea}>
+            <View style={{ width: '100%' }}>
+              {/* Shared Tako mascot across slides */}
+              <Animated.View style={[{ alignItems: 'center', marginTop: 8 }, takoWrapStyle]}>
+                <Tako
+                  state={SLIDE_TAKO_STATE[slide]}
+                  size={164}
+                  interactive
+                  isActive={isActive}
+                />
+              </Animated.View>
 
-                  <NeoCard
-                    style={{ marginTop: 12 }}
-                    borderRadius={Radii.card}
-                    contentStyle={styles.intro1ItemRow}
-                  >
-                    <View style={styles.flexMin0}>
-                      <Text style={styles.cardTitle} numberOfLines={1}>
-                        Truffle Burger ×2
-                      </Text>
-                      <Text style={styles.cardSub} numberOfLines={1}>
-                        Added by Mia · just now
-                      </Text>
-                    </View>
-                    <Text style={styles.cardPrice} numberOfLines={1}>
-                      $36.00
-                    </Text>
-                  </NeoCard>
-
-                  <NeoCard
-                    style={{ marginTop: Spacing.md }}
-                    borderRadius={Radii.card}
-                    contentStyle={styles.intro1JoinRow}
-                  >
-                    <MemojiAvatar id="aly" size={34} />
-                    <Text style={[styles.cardTitle, { flex: 1, minWidth: 0 }]} numberOfLines={1}>
-                      Aly joined the room
-                    </Text>
-                    <Badge label="Live" variant="emerald" />
-                  </NeoCard>
-                </View>
-              )}
-
-              {slide === 1 && (
-                <View style={{ width: '100%' }}>
-                  <View style={{ alignItems: 'center', marginTop: 8 }}>
-                    <TakoMascot size={140} />
-                  </View>
-
-                  <NeoCard
-                    style={{ marginTop: 10 }}
-                    borderRadius={Radii.pill}
-                    contentStyle={styles.intro2PillRow}
-                  >
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      Burgers ×4
-                    </Text>
-                    <Text style={[styles.cardTitle, Typography.tabular]} numberOfLines={1}>
-                      $120.00
-                    </Text>
-                  </NeoCard>
-
-                  <NeoCard
-                    style={{ marginTop: 12 }}
-                    backgroundColor={Colors.card}
-                    borderRadius={Radii.card}
-                    contentStyle={styles.intro2SliderCard}
-                  >
-                    <View style={styles.rowGap10}>
-                      <MemojiAvatar id="you" size={34} />
-                      <Text style={[styles.cardTitle, { flex: 1, minWidth: 0 }]} numberOfLines={1}>
-                        You
-                      </Text>
-                      <Badge label="25%" variant="blue" />
-                      <Text style={styles.sliderAmount} numberOfLines={1}>
-                        $30.00
-                      </Text>
-                    </View>
-                    <View style={styles.sliderTrackWrap}>
-                      <View style={styles.sliderTrack}>
-                        <View style={styles.sliderFill} />
+              <Animated.View style={cardAnimStyle}>
+                {slide === 0 && (
+                  <View style={{ width: '100%' }}>
+                    <NeoCard
+                      style={{ marginTop: 12 }}
+                      borderRadius={Radii.card}
+                      contentStyle={styles.intro1ItemRow}
+                    >
+                      <View style={styles.flexMin0}>
+                        <Text style={styles.cardTitle} numberOfLines={1}>
+                          Truffle Burger ×2
+                        </Text>
+                        <Text style={styles.cardSub} numberOfLines={1}>
+                          Added by Mia · just now
+                        </Text>
                       </View>
-                      <View style={[styles.sliderThumb, Shadows.cardSoft]} />
-                    </View>
-                  </NeoCard>
-                </View>
-              )}
+                      <Text style={styles.cardPrice} numberOfLines={1}>
+                        $36.00
+                      </Text>
+                    </NeoCard>
 
-              {slide === 2 && (
-                <View style={{ width: '100%' }}>
-                  <View style={{ alignItems: 'center', marginTop: 8 }}>
-                    <TakoMascot size={140} />
+                    <NeoCard
+                      style={{ marginTop: Spacing.md }}
+                      borderRadius={Radii.card}
+                      contentStyle={styles.intro1JoinRow}
+                    >
+                      <MemojiAvatar id="aly" size={34} />
+                      <Text style={[styles.cardTitle, { flex: 1, minWidth: 0 }]} numberOfLines={1}>
+                        Aly joined the room
+                      </Text>
+                      <Badge label="Live" variant="emerald" />
+                    </NeoCard>
                   </View>
+                )}
 
-                  <View style={[styles.darkCard, Shadows.hero]}>
-                    <Text style={styles.darkLabel}>Your share to pay</Text>
-                    <Text style={styles.darkAmount} numberOfLines={1}>
-                      $52.50
-                    </Text>
-                    <View style={{ marginTop: 12 }}>
-                      <NeoButton
-                        label="Pay Now"
-                        onPress={() => router.replace('/(tabs)')}
-                        backgroundColor={Colors.amber}
-                        textColor={Colors.ink}
-                        height={46}
-                        fontSize={15}
-                      />
-                    </View>
+                {slide === 1 && (
+                  <View style={{ width: '100%' }}>
+                    <NeoCard
+                      style={{ marginTop: 10 }}
+                      borderRadius={Radii.pill}
+                      contentStyle={styles.intro2PillRow}
+                    >
+                      <Text style={styles.cardTitle} numberOfLines={1}>
+                        Burgers ×4
+                      </Text>
+                      <Text style={[styles.cardTitle, Typography.tabular]} numberOfLines={1}>
+                        $120.00
+                      </Text>
+                    </NeoCard>
+
+                    <NeoCard
+                      style={{ marginTop: 12 }}
+                      backgroundColor={Colors.card}
+                      borderRadius={Radii.card}
+                      contentStyle={styles.intro2SliderCard}
+                    >
+                      <View style={styles.rowGap10}>
+                        <MemojiAvatar id="you" size={34} />
+                        <Text style={[styles.cardTitle, { flex: 1, minWidth: 0 }]} numberOfLines={1}>
+                          You
+                        </Text>
+                        <Badge label="25%" variant="blue" />
+                        <Text style={styles.sliderAmount} numberOfLines={1}>
+                          $30.00
+                        </Text>
+                      </View>
+                      <View style={styles.sliderTrackWrap}>
+                        <View style={styles.sliderTrack}>
+                          <View style={styles.sliderFill} />
+                        </View>
+                        <View style={[styles.sliderThumb, Shadows.cardSoft]} />
+                      </View>
+                    </NeoCard>
                   </View>
+                )}
 
-                  <NeoCard
-                    style={{ marginTop: 12 }}
-                    borderRadius={Radii.card}
-                    contentStyle={styles.intro1JoinRow}
-                  >
-                    <MemojiAvatar id="mia" size={34} />
-                    <Text style={[styles.cardTitle, { flex: 1, minWidth: 0 }]} numberOfLines={1}>
-                      Mia
-                    </Text>
-                    <Badge label="Paid" variant="emerald" />
-                  </NeoCard>
-                </View>
-              )}
+                {slide === 2 && (
+                  <View style={{ width: '100%' }}>
+                    <View style={[styles.darkCard, Shadows.hero]}>
+                      <Text style={styles.darkLabel}>Your share to pay</Text>
+                      <Text style={styles.darkAmount} numberOfLines={1}>
+                        $52.50
+                      </Text>
+                      <View style={{ marginTop: 12 }}>
+                        <NeoButton
+                          label="Pay Now"
+                          onPress={() => router.replace('/(tabs)')}
+                          backgroundColor={Colors.amber}
+                          textColor={Colors.ink}
+                          height={46}
+                          fontSize={15}
+                        />
+                      </View>
+                    </View>
+
+                    <NeoCard
+                      style={{ marginTop: 12 }}
+                      borderRadius={Radii.card}
+                      contentStyle={styles.intro1JoinRow}
+                    >
+                      <MemojiAvatar id="mia" size={34} />
+                      <Text style={[styles.cardTitle, { flex: 1, minWidth: 0 }]} numberOfLines={1}>
+                        Mia
+                      </Text>
+                      <Badge label="Paid" variant="emerald" />
+                    </NeoCard>
+                  </View>
+                )}
+              </Animated.View>
             </View>
-          </StaggerItem>
+          </View>
 
           {/* Copy */}
-          <View style={styles.copyArea}>
+          <Animated.View style={[styles.copyArea, cardAnimStyle]}>
             <Text style={styles.headline}>{SLIDES[slide].title}</Text>
             <Text style={styles.subtitle}>{SLIDES[slide].subtitle}</Text>
-          </View>
+          </Animated.View>
 
           {/* Bottom Navigation */}
           <View style={styles.bottomArea}>
             <View style={styles.dotsRow}>
               {[0, 1, 2].map((idx) => (
-                <Pressable
+                <OnboardingDot
                   key={idx}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: idx === slide }}
-                  accessibilityLabel={`Slide ${idx + 1}`}
-                  onPress={() => setSlide(idx)}
-                  style={styles.dotHit}
-                >
-                  <View
-                    style={[
-                      styles.pillDot,
-                      idx === slide ? styles.pillDotActive : styles.pillDotInactive,
-                    ]}
-                  />
-                </Pressable>
+                  index={idx}
+                  active={idx === slide}
+                  onPress={() => goToSlide(idx)}
+                  reducedMotion={reducedMotion}
+                />
               ))}
             </View>
 

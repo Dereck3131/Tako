@@ -41,8 +41,8 @@ export default function LoginScreen() {
           <StaggerItem index={0} distance={10}>
             <View style={styles.cardWrap}>
               {/* Small Tako peeking over the card */}
-              <View style={styles.takoPeek} pointerEvents="none">
-                <TakoMascot size={78} />
+              <View style={styles.takoPeek}>
+                <TakoMascot size={78} peekIn interactive />
               </View>
 
               <NeoCard borderRadius={Radii.cardLg} contentStyle={styles.cardContent}>
