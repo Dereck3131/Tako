@@ -70,17 +70,20 @@ const MIN_ARM_RADIUS = 74; // Keeps avatars clear of Tako's 130px head
 
 /**
  * Linear share-to-arm-length mapping:
- * 20% = 90px, 25% = 110px, 40% = 170px (formula: 10 + 4 * pct),
- * clamped so low percentages stay outside Tako's head and high percentages fit the card.
+ * Allows continuous smooth tracking from MIN_ARM_RADIUS to maxRadius.
+ * Maps 0% -> MIN_ARM_RADIUS (74px) and 100% -> maxRadius (~160px).
  */
 function sharePctToArmLength(pct: number, maxRadius: number): number {
-  const linear = 10 + 4 * pct;
-  return Math.max(MIN_ARM_RADIUS, Math.min(maxRadius, linear));
+  const t = Math.max(0, Math.min(100, pct)) / 100;
+  return MIN_ARM_RADIUS + t * (maxRadius - MIN_ARM_RADIUS);
 }
 
-function armLengthToSharePct(radius: number): number {
-  const raw = (radius - 10) / 4;
-  return Math.max(0, Math.min(100, Math.round(raw / 5) * 5));
+function armLengthToSharePct(radius: number, maxRadius: number): number {
+  if (maxRadius <= MIN_ARM_RADIUS) return 0;
+  const ratio = (radius - MIN_ARM_RADIUS) / (maxRadius - MIN_ARM_RADIUS);
+  // Smooth 1% granularity (or 0.5%) for fluid dragging without chunky 5% jumps
+  const pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+  return pct;
 }
 
 /**
@@ -503,7 +506,10 @@ export function TakoArmSplit({
                   }}
                   onSnapPct={(nextPct) => {
                     if (nextPct !== pct) {
-                      triggerHaptic('tick');
+                      // Light tick on 5% intervals so haptics feel crisp without buzzing continuously
+                      if (nextPct % 5 === 0) {
+                        triggerHaptic('tick');
+                      }
                       onChangeShare(p.id, nextPct * 100);
                       setLiveAnnouncement(`${p.name} ${nextPct} percent`);
                     }
@@ -736,14 +742,15 @@ function RadialArmHandle({
           const a = angleRef.current;
           const radialDelta =
             gesture.dx * Math.cos(a) + gesture.dy * Math.sin(a);
+          const maxR = maxRadiusRef.current;
           const nextRadius = Math.max(
             MIN_ARM_RADIUS,
-            Math.min(maxRadiusRef.current, startRadiusRef.current + radialDelta)
+            Math.min(maxR, startRadiusRef.current + radialDelta)
           );
-          const snapped = armLengthToSharePct(nextRadius);
-          if (snapped !== lastEmittedPctRef.current) {
-            lastEmittedPctRef.current = snapped;
-            onSnapRef.current(snapped);
+          const smoothPct = armLengthToSharePct(nextRadius, maxR);
+          if (smoothPct !== lastEmittedPctRef.current) {
+            lastEmittedPctRef.current = smoothPct;
+            onSnapRef.current(smoothPct);
           }
         },
         onPanResponderRelease: () => onDragRef.current(false),
