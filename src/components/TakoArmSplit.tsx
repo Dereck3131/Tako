@@ -993,6 +993,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     flexShrink: 0,
+    overflow: 'hidden',
   },
   amountInputWrapFocused: {
     borderWidth: 2,
@@ -1007,11 +1008,22 @@ const styles = StyleSheet.create({
   },
   amountInput: {
     flex: 1,
+    width: '100%',
+    minWidth: 0,
     fontSize: 13,
     fontWeight: '700',
     color: Colors.ink,
     fontVariant: ['tabular-nums'],
     paddingVertical: 0,
+    paddingHorizontal: 0,
     textAlign: 'right',
+    borderWidth: 0,
+    ...(Platform.OS === 'web'
+      ? ({
+          outlineStyle: 'none',
+          boxSizing: 'border-box',
+          backgroundColor: 'transparent',
+        } as object)
+      : null),
   },
 });
