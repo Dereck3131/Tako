@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -7,8 +7,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { QrSmallIcon } from '../../src/components/Icons';
 import { useRoomStore } from '../../src/store/roomStore';
 import {
@@ -19,6 +24,7 @@ import {
   TouchTarget,
   Typography,
 } from '../../src/constants/theme';
+import { MotionTokens } from '../../src/constants/motion';
 import { DotGridBackground } from '../../src/components/DotGridBackground';
 import { TakoMascot, getTakoMood, getTakoMoodCopy } from '../../src/components/TakoMascot';
 import { formatMoney } from '../../src/services/currency';
@@ -29,10 +35,54 @@ import { PeopleCarousel } from '../../src/components/PeopleCarousel';
 import { Badge } from '../../src/components/Badge';
 import { MemojiAvatar, MemojiId } from '../../src/components/MemojiAvatar';
 import { HeroShaderBackground } from '../../src/components/HeroShaderBackground';
-import { StaggerItem } from '../../src/components/MotionPrimitives';
+import { AnimatedNumber, StaggerItem, useReducedMotion } from '../../src/components/MotionPrimitives';
+
+function NewItemHighlight({ active }: { active?: boolean }) {
+  const reducedMotion = useReducedMotion();
+  const opacity = useSharedValue(active && !reducedMotion ? 0.16 : 0);
+
+  useEffect(() => {
+    if (!active || reducedMotion) return;
+    opacity.value = 0.16;
+    opacity.value = withTiming(0, {
+      duration: 900,
+      easing: MotionTokens.easing.reanimatedOut,
+    });
+  }, [active, opacity, reducedMotion]);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  if (!active || reducedMotion) return null;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        {
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+          backgroundColor: Colors.amber,
+          borderRadius: Radii.card,
+        },
+        style,
+      ]}
+    />
+  );
+}
 
 export default function RoomHomeScreen() {
   const router = useRouter();
+  const [isFocused, setIsFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => setIsFocused(false);
+    }, [])
+  );
   const {
     currentRoom,
     members,
@@ -87,8 +137,8 @@ export default function RoomHomeScreen() {
           {/* Hero Spend Card with Tako peeking behind */}
           <StaggerItem index={0} distance={8}>
             <View style={styles.heroWrap}>
-              <View style={styles.takoPeekBehind} pointerEvents="none">
-                <TakoMascot size={92} mood={takoMood} />
+              <View style={styles.takoPeekBehind}>
+                <TakoMascot size={92} mood={takoMood} peekIn interactive isActive={isFocused} />
               </View>
               <NeoCard
                 noBorder
@@ -101,14 +151,14 @@ export default function RoomHomeScreen() {
                 <View style={styles.heroTopRow}>
                   <View style={styles.heroAmountCol}>
                     <Text style={styles.heroLabel}>{t(language, 'splitTheBill')}</Text>
-                    <Text
+                    <AnimatedNumber
+                      value={totalSpendCents}
+                      formatter={(c) => formatMoney(c, currency, { roundToWhole: roundToPeso })}
                       style={styles.heroAmount}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       minimumFontScale={0.65}
-                    >
-                      {formatMoney(totalSpendCents, currency, { roundToWhole: roundToPeso })}
-                    </Text>
+                    />
                   </View>
                   <Pressable
                     accessibilityRole="button"
@@ -205,26 +255,29 @@ export default function RoomHomeScreen() {
                         topStyle={styles.ticketTop}
                         bottomStyle={styles.ticketBottom}
                         childrenTop={
-                          <View style={styles.ticketTopRow}>
-                            <View style={styles.ticketInfoCol}>
-                              <Text style={styles.itemTitle} numberOfLines={2}>
-                                {item.title}
-                              </Text>
-                              <Text style={styles.itemMeta} numberOfLines={1}>
-                                Added by {item.createdByName} · {item.createdAt}
-                              </Text>
-                            </View>
-                            <View style={styles.ticketPriceCol}>
-                              <Text style={styles.itemPrice} numberOfLines={1}>
-                                ${(item.priceCents / 100).toFixed(2)}
-                              </Text>
-                              {item.isNew && (
-                                <Badge
-                                  label="NEW"
-                                  variant="amber"
-                                  style={{ marginTop: 4 }}
-                                />
-                              )}
+                          <View style={{ position: 'relative' }}>
+                            <NewItemHighlight active={item.isNew} />
+                            <View style={styles.ticketTopRow}>
+                              <View style={styles.ticketInfoCol}>
+                                <Text style={styles.itemTitle} numberOfLines={2}>
+                                  {item.title}
+                                </Text>
+                                <Text style={styles.itemMeta} numberOfLines={1}>
+                                  Added by {item.createdByName} · {item.createdAt}
+                                </Text>
+                              </View>
+                              <View style={styles.ticketPriceCol}>
+                                <Text style={styles.itemPrice} numberOfLines={1}>
+                                  ${(item.priceCents / 100).toFixed(2)}
+                                </Text>
+                                {item.isNew && (
+                                  <Badge
+                                    label="NEW"
+                                    variant="amber"
+                                    style={{ marginTop: 4 }}
+                                  />
+                                )}
+                              </View>
                             </View>
                           </View>
                         }

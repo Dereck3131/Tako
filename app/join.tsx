@@ -1,9 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import {
-  Animated,
-  Easing,
-  Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,9 +8,7 @@ import {
 import { useRouter } from 'expo-router';
 import {
   Colors,
-  Motion,
   Radii,
-  Shadows,
   Spacing,
   Typography,
 } from '../src/constants/theme';
@@ -22,7 +16,7 @@ import { NeoButton, NeoCard } from '../src/components/NeoUI';
 import { Badge } from '../src/components/Badge';
 import { MemojiAvatar } from '../src/components/MemojiAvatar';
 import { QRCodeVector } from '../src/components/QRCodeVector';
-import { useReducedMotion } from '../src/components/MotionPrimitives';
+import { DraggableBottomSheet } from '../src/components/MotionPrimitives';
 import { useRoomStore } from '../src/store/roomStore';
 
 const PIN_DIGITS = ['4', '8', '2', '1'];
@@ -30,51 +24,16 @@ const PIN_DIGITS = ['4', '8', '2', '1'];
 export default function JoinQRModal() {
   const router = useRouter();
   const { selectedAnimal } = useRoomStore();
-  const reducedMotion = useReducedMotion();
-  const sheetAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const anim = Animated.timing(sheetAnim, {
-      toValue: 1,
-      duration: reducedMotion ? 120 : Motion.durationNormal,
-      easing: Easing.bezier(0.23, 1, 0.32, 1),
-      useNativeDriver: Platform.OS !== 'web',
-    });
-    anim.start();
-    return () => anim.stop();
-  }, [sheetAnim, reducedMotion]);
-
-  const sheetTranslateY = sheetAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [reducedMotion ? 0 : 28, 0],
-  });
 
   return (
-    <View style={styles.root}>
-      {/* Dimmed Backdrop */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Close join modal"
-        style={styles.dimOverlay}
-        onPress={() => router.back()}
-      />
-
-      {/* Bottom Sheet */}
-      <Animated.View
-        style={[
-          styles.sheet,
-          Shadows.hero,
-          {
-            opacity: sheetAnim,
-            transform: [{ translateY: sheetTranslateY }],
-          },
-        ]}
+    <DraggableBottomSheet
+      onDismiss={() => router.back()}
+      accessibilityLabel="Close join modal"
+    >
+      <ScrollView
+        contentContainerStyle={styles.sheetScroll}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.handle} />
-        <ScrollView
-          contentContainerStyle={styles.sheetScroll}
-          showsVerticalScrollIndicator={false}
-        >
           <Text style={styles.title}>{'Point your phone\nto join this bill'}</Text>
 
           <View style={styles.qrCenter}>
@@ -158,9 +117,8 @@ export default function JoinQRModal() {
               fontSize={16}
             />
           </View>
-        </ScrollView>
-      </Animated.View>
-    </View>
+      </ScrollView>
+    </DraggableBottomSheet>
   );
 }
 

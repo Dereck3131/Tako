@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RoomMember } from '../types/database';
 import { Border, Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { MemojiAvatar, MemojiId } from './MemojiAvatar';
+import { PopIn } from './MotionPrimitives';
 
 interface PeopleCarouselProps {
   members: RoomMember[];
@@ -28,23 +29,25 @@ export function PeopleCarousel({ members }: PeopleCarouselProps) {
       {guests.map((member) => {
         const isJoining = member.connectionStatus.toLowerCase().includes('joining');
         return (
-          <View key={member.id} style={[styles.card, Shadows.cardSoft]}>
-            <View style={styles.avatarWrap}>
-              <MemojiAvatar id={(member.avatarUrl as MemojiId) || 'you'} size={44} />
+          <PopIn key={member.id} triggerKey={member.id}>
+            <View style={[styles.card, Shadows.cardSoft]}>
+              <View style={styles.avatarWrap}>
+                <MemojiAvatar id={(member.avatarUrl as MemojiId) || 'you'} size={44} />
+              </View>
+              <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+                {member.displayName}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.status,
+                  { color: isJoining ? Colors.amberText : Colors.mintText },
+                ]}
+              >
+                {isJoining ? 'Joining' : 'Live'}
+              </Text>
             </View>
-            <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
-              {member.displayName}
-            </Text>
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.status,
-                { color: isJoining ? Colors.amberText : Colors.mintText },
-              ]}
-            >
-              {isJoining ? 'Joining' : 'Live'}
-            </Text>
-          </View>
+          </PopIn>
         );
       })}
     </ScrollView>
