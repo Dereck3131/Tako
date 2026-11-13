@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
-import { TakoMascot } from '@/components/TakoMascot';
+import { TakoMark } from '@/components/TakoMark';
 import { Radii, TakoFonts } from '@/constants/theme';
 import { useTakoTheme } from '@/context/ThemeContext';
 
@@ -61,7 +61,7 @@ export function QRCodeCard({
           ecl="H"
         />
         <View style={styles.centerBadge} pointerEvents="none">
-          <TakoMascot state="idle" size={34} interactive={false} />
+          <TakoMark size={30} />
         </View>
       </View>
 
