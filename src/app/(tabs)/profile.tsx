@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useState } from 'react';
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TakoMascot } from '@/components/TakoMascot';
 import { TakoSplash } from '@/components/TakoSplash';
@@ -30,8 +31,9 @@ const MASCOT_STATES: { key: TakoState; label: string }[] = [
 ];
 
 export default function ProfileScreen() {
-  const { palette, preference, setPreference } = useTakoTheme();
+  const { palette, isDark, preference, setPreference } = useTakoTheme();
   const { profile, user, updateProfile, signOut } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [editModal, setEditModal] = useState<'profile' | 'payment' | 'mascot' | null>(null);
   const [paymentLabel, setPaymentLabel] = useState('GCash');
@@ -60,12 +62,67 @@ export default function ProfileScreen() {
     setEditModal(null);
   };
 
+  const appearanceIcon =
+    preference === 'light'
+      ? 'sunny-outline'
+      : preference === 'dark'
+        ? 'moon-outline'
+        : 'contrast-outline';
+
+  const cardShadow = isDark
+    ? {}
+    : Platform.select({
+        ios: {
+          shadowColor: '#2B1B3D',
+          shadowOpacity: 0.06,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 3 },
+        },
+        android: { elevation: 2 },
+        web: { boxShadow: '0 2px 10px rgba(43, 27, 61, 0.06)' },
+      });
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: Math.max(insets.bottom, 16) + 96 },
+        ]}>
         <Text style={[styles.pageTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
           Profile
         </Text>
+
+        {/* Guest Upgrade Banner */}
+        {user?.is_anonymous && (
+          <View
+            style={[
+              styles.guestBanner,
+              { backgroundColor: palette.coralSoft, borderColor: palette.coral },
+            ]}>
+            <View style={styles.guestBannerCopy}>
+              <Text style={[styles.guestBannerTitle, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
+                You’re using a guest account
+              </Text>
+              <Text style={[styles.guestBannerSub, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
+                Create an account so your splits are saved across devices.
+              </Text>
+            </View>
+            <Pressable
+              onPress={signOut}
+              accessibilityRole="button"
+              accessibilityLabel="Create an account"
+              style={({ pressed }) => [
+                styles.guestBannerBtn,
+                { backgroundColor: palette.coralAccent },
+                pressed && { opacity: 0.9 },
+              ]}>
+              <Text style={[styles.guestBannerBtnText, { fontFamily: TakoFonts.bold }]}>
+                Sign up
+              </Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* User Card */}
         <Pressable
@@ -73,9 +130,12 @@ export default function ProfileScreen() {
             setDisplayName(profile?.display_name ?? '');
             setEditModal('profile');
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Edit profile"
           style={[
             styles.userCard,
             { backgroundColor: palette.surface, borderColor: palette.border },
+            cardShadow,
           ]}>
           <View style={[styles.avatar, { backgroundColor: palette.coral }]}>
             <Text style={[styles.avatarText, { fontFamily: TakoFonts.black }]}>
@@ -83,10 +143,10 @@ export default function ProfileScreen() {
             </Text>
           </View>
           <View style={styles.userInfo}>
-            <Text style={[styles.userName, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
+            <Text style={[styles.userName, { color: palette.ink, fontFamily: TakoFonts.bold }]} numberOfLines={1}>
               {profile?.display_name ?? 'Your name'}
             </Text>
-            <Text style={[styles.userEmail, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
+            <Text style={[styles.userEmail, { color: palette.mute, fontFamily: TakoFonts.regular }]} numberOfLines={1}>
               {user?.is_anonymous ? 'Guest account' : (user?.email ?? 'you@email.com')}
             </Text>
           </View>
@@ -102,12 +162,15 @@ export default function ProfileScreen() {
             style={[
               styles.card,
               { backgroundColor: palette.surface, borderColor: palette.border },
+              cardShadow,
             ]}>
-            {[
-              { label: 'GCash', bg: palette.tealSoft },
-              { label: 'Maya', bg: palette.lavenderSoft },
-              { label: 'Bank accounts', bg: palette.coralSoft },
-            ].map((item, idx, arr) => (
+            {(
+              [
+                { label: 'GCash', icon: 'phone-portrait-outline', bg: palette.tealSoft, color: palette.teal },
+                { label: 'Maya', icon: 'wallet-outline', bg: palette.lavenderSoft, color: palette.lavender },
+                { label: 'Bank accounts', icon: 'business-outline', bg: palette.coralSoft, color: palette.coralAccent },
+              ] as const
+            ).map((item, idx, arr) => (
               <Pressable
                 key={item.label}
                 onPress={() => {
@@ -115,6 +178,8 @@ export default function ProfileScreen() {
                   setPaymentHandle(profile?.payment_handle ?? '');
                   setEditModal('payment');
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Configure ${item.label}`}
                 style={[
                   styles.row,
                   idx < arr.length - 1 && {
@@ -123,7 +188,7 @@ export default function ProfileScreen() {
                   },
                 ]}>
                 <View style={[styles.iconBox, { backgroundColor: item.bg }]}>
-                  <Ionicons name="card-outline" size={18} color={palette.ink} />
+                  <Ionicons name={item.icon} size={18} color={item.color} />
                 </View>
                 <Text style={[styles.rowLabel, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
                   {item.label}
@@ -143,30 +208,18 @@ export default function ProfileScreen() {
             style={[
               styles.card,
               { backgroundColor: palette.surface, borderColor: palette.border },
+              cardShadow,
             ]}>
             <Pressable
-              onPress={() => setEditModal('mascot')}
-              style={[
-                styles.row,
-                { borderBottomWidth: 1, borderBottomColor: palette.border },
-              ]}>
-              <View style={[styles.iconBox, { backgroundColor: palette.coralSoft }]}>
-                <Ionicons name="sparkles-outline" size={18} color={palette.ink} />
-              </View>
-              <Text style={[styles.rowLabel, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
-                Tako Mascot & Splash
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color={palette.mute} />
-            </Pressable>
-
-            <Pressable
               onPress={cycleAppearance}
+              accessibilityRole="button"
+              accessibilityLabel={`Appearance: ${preference}`}
               style={[
                 styles.row,
                 { borderBottomWidth: 1, borderBottomColor: palette.border },
               ]}>
               <View style={[styles.iconBox, { backgroundColor: palette.lavenderSoft }]}>
-                <Ionicons name="moon-outline" size={18} color={palette.ink} />
+                <Ionicons name={appearanceIcon} size={18} color={palette.ink} />
               </View>
               <Text style={[styles.rowLabel, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
                 Appearance
@@ -177,17 +230,31 @@ export default function ProfileScreen() {
               <Ionicons name="chevron-forward" size={18} color={palette.mute} />
             </Pressable>
 
-            <Pressable onPress={signOut} style={styles.row}>
-              <View style={[styles.iconBox, { backgroundColor: palette.tealSoft }]}>
-                <Ionicons name="log-out-outline" size={18} color={palette.ink} />
+            <Pressable
+              onPress={signOut}
+              accessibilityRole="button"
+              accessibilityLabel="Sign out"
+              style={styles.row}>
+              <View style={[styles.iconBox, { backgroundColor: palette.destructiveSoft }]}>
+                <Ionicons name="log-out-outline" size={18} color={palette.destructive} />
               </View>
-              <Text style={[styles.rowLabel, { color: palette.coralAccent, fontFamily: TakoFonts.bold }]}>
+              <Text style={[styles.rowLabel, { color: palette.destructive, fontFamily: TakoFonts.bold }]}>
                 Sign out
               </Text>
-              <Ionicons name="chevron-forward" size={18} color={palette.mute} />
+              <Ionicons name="chevron-forward" size={18} color={palette.destructive} />
             </Pressable>
           </View>
         </View>
+
+        {__DEV__ && (
+          <Pressable
+            onPress={() => setEditModal('mascot')}
+            style={styles.devFooter}>
+            <Text style={[styles.devFooterText, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
+              Tako v1.0 · Mascot Playground
+            </Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       {/* Edit Name / Payment Modal */}
@@ -318,6 +385,43 @@ const styles = StyleSheet.create({
     fontSize: 30,
     letterSpacing: -0.6,
   },
+  guestBanner: {
+    borderRadius: Radii.xl,
+    borderWidth: 1,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  guestBannerCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  guestBannerTitle: {
+    fontSize: 14,
+  },
+  guestBannerSub: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  guestBannerBtn: {
+    paddingHorizontal: 14,
+    minHeight: 40,
+    borderRadius: Radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guestBannerBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+  },
+  devFooter: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  devFooterText: {
+    fontSize: 12,
+  },
   userCard: {
     borderRadius: Radii.xl,
     borderWidth: 1,
@@ -363,7 +467,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    minHeight: 54,
     gap: 12,
   },
   iconBox: {
