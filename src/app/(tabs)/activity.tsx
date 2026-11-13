@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,8 +10,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SplitRowSkeleton } from '@/components/Skeleton';
 import { TakoMascot } from '@/components/TakoMascot';
 import { Radii, TakoFonts, formatPeso } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -52,8 +53,9 @@ function isToday(iso: string): boolean {
 }
 
 export default function ActivityScreen() {
-  const { palette } = useTakoTheme();
+  const { palette, isDark } = useTakoTheme();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const [items, setItems] = useState<ActivityItem[]>([]);
@@ -208,7 +210,10 @@ export default function ActivityScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: Math.max(insets.bottom, 16) + 96 },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -224,19 +229,61 @@ export default function ActivityScreen() {
         </Text>
 
         {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={palette.coralAccent} />
+          <View style={styles.skeletonList}>
+            <SplitRowSkeleton />
+            <SplitRowSkeleton />
+            <SplitRowSkeleton />
           </View>
         ) : items.length === 0 ? (
           <View
             style={[
               styles.emptyCard,
               { backgroundColor: palette.surface, borderColor: palette.border },
+              !isDark && styles.lightShadow,
             ]}>
-            <TakoMascot state="sad" size={110} interactive />
-            <Text style={[styles.emptyText, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
-              No activity yet. Expenses and settlements will show up here.
+            <TakoMascot state="think" size={110} interactive />
+            <Text style={[styles.emptyTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+              No activity yet
             </Text>
+            <Text style={[styles.emptyText, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
+              Expenses and settlements from your splits will appear here, like:
+            </Text>
+
+            <View
+              style={[
+                styles.exampleRow,
+                { backgroundColor: palette.surfaceAlt, borderColor: palette.border },
+              ]}>
+              <View style={[styles.iconBox, { backgroundColor: palette.coralSoft }]}>
+                <Ionicons name="receipt-outline" size={18} color={palette.ink} />
+              </View>
+              <View style={styles.rowInfo}>
+                <Text style={[styles.rowTitle, { color: palette.ink, fontFamily: TakoFonts.bold }]} numberOfLines={1}>
+                  Ramen Ya dinner added
+                </Text>
+                <Text style={[styles.rowSub, { color: palette.mute, fontFamily: TakoFonts.regular }]} numberOfLines={1}>
+                  Barkada Dinner · You · Just now
+                </Text>
+              </View>
+              <Text style={[styles.rowAmt, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+                ₱1,200
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={() => router.push('/group/new-split')}
+              accessibilityRole="button"
+              accessibilityLabel="Create a split"
+              style={({ pressed }) => [
+                styles.emptyCta,
+                { backgroundColor: palette.coral },
+                pressed && { opacity: 0.9 },
+              ]}>
+              <Ionicons name="add" size={18} color={palette.plum} />
+              <Text style={[styles.emptyCtaText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
+                Create a split
+              </Text>
+            </Pressable>
           </View>
         ) : (
           <>
@@ -268,14 +315,54 @@ const styles = StyleSheet.create({
   emptyCard: {
     borderRadius: Radii.xl,
     borderWidth: 1,
-    padding: 28,
+    padding: 24,
     alignItems: 'center',
     gap: 10,
+  },
+  lightShadow: Platform.select({
+    ios: {
+      shadowColor: '#2B1B3D',
+      shadowOpacity: 0.06,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 3 },
+    },
+    android: { elevation: 2 },
+    web: { boxShadow: '0 2px 10px rgba(43, 27, 61, 0.06)' },
+  }),
+  skeletonList: {
+    gap: 12,
+  },
+  emptyTitle: {
+    fontSize: 17,
   },
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  exampleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: Radii.lg,
+    borderWidth: 1,
+    width: '100%',
+    marginTop: 4,
+    opacity: 0.85,
+  },
+  emptyCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 22,
+    minHeight: 46,
+    borderRadius: Radii.pill,
+  },
+  emptyCtaText: {
+    fontSize: 15,
   },
   section: {
     gap: 8,
@@ -305,6 +392,7 @@ const styles = StyleSheet.create({
   },
   rowInfo: {
     flex: 1,
+    flexShrink: 1,
     gap: 2,
   },
   rowTitle: {
@@ -315,5 +403,7 @@ const styles = StyleSheet.create({
   },
   rowAmt: {
     fontSize: 15,
+    fontVariant: ['tabular-nums'],
+    flexShrink: 0,
   },
 });
