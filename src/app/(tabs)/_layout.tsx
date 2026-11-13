@@ -1,11 +1,54 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TakoFonts } from '@/constants/theme';
 import { useTakoTheme } from '@/context/ThemeContext';
+
+function TabIconPill({
+  name,
+  color,
+  focused,
+  surfaceAlt,
+}: {
+  name: React.ComponentProps<typeof Ionicons>['name'];
+  color: string;
+  focused: boolean;
+  surfaceAlt: string;
+}) {
+  const reducedMotion = useReducedMotion();
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    if (focused && !reducedMotion) {
+      scale.value = 0.88;
+      scale.value = withSpring(1, { damping: 14, stiffness: 320 });
+    }
+  }, [focused, reducedMotion, scale]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.iconPill,
+        focused && { backgroundColor: surfaceAlt },
+        animStyle,
+      ]}>
+      <Ionicons name={name} size={20} color={color} />
+    </Animated.View>
+  );
+}
 
 export default function TabsLayout() {
   const { palette, isDark } = useTakoTheme();
@@ -55,13 +98,12 @@ export default function TabsLayout() {
         options={{
           title: 'Splits',
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconPill,
-                focused && { backgroundColor: palette.surfaceAlt },
-              ]}>
-              <Ionicons name="receipt-outline" size={20} color={String(color)} />
-            </View>
+            <TabIconPill
+              name="receipt-outline"
+              color={String(color)}
+              focused={focused}
+              surfaceAlt={palette.surfaceAlt}
+            />
           ),
         }}
       />
@@ -71,13 +113,12 @@ export default function TabsLayout() {
           title: 'Scan',
           tabBarStyle: { display: 'none' },
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconPill,
-                focused && { backgroundColor: palette.surfaceAlt },
-              ]}>
-              <Ionicons name="qr-code-outline" size={20} color={String(color)} />
-            </View>
+            <TabIconPill
+              name="qr-code-outline"
+              color={String(color)}
+              focused={focused}
+              surfaceAlt={palette.surfaceAlt}
+            />
           ),
         }}
       />
@@ -86,13 +127,12 @@ export default function TabsLayout() {
         options={{
           title: 'Activity',
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconPill,
-                focused && { backgroundColor: palette.surfaceAlt },
-              ]}>
-              <Ionicons name="time-outline" size={20} color={String(color)} />
-            </View>
+            <TabIconPill
+              name="time-outline"
+              color={String(color)}
+              focused={focused}
+              surfaceAlt={palette.surfaceAlt}
+            />
           ),
         }}
       />
@@ -101,13 +141,12 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={[
-                styles.iconPill,
-                focused && { backgroundColor: palette.surfaceAlt },
-              ]}>
-              <Ionicons name="person-outline" size={20} color={String(color)} />
-            </View>
+            <TabIconPill
+              name="person-outline"
+              color={String(color)}
+              focused={focused}
+              surfaceAlt={palette.surfaceAlt}
+            />
           ),
         }}
       />
