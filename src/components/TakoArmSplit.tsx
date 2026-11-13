@@ -63,10 +63,10 @@ const ARM_PALETTE = [
   Colors.mintText,
 ];
 
-const CANVAS_HEIGHT = 360;
+const CANVAS_HEIGHT = 350;
 const MIN_CANVAS_WIDTH = 318;
-const TAKO_HEAD_SIZE = 130;
-const MIN_ARM_RADIUS = 74; // Keeps avatars clear of Tako's 130px head
+const TAKO_HEAD_SIZE = 104;
+const MIN_ARM_RADIUS = 64; // Keeps avatars clear of Tako's 104px head
 
 /**
  * Linear share-to-arm-length mapping:
@@ -447,14 +447,14 @@ export function TakoArmSplit({
             })}
           </Svg>
 
-          {/* Layer 2: Center Tako Head Only (130px wide, no legs) */}
+          {/* Layer 2: Center Tako Head Only (104px wide, no legs) */}
           <Animated.View
             pointerEvents="none"
             style={[
               styles.centerTako,
               {
                 left: centerX - TAKO_HEAD_SIZE / 2,
-                top: centerY - 63,
+                top: centerY - Math.round(TAKO_HEAD_SIZE * 0.48),
                 transform: [{ rotate: wiggleRotate }],
               },
             ]}
@@ -932,7 +932,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   colorDot: {
     width: 8,
@@ -941,27 +941,29 @@ const styles = StyleSheet.create({
   },
   stepperInfo: {
     flex: 1,
-    minWidth: 0,
+    minWidth: 80,
+    justifyContent: 'center',
   },
   stepperName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.ink,
   },
   stepperAmount: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     color: Colors.textSecondary,
     fontVariant: ['tabular-nums'],
+    marginTop: 1,
   },
   stepperControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: 4,
   },
   stepBtn: {
-    width: TouchTarget.minSize,
-    height: TouchTarget.minSize,
+    width: 36,
+    height: 36,
     borderRadius: Radii.pill,
     backgroundColor: Colors.surfaceSubtle,
     borderWidth: 1,
@@ -982,9 +984,9 @@ const styles = StyleSheet.create({
   amountInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: TouchTarget.minSize,
-    minWidth: 92,
-    paddingHorizontal: Spacing.sm,
+    height: 38,
+    width: 104,
+    paddingHorizontal: 8,
     borderRadius: Radii.md,
     backgroundColor: Colors.surfaceSubtle,
     borderWidth: 1,
@@ -996,19 +998,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
   },
   amountPrefix: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.textSecondary,
     marginRight: 2,
   },
   amountInput: {
     flex: 1,
-    minWidth: 56,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: Colors.ink,
     fontVariant: ['tabular-nums'],
-    paddingVertical: 6,
+    paddingVertical: 0,
     textAlign: 'right',
   },
 });
