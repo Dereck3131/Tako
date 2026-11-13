@@ -30,18 +30,8 @@ import { Badge } from '../../src/components/Badge';
 import { MemojiAvatar, MemojiId } from '../../src/components/MemojiAvatar';
 import { HeroShaderBackground } from '../../src/components/HeroShaderBackground';
 import { StaggerItem } from '../../src/components/MotionPrimitives';
-import { RoomPrototypeSwitcher } from '../../src/components/roomPrototypes/RoomPrototypeSwitcher';
 
 export default function RoomHomeScreen() {
-  // If in prototype mode, render the interactive 4-variant prototype switcher
-  if (__DEV__) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={['top', 'left', 'right']}>
-        <RoomPrototypeSwitcher />
-      </SafeAreaView>
-    );
-  }
-
   const router = useRouter();
   const {
     currentRoom,
