@@ -6,6 +6,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -24,10 +25,18 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TakoMascot } from '@/components/TakoMascot';
-import { Radii, TakoFonts } from '@/constants/theme';
+import { Radii, TakoFonts, formatPeso } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useTakoTheme } from '@/context/ThemeContext';
 import { supabase } from '@/lib/supabase';
+
+interface SplitPreview {
+  code: string;
+  name?: string;
+  totalCents?: number;
+  memberCount?: number;
+  paidBy?: string;
+}
 
 function extractInviteCode(raw: string): string {
   const trimmed = raw.trim();
@@ -50,6 +59,7 @@ export default function ScanScreen() {
   const [error, setError] = useState<string | null>(null);
   const [scannedLock, setScannedLock] = useState(false);
   const [shakeTick, setShakeTick] = useState(0);
+  const [preview, setPreview] = useState<SplitPreview | null>(null);
 
   const shakeX = useSharedValue(0);
 
@@ -86,30 +96,59 @@ export default function ScanScreen() {
       }
 
       setJoining(true);
-      const { data: groupId, error: rpcErr } = await supabase.rpc('join_group_by_code', {
-        p_code: cleaned,
-        p_member_name: profile?.display_name ?? null,
-      });
-
-      if (rpcErr || !groupId) {
-        setError(rpcErr?.message ?? 'Split not found for that code.');
-        setJoining(false);
-        setScannedLock(false);
-        triggerShake();
-        return;
-      }
-
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      }
+      const { data: previewData } = await supabase
+        .rpc('preview_group_by_code', { p_code: cleaned })
+        .maybeSingle();
 
       setJoining(false);
-      setCode('');
-      setScannedLock(false);
-      router.replace(`/group/${groupId}`);
+      if (previewData && typeof previewData === 'object') {
+        const row = previewData as {
+          name?: string;
+          total_cents?: number;
+          member_count?: number;
+          paid_by?: string;
+        };
+        setPreview({
+          code: cleaned,
+          name: row.name,
+          totalCents: row.total_cents,
+          memberCount: row.member_count,
+          paidBy: row.paid_by,
+        });
+      } else {
+        setPreview({ code: cleaned });
+      }
     },
-    [profile?.display_name, router, triggerShake]
+    [triggerShake]
   );
+
+  const confirmJoin = async () => {
+    if (!preview) return;
+    setJoining(true);
+    const { data: groupId, error: rpcErr } = await supabase.rpc('join_group_by_code', {
+      p_code: preview.code,
+      p_member_name: profile?.display_name ?? null,
+    });
+
+    if (rpcErr || !groupId) {
+      setPreview(null);
+      setError(rpcErr?.message ?? 'Split not found for that code.');
+      setJoining(false);
+      setScannedLock(false);
+      triggerShake();
+      return;
+    }
+
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
+
+    setPreview(null);
+    setJoining(false);
+    setCode('');
+    setScannedLock(false);
+    router.replace(`/group/${groupId}`);
+  };
 
   const handleJoin = () => submitCode(code);
 
@@ -277,6 +316,72 @@ export default function ScanScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Split Preview Modal before joining */}
+      <Modal
+        visible={!!preview}
+        animationType="slide"
+        transparent
+        onRequestClose={() => {
+          setPreview(null);
+          setScannedLock(false);
+        }}>
+        <View style={styles.modalBackdrop}>
+          <View
+            style={[
+              styles.previewCard,
+              {
+                backgroundColor: palette.surface,
+                paddingBottom: Math.max(insets.bottom, 24) + 8,
+              },
+            ]}>
+            <Text style={[styles.previewKicker, { color: palette.coralAccent, fontFamily: TakoFonts.bold }]}>
+              TAKO-{preview?.code}
+            </Text>
+            <Text style={[styles.previewTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+              {preview?.name ?? 'Join this split?'}
+            </Text>
+            {preview?.name ? (
+              <Text style={[styles.previewMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
+                {preview.totalCents !== undefined ? `${formatPeso(preview.totalCents)} · ` : ''}
+                {preview.memberCount !== undefined
+                  ? `${preview.memberCount} ${preview.memberCount === 1 ? 'person' : 'people'}`
+                  : ''}
+                {preview.paidBy ? ` · paid by ${preview.paidBy}` : ''}
+              </Text>
+            ) : (
+              <Text style={[styles.previewMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
+                Tap Join to hop into this split and see the items.
+              </Text>
+            )}
+
+            <View style={styles.previewActions}>
+              <Pressable
+                onPress={() => {
+                  setPreview(null);
+                  setScannedLock(false);
+                }}
+                style={[styles.cancelPreviewBtn, { borderColor: palette.border }]}>
+                <Text style={[styles.cancelPreviewText, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={confirmJoin}
+                disabled={joining}
+                style={[styles.confirmJoinBtn, { backgroundColor: palette.coral }]}>
+                {joining ? (
+                  <ActivityIndicator color={palette.plum} />
+                ) : (
+                  <Text style={[styles.confirmJoinText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
+                    Join split
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -428,5 +533,54 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     marginTop: 4,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  previewCard: {
+    borderTopLeftRadius: Radii.xl,
+    borderTopRightRadius: Radii.xl,
+    padding: 22,
+    gap: 8,
+  },
+  previewKicker: {
+    fontSize: 12,
+    letterSpacing: 1.4,
+  },
+  previewTitle: {
+    fontSize: 22,
+  },
+  previewMeta: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontVariant: ['tabular-nums'],
+  },
+  previewActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  cancelPreviewBtn: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: Radii.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelPreviewText: {
+    fontSize: 15,
+  },
+  confirmJoinBtn: {
+    flex: 1.4,
+    minHeight: 48,
+    borderRadius: Radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmJoinText: {
+    fontSize: 15,
   },
 });
