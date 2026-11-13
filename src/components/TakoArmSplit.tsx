@@ -568,25 +568,6 @@ export function TakoArmSplit({
                 <Text style={styles.stepperName}>{p.name}</Text>
                 <Text style={styles.stepperAmount}>{pct}%</Text>
               </View>
-              <TypeableAmountInput
-                memberName={p.name}
-                cents={cents}
-                itemPriceCents={itemPriceCents}
-                currency={currency}
-                onCommitCents={(typedCents) => {
-                  if (itemPriceCents <= 0) return;
-                  const targetBps = Math.max(
-                    0,
-                    Math.min(10000, Math.round((typedCents / itemPriceCents) * 10000))
-                  );
-                  setShowDragHint(false);
-                  triggerHaptic('tick');
-                  onChangeShare(p.id, targetBps);
-                  setLiveAnnouncement(
-                    `${p.name} updated to ${formatMoney(typedCents, currency)}`
-                  );
-                }}
-              />
               <View style={styles.stepperControls}>
                 <Pressable
                   accessibilityRole="button"
@@ -602,6 +583,25 @@ export function TakoArmSplit({
                 >
                   <Text style={styles.stepBtnText}>−</Text>
                 </Pressable>
+                <TypeableAmountInput
+                  memberName={p.name}
+                  cents={cents}
+                  itemPriceCents={itemPriceCents}
+                  currency={currency}
+                  onCommitCents={(typedCents) => {
+                    if (itemPriceCents <= 0) return;
+                    const targetBps = Math.max(
+                      0,
+                      Math.min(10000, Math.round((typedCents / itemPriceCents) * 10000))
+                    );
+                    setShowDragHint(false);
+                    triggerHaptic('tick');
+                    onChangeShare(p.id, targetBps);
+                    setLiveAnnouncement(
+                      `${p.name} updated to ${formatMoney(typedCents, currency)}`
+                    );
+                  }}
+                />
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Increase ${p.name} share by 5%`}
@@ -931,8 +931,8 @@ const styles = StyleSheet.create({
   stepperRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 6,
+    gap: 8,
+    paddingVertical: 5,
   },
   colorDot: {
     width: 8,
@@ -941,7 +941,7 @@ const styles = StyleSheet.create({
   },
   stepperInfo: {
     flex: 1,
-    minWidth: 80,
+    minWidth: 54,
     justifyContent: 'center',
   },
   stepperName: {
@@ -959,17 +959,18 @@ const styles = StyleSheet.create({
   stepperControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   stepBtn: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: Radii.pill,
     backgroundColor: Colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   stepBtnFocused: {
     borderWidth: 2,
@@ -984,13 +985,14 @@ const styles = StyleSheet.create({
   amountInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 38,
-    width: 104,
-    paddingHorizontal: 8,
+    height: 34,
+    width: 82,
+    paddingHorizontal: 6,
     borderRadius: Radii.md,
     backgroundColor: Colors.surfaceSubtle,
     borderWidth: 1,
     borderColor: Colors.border,
+    flexShrink: 0,
   },
   amountInputWrapFocused: {
     borderWidth: 2,
@@ -998,14 +1000,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
   },
   amountPrefix: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.textSecondary,
     marginRight: 2,
   },
   amountInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.ink,
     fontVariant: ['tabular-nums'],
