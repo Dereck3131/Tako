@@ -1,13 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TakoFonts } from '@/constants/theme';
 import { useTakoTheme } from '@/context/ThemeContext';
 
 export default function TabsLayout() {
   const { palette, isDark } = useTakoTheme();
+  const insets = useSafeAreaInsets();
+  const bottomOffset = Math.max(insets.bottom, 12) + 6;
 
   return (
     <Tabs
@@ -20,7 +23,7 @@ export default function TabsLayout() {
           position: 'absolute',
           left: 16,
           right: 16,
-          bottom: Platform.OS === 'ios' ? 22 : 16,
+          bottom: bottomOffset,
           height: 66,
           borderRadius: 33,
           backgroundColor: palette.surface,
@@ -31,7 +34,7 @@ export default function TabsLayout() {
           paddingTop: 6,
           paddingHorizontal: 8,
           shadowColor: isDark ? '#000' : '#2B1B3D',
-          shadowOpacity: isDark ? 0.35 : 0.1,
+          shadowOpacity: isDark ? 0.35 : 0.12,
           shadowRadius: 16,
           shadowOffset: { width: 0, height: 6 },
           elevation: 8,
@@ -39,11 +42,12 @@ export default function TabsLayout() {
         tabBarItemStyle: {
           borderRadius: 26,
           marginHorizontal: 2,
+          minHeight: 48,
         },
         tabBarLabelStyle: {
           fontFamily: TakoFonts.bold,
           fontSize: 11,
-          marginTop: -2,
+          marginTop: 0,
         },
       }}>
       <Tabs.Screen
@@ -113,8 +117,10 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   iconPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 3,
-    borderRadius: 14,
+    minWidth: 48,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
