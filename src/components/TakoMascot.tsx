@@ -1,7 +1,8 @@
 import React from 'react';
-import Svg, { Path, Ellipse, Circle, Rect } from 'react-native-svg';
+import { ViewStyle } from 'react-native';
 import { Item, ItemShare, RoomMember } from '../types/database';
 import { AppLanguage, t } from '../constants/i18n';
+import { Tako, TakoLookAt, TakoState } from './Tako';
 
 export type TakoMood =
   | 'waiting'
@@ -12,8 +13,16 @@ export type TakoMood =
 
 interface TakoMascotProps {
   size?: number;
-  mood?: TakoMood;
+  mood?: TakoMood | TakoState;
   hideLegs?: boolean;
+  peekIn?: boolean;
+  lookAt?: TakoLookAt | null;
+  wiggleKey?: number;
+  inkSquirtKey?: number;
+  interactive?: boolean;
+  onPress?: () => void;
+  isActive?: boolean;
+  style?: ViewStyle;
 }
 
 /**
@@ -81,156 +90,32 @@ export function getTakoMoodCopy(
   }
 }
 
-export function TakoMascot({ size = 120, mood = 'happy', hideLegs = false }: TakoMascotProps) {
-  const isWaiting = mood === 'waiting';
-  const isCounting = mood === 'counting';
-  const isEmptyPockets = mood === 'empty_pockets';
-  const isCelebrating = mood === 'celebrating';
-
+export function TakoMascot({
+  size = 120,
+  mood = 'happy',
+  hideLegs = false,
+  peekIn = false,
+  lookAt = null,
+  wiggleKey = 0,
+  inkSquirtKey = 0,
+  interactive = false,
+  onPress,
+  isActive = true,
+  style,
+}: TakoMascotProps) {
   return (
-    <Svg
-      width={size}
-      height={hideLegs ? Math.round(size * (74 / 76)) : size}
-      viewBox={hideLegs ? '22 12 76 74' : '0 0 120 120'}
-    >
-      {/* Confetti accents for celebrating mood (existing palette only) */}
-      {isCelebrating && !hideLegs && (
-        <>
-          <Circle cx={18} cy={22} r={3.5} fill="#FFB400" />
-          <Circle cx={102} cy={20} r={3.5} fill="#14B87A" />
-          <Rect x={24} y={36} width={5} height={5} rx={1} fill="#2F65F6" transform="rotate(20 26 38)" />
-          <Rect x={96} y={34} width={5} height={5} rx={1} fill="#FFB400" transform="rotate(-18 98 36)" />
-          <Circle cx={60} cy={8} r={3} fill="#14B87A" />
-        </>
-      )}
-
-      {/* Tentacles (hidden when used as center head in TakoArmSplit) */}
-      {!hideLegs && (
-        <>
-          <Path
-            d={isCelebrating || mood === 'happy' ? 'M32 64C14 54 14 34 22 26' : 'M38 72C22 88 30 106 14 104'}
-            fill="none"
-            stroke="#14123A"
-            strokeWidth={15}
-            strokeLinecap="round"
-          />
-          <Path
-            d="M50 80C44 96 56 108 44 114"
-            fill="none"
-            stroke="#14123A"
-            strokeWidth={15}
-            strokeLinecap="round"
-          />
-          <Path
-            d="M70 80C76 96 64 108 76 114"
-            fill="none"
-            stroke="#14123A"
-            strokeWidth={15}
-            strokeLinecap="round"
-          />
-          <Path
-            d={isCelebrating || mood === 'happy' ? 'M88 64C106 54 106 34 98 26' : 'M82 72C98 88 90 106 106 104'}
-            fill="none"
-            stroke="#14123A"
-            strokeWidth={15}
-            strokeLinecap="round"
-          />
-
-          <Path
-            d={isCelebrating || mood === 'happy' ? 'M32 64C14 54 14 34 22 26' : 'M38 72C22 88 30 106 14 104'}
-            fill="none"
-            stroke="#2F65F6"
-            strokeWidth={9}
-            strokeLinecap="round"
-          />
-          <Path
-            d="M50 80C44 96 56 108 44 114"
-            fill="none"
-            stroke="#2F65F6"
-            strokeWidth={9}
-            strokeLinecap="round"
-          />
-          <Path
-            d="M70 80C76 96 64 108 76 114"
-            fill="none"
-            stroke="#2F65F6"
-            strokeWidth={9}
-            strokeLinecap="round"
-          />
-          <Path
-            d={isCelebrating || mood === 'happy' ? 'M88 64C106 54 106 34 98 26' : 'M82 72C98 88 90 106 106 104'}
-            fill="none"
-            stroke="#2F65F6"
-            strokeWidth={9}
-            strokeLinecap="round"
-          />
-        </>
-      )}
-
-      {/* Head */}
-      <Path
-        d="M26 56C26 28 42 16 60 16S94 28 94 56C94 74 80 82 60 82S26 74 26 56Z"
-        fill="#2F65F6"
-        stroke="#14123A"
-        strokeWidth={3.5}
-      />
-
-      {/* Highlight & freckles */}
-      <Ellipse
-        cx={45}
-        cy={31}
-        rx={8}
-        ry={4}
-        fill="#FFFFFF"
-        opacity={0.35}
-        transform="rotate(-25 45 31)"
-      />
-      <Circle cx={72} cy={27} r={3.5} fill="#FFB400" />
-      <Circle cx={80} cy={38} r={2.5} fill="#FFB400" />
-
-      {/* Eyes (half-closed for waiting) */}
-      <Circle cx={47} cy={54} r={9} fill="#FFFFFF" stroke="#14123A" strokeWidth={3} />
-      <Circle cx={73} cy={54} r={9} fill="#FFFFFF" stroke="#14123A" strokeWidth={3} />
-      {isWaiting ? (
-        <>
-          <Path d="M39 54H55" stroke="#14123A" strokeWidth={3} strokeLinecap="round" />
-          <Path d="M65 54H81" stroke="#14123A" strokeWidth={3} strokeLinecap="round" />
-        </>
-      ) : (
-        <>
-          <Circle cx={49} cy={55} r={4.2} fill="#14123A" />
-          <Circle cx={75} cy={55} r={4.2} fill="#14123A" />
-          <Circle cx={50.5} cy={53.5} r={1.4} fill="#FFFFFF" />
-          <Circle cx={76.5} cy={53.5} r={1.4} fill="#FFFFFF" />
-        </>
-      )}
-
-      {/* Blush & expression */}
-      <Ellipse cx={35} cy={66} rx={5} ry={3} fill="#FF8FA3" />
-      <Ellipse cx={85} cy={66} rx={5} ry={3} fill="#FF8FA3" />
-      <Path
-        d={isEmptyPockets ? 'M53 71Q60 65 67 71' : 'M53 67Q60 74 67 67'}
-        fill="none"
-        stroke="#14123A"
-        strokeWidth={3.5}
-        strokeLinecap="round"
-      />
-
-      {/* Counting mood: amber coin in hand */}
-      {isCounting && (
-        <>
-          <Circle cx={99} cy={98} r={9} fill="#FFB400" stroke="#14123A" strokeWidth={2.5} />
-          <Circle cx={99} cy={98} r={4} fill="none" stroke="#14123A" strokeWidth={1.8} />
-        </>
-      )}
-
-      {/* Empty pockets mood: turned-out pocket flaps */}
-      {isEmptyPockets && (
-        <>
-          <Path d="M16 94C10 92 8 98 13 102" fill="#FFFFFF" stroke="#14123A" strokeWidth={2.2} strokeLinecap="round" />
-          <Path d="M104 94C110 92 112 98 107 102" fill="#FFFFFF" stroke="#14123A" strokeWidth={2.2} strokeLinecap="round" />
-        </>
-      )}
-    </Svg>
+    <Tako
+      state={mood}
+      size={size}
+      hideLegs={hideLegs}
+      peekIn={peekIn}
+      lookAt={lookAt}
+      wiggleKey={wiggleKey}
+      inkSquirtKey={inkSquirtKey}
+      interactive={interactive}
+      onPress={onPress}
+      isActive={isActive}
+      style={style}
+    />
   );
 }
