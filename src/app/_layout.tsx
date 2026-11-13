@@ -10,9 +10,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthScreen } from '@/components/AuthScreen';
 import { TakoSplash } from '@/components/TakoSplash';
+import { ToastProvider } from '@/components/Toast';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { TakoThemeProvider, useTakoTheme } from '@/context/ThemeContext';
 
@@ -86,11 +88,15 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <TakoThemeProvider>
-        <AuthProvider>
-          <RootNavigator />
-        </AuthProvider>
-      </TakoThemeProvider>
+      <SafeAreaProvider>
+        <TakoThemeProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <RootNavigator />
+            </AuthProvider>
+          </ToastProvider>
+        </TakoThemeProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
