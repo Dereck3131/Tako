@@ -402,72 +402,51 @@ export function Tako({
     onPress?.();
   };
 
-  // Animated props for SVG groups
+  // Animated props for SVG groups (using standard SVG transform strings for Web + Native)
   const headAnimatedProps = useAnimatedProps(() => ({
-    originX: 60,
-    originY: 54,
-    scale: headBreath.value,
+    transform: `translate(60, 54) scale(${headBreath.value}) translate(-60, -54)`,
   }));
 
   const armLeftOuterProps = useAnimatedProps(() => ({
-    originX: 34,
-    originY: 68,
-    rotation: armWaveA.value,
+    transform: `rotate(${armWaveA.value}, 34, 68)`,
   }));
 
   const armLeftInnerProps = useAnimatedProps(() => ({
-    originX: 50,
-    originY: 80,
-    rotation: armWaveB.value * 0.7,
+    transform: `rotate(${armWaveB.value * 0.7}, 50, 80)`,
   }));
 
   const armRightInnerProps = useAnimatedProps(() => ({
-    originX: 70,
-    originY: 80,
-    rotation: -armWaveB.value * 0.7,
+    transform: `rotate(${-armWaveB.value * 0.7}, 70, 80)`,
   }));
 
   const armRightOuterProps = useAnimatedProps(() => ({
-    originX: 86,
-    originY: 68,
-    rotation: -armWaveA.value,
+    transform: `rotate(${-armWaveA.value}, 86, 68)`,
   }));
 
   const eyeLeftBlinkProps = useAnimatedProps(() => ({
-    originX: 47,
-    originY: 54,
-    scaleY: blinkScaleY.value,
+    transform: `translate(47, 54) scale(1, ${blinkScaleY.value}) translate(-47, -54)`,
   }));
 
   const eyeRightBlinkProps = useAnimatedProps(() => ({
-    originX: 73,
-    originY: 54,
-    scaleY: blinkScaleY.value,
+    transform: `translate(73, 54) scale(1, ${blinkScaleY.value}) translate(-73, -54)`,
   }));
 
   const pupilsProps = useAnimatedProps(() => ({
-    x: pupilX.value,
-    y: pupilY.value,
+    transform: `translate(${pupilX.value}, ${pupilY.value})`,
   }));
 
   const coinProps = useAnimatedProps(() => ({
-    originX: 99,
-    originY: 98,
-    scaleX: coinFlipX.value,
+    transform: `translate(99, 98) scale(${coinFlipX.value}, 1) translate(-99, -98)`,
   }));
 
   const confettiProps = useAnimatedProps(() => ({
-    y: -confettiFloat.value * 5,
+    transform: `translate(0, ${-confettiFloat.value * 5})`,
     opacity: 0.75 + confettiFloat.value * 0.25,
   }));
 
   const inkPuffProps = useAnimatedProps(() => ({
     opacity: inkProgress.value,
-    x: inkProgress.value * 14,
-    y: -inkProgress.value * 6,
-    originX: 98,
-    originY: 72,
-    scale: 0.7 + inkProgress.value * 0.45,
+    transform: `translate(${inkProgress.value * 14 + 98}, ${-inkProgress.value * 6 + 72}) scale(${0.7 + inkProgress.value * 0.45}) translate(-98, -72)`,
   }));
 
   const containerStyle = useAnimatedStyle(() => ({
