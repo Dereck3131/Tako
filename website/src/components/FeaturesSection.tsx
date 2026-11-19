@@ -293,6 +293,7 @@ export function FeaturesSection() {
           ref={stageRef}
           onMouseLeave={() => {
             setHoveredId(null);
+            setOpenId(null);
           }}
           className="relative mx-auto mt-10 hidden h-[560px] w-full max-w-[1160px] select-none lg:block"
         >
@@ -462,10 +463,15 @@ export function FeaturesSection() {
                   aria-controls={activeId === arm.id ? 'eight-arms-card' : undefined}
                   onMouseEnter={() => {
                     setHoveredId(arm.id);
-                    setOpenId(arm.id);
+                  }}
+                  onMouseLeave={() => {
+                    setHoveredId((curr) => (curr === arm.id ? null : curr));
                   }}
                   onFocus={() => {
                     setHoveredId(arm.id);
+                  }}
+                  onBlur={() => {
+                    setHoveredId((curr) => (curr === arm.id ? null : curr));
                   }}
                   onClick={() => {
                     setOpenId((curr) => (curr === arm.id ? null : arm.id));
