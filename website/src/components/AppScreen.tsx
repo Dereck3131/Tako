@@ -46,7 +46,8 @@ export function AppScreen({ screen, theme, priority = false, alt }: AppScreenPro
           fill
           sizes="(max-width: 768px) 260px, 300px"
           priority={priority}
-          className="object-cover object-top"
+          draggable={false}
+          className="pointer-events-none select-none object-cover object-top"
           onError={() => setFailed(true)}
         />
       </div>

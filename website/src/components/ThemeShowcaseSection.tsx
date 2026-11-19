@@ -32,6 +32,7 @@ export function ThemeShowcaseSection() {
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
     draggingRef.current = true;
     setIsDragging(true);
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -113,6 +114,7 @@ export function ThemeShowcaseSection() {
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
+              onDragStart={(e) => e.preventDefault()}
               role="slider"
               aria-label="Compare light and dark theme screenshots"
               aria-valuemin={0}

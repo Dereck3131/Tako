@@ -42,8 +42,9 @@ function SingleScreenshotFrame({
           placeholder="blur"
           blurDataURL={BLUR_DATA_URL}
           sizes={compact ? '120px' : '156px'}
+          draggable={false}
           // Slight crop hides mobile status bar, Expo Go banner, and dev gear button
-          className="object-cover object-top scale-[1.06] -translate-y-[2.5%]"
+          className="pointer-events-none select-none object-cover object-top scale-[1.06] -translate-y-[2.5%]"
           onError={() => setMissing(true)}
         />
       ) : (

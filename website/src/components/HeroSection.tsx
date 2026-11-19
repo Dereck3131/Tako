@@ -49,8 +49,9 @@ function RealHeroAppScreen({ theme }: { theme: 'light' | 'dark' }) {
           fill
           sizes="(max-width: 768px) 260px, 300px"
           priority
+          draggable={false}
           // Slight upward shift & scale crops out top status bar / Expo Go dev banner
-          className="object-cover object-top scale-[1.06] -translate-y-[2.5%]"
+          className="pointer-events-none select-none object-cover object-top scale-[1.06] -translate-y-[2.5%]"
           onError={() => setMissing(true)}
         />
       </div>
