@@ -1,8 +1,7 @@
 'use client';
 
 import { type MotionValue, motion, useReducedMotion, useSpring } from 'motion/react';
-import Image from 'next/image';
-import React, { useState } from 'react';
+import React from 'react';
 
 interface HeroTakoProps {
   /** Normalized cursor offset (-1 to 1) for subtle eye tracking */
@@ -13,43 +12,15 @@ interface HeroTakoProps {
 }
 
 /**
- * Hero star mascot: loads `/public/mascot/happy.png` (or `.svg`) if supplied,
- * otherwise renders Tako's exact octopus character from the mobile app
- * (happy face, waving tentacle, receipt + peso coin in tentacles,
- * 4s float, occasional blink, periodic wave, and cursor-tracking eyes).
+ * Hero star mascot: renders Tako's exact octopus character from the mobile app
+ * directly as an inline SVG (zero wasted image fallback requests, zero per-frame
+ * CSS drop-shadow filter re-rasterization).
  */
 export function HeroTako({ eyeX, eyeY }: HeroTakoProps) {
   const reducedMotion = useReducedMotion();
-  const [srcStage, setSrcStage] = useState<'png' | 'svg' | 'vector'>('png');
 
   const pupilX = useSpring(eyeX, { stiffness: 160, damping: 20 });
   const pupilY = useSpring(eyeY, { stiffness: 160, damping: 20 });
-
-  if (srcStage !== 'vector') {
-    const src = `/mascot/happy.${srcStage}`;
-    return (
-      <motion.div
-        animate={reducedMotion ? undefined : { y: [0, -8, 0] }}
-        transition={
-          reducedMotion
-            ? undefined
-            : { duration: 4, repeat: Infinity, ease: 'easeInOut' }
-        }
-        className="relative h-[220px] w-[220px] sm:h-[270px] sm:w-[270px] lg:h-[310px] lg:w-[310px] select-none"
-      >
-        <Image
-          src={src}
-          alt="Tako the coral octopus waving happily"
-          fill
-          sizes="(max-width: 640px) 220px, (max-width: 1024px) 270px, 310px"
-          priority
-          unoptimized={srcStage === 'svg'}
-          className="object-contain drop-shadow-[0_18px_24px_rgba(43,27,61,0.28)]"
-          onError={() => setSrcStage((prev) => (prev === 'png' ? 'svg' : 'vector'))}
-        />
-      </motion.div>
-    );
-  }
 
   return (
     <motion.div
@@ -59,6 +30,7 @@ export function HeroTako({ eyeX, eyeY }: HeroTakoProps) {
           ? undefined
           : { duration: 4, repeat: Infinity, ease: 'easeInOut' }
       }
+      style={{ willChange: reducedMotion ? undefined : 'transform' }}
       className="relative h-[220px] w-[220px] sm:h-[270px] sm:w-[270px] lg:h-[310px] lg:w-[310px] select-none"
       role="img"
       aria-label="Tako the coral octopus waving while holding a receipt and peso coin"
@@ -67,10 +39,11 @@ export function HeroTako({ eyeX, eyeY }: HeroTakoProps) {
         viewBox="-26 -14 186 176"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="h-full w-full overflow-visible drop-shadow-[0_18px_22px_rgba(43,27,61,0.24)]"
+        className="h-full w-full overflow-visible"
       >
-        {/* Soft ground shadow */}
-        <ellipse cx="64" cy="144" rx="44" ry="8" fill="rgba(43, 27, 61, 0.22)" />
+        {/* Soft static ground shadow (GPU-free replacement for animated drop-shadow filter) */}
+        <ellipse cx="64" cy="144" rx="48" ry="10" fill="rgba(43, 27, 61, 0.14)" />
+        <ellipse cx="64" cy="144" rx="34" ry="6" fill="rgba(43, 27, 61, 0.18)" />
 
         {/* Left tentacle holding a mini paper receipt */}
         <g transform="translate(-4, 6)">

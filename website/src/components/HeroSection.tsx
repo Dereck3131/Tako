@@ -14,17 +14,8 @@ import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { EntranceCoin } from './hero-entrances/EntranceCoin';
-import { EntranceInk } from './hero-entrances/EntranceInk';
-import { EntrancePeek } from './hero-entrances/EntrancePeek';
-import { EntranceReceipt } from './hero-entrances/EntranceReceipt';
-import { HeroEntrancePicker } from './hero-entrances/HeroEntrancePicker';
-import {
-  ENTRANCE_VARIANTS,
-  type EntranceSpeed,
-  type EntranceVariantId,
-} from './hero-entrances/types';
 import { HeroDownloadControls } from './HeroDownloadControls';
+import { HeroReceiptEntrance } from './HeroReceiptEntrance';
 import { HeroTako } from './HeroTako';
 import { PhoneMockup } from './PhoneMockup';
 
@@ -32,8 +23,6 @@ const HeroShaderBg = dynamic(
   () => import('./HeroShaderBg').then((m) => m.HeroShaderBg),
   { ssr: false }
 );
-
-const STORAGE_KEY = 'tako_hero_proto_variant_v1';
 
 function RealHeroAppScreen({ theme }: { theme: 'light' | 'dark' }) {
   const [missing, setMissing] = useState(false);
@@ -60,7 +49,6 @@ function RealHeroAppScreen({ theme }: { theme: 'light' | 'dark' }) {
     );
   }
 
-  // TODO: Drop your real screenshots into website/public/screens/splits-home-light.png and splits-home-dark.png
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[var(--surface)] px-6 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--coral-soft)] text-[var(--coral-accent)]">
@@ -90,104 +78,45 @@ export function HeroSection() {
 
   const [mounted, setMounted] = useState(false);
   const [shaderReady, setShaderReady] = useState(false);
-  const [variant, setVariant] = useState<EntranceVariantId>('peek');
-  // Always default playback speed to 1x on every load (never persisted)
-  const [speed, setSpeed] = useState<EntranceSpeed>(1);
-  const [playKey, setPlayKey] = useState(0);
   const [skipped, setSkipped] = useState(false);
-  const [measuredSec, setMeasuredSec] = useState<number | null>(null);
-  const playStartRef = useRef<number>(0);
 
-  // Hydrate persisted variant choice ONLY (never speed) + defer shader after entrance starts
   useEffect(() => {
     setMounted(true);
-    playStartRef.current = performance.now();
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY) as EntranceVariantId | null;
-      if (saved && ENTRANCE_VARIANTS.some((v) => v.id === saved)) {
-        setVariant(saved);
-        setPlayKey((k) => k + 1);
-      }
-    } catch {
-      // localStorage blocked
-    }
-    const timer = window.setTimeout(() => setShaderReady(true), 140);
-    return () => window.clearTimeout(timer);
+    // Safety fallback so HeroShaderBg always mounts after the entrance finishes
+    const fallbackTimer = window.setTimeout(() => setShaderReady(true), 4200);
+    return () => window.clearTimeout(fallbackTimer);
   }, []);
 
-  // Stamp exact start time whenever a play starts
-  useEffect(() => {
-    playStartRef.current = performance.now();
-    setMeasuredSec(null);
-  }, [variant, playKey, speed]);
-
+  // Mount WebGL shader right after the Receipt Tear entrance settles (never during it)
   const handleEntranceComplete = useCallback(() => {
-    const start = playStartRef.current;
-    if (!start) return;
-    const elapsed = (performance.now() - start) / 1000;
-    setMeasuredSec(elapsed);
+    setShaderReady(true);
   }, []);
 
-  const handleSelectVariant = useCallback((nextId: EntranceVariantId) => {
-    setVariant(nextId);
-    setSkipped(false);
-    setMeasuredSec(null);
-    setPlayKey((k) => k + 1);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, nextId);
-    } catch {
-      // ignore storage errors
+  // If user skips or prefers reduced motion, allow WebGL/static bg immediately
+  useEffect(() => {
+    if (skipped || reducedMotion) {
+      setShaderReady(true);
     }
-  }, []);
+  }, [skipped, reducedMotion]);
 
-  const handleReplay = useCallback(() => {
-    setSkipped(false);
-    setMeasuredSec(null);
-    setPlayKey((k) => k + 1);
-  }, []);
-
-  const handleSpeedChange = useCallback((nextSpeed: EntranceSpeed) => {
-    setSpeed(nextSpeed);
-    setSkipped(false);
-    setMeasuredSec(null);
-    setPlayKey((k) => k + 1);
-  }, []);
-
-  // Any click, key press (except prototype picker shortcuts), or scroll skips straight to resting state
+  // Any click, key press, or scroll skips straight to resting state
   useEffect(() => {
     if (skipped || reducedMotion) return;
 
     const skip = () => setSkipped(true);
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (
-        (e.key >= '1' && e.key <= '4') ||
-        e.key === 'r' ||
-        e.key === 'R' ||
-        e.key === 'ArrowLeft' ||
-        e.key === 'ArrowRight'
-      ) {
-        return;
-      }
-      skip();
-    };
     const onScroll = () => {
       if (window.scrollY > 12) skip();
     };
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target?.closest('.proto-picker')) return;
-      skip();
-    };
 
-    window.addEventListener('pointerdown', onPointerDown, { passive: true });
-    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('pointerdown', skip, { passive: true, once: true });
+    window.addEventListener('keydown', skip, { once: true });
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
-      window.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('pointerdown', skip);
+      window.removeEventListener('keydown', skip);
       window.removeEventListener('scroll', onScroll);
     };
-  }, [skipped, reducedMotion, playKey]);
+  }, [skipped, reducedMotion]);
 
   const screenTheme: 'light' | 'dark' = mounted && resolvedTheme === 'dark' ? 'dark' : 'light';
 
@@ -237,7 +166,6 @@ export function HeroSection() {
     clamp: true,
   });
 
-  // Shared resting slots passed into each entrance variant
   const sublineNode = (
     /* TODO: Confirm if offline auto-sync or marking paid offline should be mentioned here once verified */
     <p className="max-w-xl text-base leading-relaxed text-[var(--mute)] sm:text-lg lg:text-[1.15rem]">
@@ -248,15 +176,16 @@ export function HeroSection() {
 
   const controlsNode = <HeroDownloadControls />;
 
+  // Pure feathered radial gradient (no blur-3xl filter pass)
   const glowNode = (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute left-1/2 top-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl sm:h-[420px] sm:w-[420px]"
+      className="pointer-events-none absolute left-1/2 top-1/2 h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full sm:h-[460px] sm:w-[460px]"
       style={{
         background:
           screenTheme === 'dark'
-            ? 'radial-gradient(circle, rgba(255, 122, 138, 0.32) 0%, rgba(185, 165, 232, 0.14) 52%, transparent 72%)'
-            : 'radial-gradient(circle, rgba(255, 122, 138, 0.28) 0%, rgba(255, 200, 87, 0.14) 55%, transparent 74%)',
+            ? 'radial-gradient(circle, rgba(255, 122, 138, 0.28) 0%, rgba(185, 165, 232, 0.12) 44%, transparent 72%)'
+            : 'radial-gradient(circle, rgba(255, 122, 138, 0.24) 0%, rgba(255, 200, 87, 0.12) 48%, transparent 72%)',
       }}
     />
   );
@@ -329,20 +258,6 @@ export function HeroSection() {
     </motion.div>
   );
 
-  const sharedEntranceProps = {
-    speed,
-    skipped,
-    reducedMotion,
-    onEntranceComplete: handleEntranceComplete,
-    subline: sublineNode,
-    controls: controlsNode,
-    phoneSlot: phoneNode,
-    takoSlot: takoNode,
-    chipNewSplitSlot: chipNewSplitNode,
-    chipScanQrSlot: chipScanQrNode,
-    glowSlot: glowNode,
-  };
-
   return (
     <section
       id="top"
@@ -358,12 +273,12 @@ export function HeroSection() {
         style={{
           background:
             screenTheme === 'dark'
-              ? 'radial-gradient(ellipse 80% 70% at 72% 40%, rgba(255, 122, 138, 0.16) 0%, rgba(185, 165, 232, 0.08) 45%, transparent 75%)'
-              : 'radial-gradient(ellipse 80% 70% at 72% 40%, rgba(255, 122, 138, 0.14) 0%, rgba(255, 200, 87, 0.10) 45%, transparent 75%)',
+              ? 'radial-gradient(ellipse 80% 70% at 72% 40%, rgba(255, 122, 138, 0.22) 0%, rgba(125, 58, 140, 0.18) 46%, transparent 78%)'
+              : 'radial-gradient(ellipse 80% 70% at 72% 40%, rgba(255, 166, 158, 0.28) 0%, rgba(255, 224, 210, 0.26) 46%, transparent 78%)',
         }}
       />
 
-      {/* Lazy-loaded ShaderGradient mounted after entrance starts so LCP is never delayed */}
+      {/* Lazy-loaded ShaderGradient mounted AFTER Receipt Tear entrance settles so it never stalls the entrance */}
       {shaderReady && <HeroShaderBg />}
 
       {/* Scroll-out veil transitioning cleanly into the next section */}
@@ -375,22 +290,17 @@ export function HeroSection() {
         />
       )}
 
-      {/* Keyed by variant + playKey so switching or pressing R replays from pre-entrance state */}
-      <React.Fragment key={`${variant}-${playKey}`}>
-        {variant === 'coin' && <EntranceCoin {...sharedEntranceProps} />}
-        {variant === 'ink' && <EntranceInk {...sharedEntranceProps} />}
-        {variant === 'peek' && <EntrancePeek {...sharedEntranceProps} />}
-        {variant === 'receipt' && <EntranceReceipt {...sharedEntranceProps} />}
-      </React.Fragment>
-
-      {/* Dev-only (or ?proto=1) floating prototype picker */}
-      <HeroEntrancePicker
-        activeId={variant}
-        speed={speed}
-        measuredSec={measuredSec}
-        onSelect={handleSelectVariant}
-        onReplay={handleReplay}
-        onSpeedChange={handleSpeedChange}
+      <HeroReceiptEntrance
+        skipped={skipped}
+        reducedMotion={reducedMotion}
+        onEntranceComplete={handleEntranceComplete}
+        subline={sublineNode}
+        controls={controlsNode}
+        phoneSlot={phoneNode}
+        takoSlot={takoNode}
+        chipNewSplitSlot={chipNewSplitNode}
+        chipScanQrSlot={chipScanQrNode}
+        glowSlot={glowNode}
       />
     </section>
   );

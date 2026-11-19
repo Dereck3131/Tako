@@ -3,30 +3,41 @@
 import { motion } from 'motion/react';
 import React, { useRef } from 'react';
 
-import { HEADLINE_WORDS, type HeroEntranceProps } from './types';
-
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
+const HEADLINE_WORDS = ['Split', 'bills,', 'not', 'friendships.'] as const;
+
+/** Relaxed 0.5x pacing multiplier chosen for the final Receipt Tear entrance */
+const PACE = 2;
+const s = (t: number) => t * PACE;
 
 /**
  * 4 torn paper scraps that fly from the receipt tear midpoint toward the 4 headline words.
  */
 const TORN_SCRAPS = [
-  { tx: -90, ty: -42, rot: -14, delay: 0.50 },
+  { tx: -90, ty: -42, rot: -14, delay: 0.5 },
   { tx: 18, ty: -34, rot: 11, delay: 0.56 },
   { tx: -68, ty: 28, rot: -9, delay: 0.62 },
   { tx: 46, ty: 38, rot: 13, delay: 0.68 },
 ] as const;
 
+export interface HeroReceiptEntranceProps {
+  skipped: boolean;
+  reducedMotion: boolean;
+  onEntranceComplete?: () => void;
+  subline: React.ReactNode;
+  controls: React.ReactNode;
+  phoneSlot: React.ReactNode;
+  takoSlot: React.ReactNode;
+  chipNewSplitSlot: React.ReactNode;
+  chipScanQrSlot: React.ReactNode;
+  glowSlot: React.ReactNode;
+}
+
 /**
- * Variant D — RECEIPT TEAR (<2.0s at 1x)
- * A tall cream paper receipt (220x420 desktop, 150x286 mobile) with zigzag edges
- * and readable printed lines drops from above with a bounce while the nav, background,
- * and phone outline are already visible. A coral tentacle with sucker dots swipes across,
- * tears the receipt in half, and 4 torn scraps fly into the real DOM headline words
- * with a 60ms staggered spring. Then the phone rises and Tako does the Peek-a-Boo pull-up.
+ * Final Hero Entrance — Receipt Tear (relaxed 0.5x pacing, GPU transform/opacity only).
+ * Zero animated CSS drop-shadow filters so every frame stays locked on the compositor.
  */
-export function EntranceReceipt({
-  speed,
+export function HeroReceiptEntrance({
   skipped,
   reducedMotion,
   onEntranceComplete,
@@ -37,13 +48,12 @@ export function EntranceReceipt({
   chipNewSplitSlot,
   chipScanQrSlot,
   glowSlot,
-}: HeroEntranceProps) {
-  const s = (t: number) => t / speed;
+}: HeroReceiptEntranceProps) {
   const instant = skipped || reducedMotion;
   const completedRef = useRef(false);
 
   const handleFinalComplete = () => {
-    if (completedRef.current || instant) return;
+    if (completedRef.current) return;
     completedRef.current = true;
     onEntranceComplete?.();
   };
@@ -63,7 +73,8 @@ export function EntranceReceipt({
               <motion.svg
                 viewBox="0 0 220 218"
                 fill="none"
-                className="absolute inset-x-0 top-0 h-[52%] w-full drop-shadow-[0_14px_28px_rgba(43,27,61,0.18)]"
+                style={{ willChange: 'transform, opacity' }}
+                className="absolute inset-x-0 top-0 h-[52%] w-full"
                 initial={{ opacity: 0, y: -180, rotate: -2 }}
                 animate={{
                   opacity: [0, 1, 1, 1, 0],
@@ -77,6 +88,11 @@ export function EntranceReceipt({
                   ease: EASE_OUT,
                 }}
               >
+                {/* Lightweight vector shadow offset (no per-frame CSS filter) */}
+                <path
+                  d="M8 16 L20 8 L32 16 L44 8 L56 16 L68 8 L80 16 L92 8 L104 16 L116 8 L128 16 L140 8 L152 16 L164 8 L176 16 L188 8 L200 16 L212 8 L220 16 V208 L200 216 L180 206 L156 218 L132 206 L108 218 L84 206 L60 218 L36 208 L8 216 Z"
+                  fill="rgba(43, 27, 61, 0.12)"
+                />
                 {/* Cream receipt body with zigzag top edge and jagged bottom tear edge */}
                 <path
                   d="M4 12 L16 4 L28 12 L40 4 L52 12 L64 4 L76 12 L88 4 L100 12 L112 4 L124 12 L136 4 L148 12 L160 4 L172 12 L184 4 L196 12 L208 4 L216 12 V204 L196 212 L176 202 L152 214 L128 202 L104 214 L80 202 L56 214 L32 204 L4 212 Z"
@@ -84,7 +100,6 @@ export function EntranceReceipt({
                   stroke="#E5D9C3"
                   strokeWidth="2.5"
                 />
-                {/* Receipt header */}
                 <text
                   x="110"
                   y="44"
@@ -98,7 +113,6 @@ export function EntranceReceipt({
                   TAKO TAB
                 </text>
                 <line x1="22" y1="58" x2="198" y2="58" stroke="#D8CBB3" strokeWidth="1.5" strokeDasharray="4 4" />
-                {/* Readable line items */}
                 <text x="22" y="88" fill="#2B1B3D" fontSize="13" fontWeight="700" fontFamily="ui-monospace, monospace">
                   RAMEN YA
                 </text>
@@ -124,7 +138,8 @@ export function EntranceReceipt({
               <motion.svg
                 viewBox="0 0 220 218"
                 fill="none"
-                className="absolute inset-x-0 bottom-0 h-[52%] w-full drop-shadow-[0_14px_28px_rgba(43,27,61,0.16)]"
+                style={{ willChange: 'transform, opacity' }}
+                className="absolute inset-x-0 bottom-0 h-[52%] w-full"
                 initial={{ opacity: 0, y: -180, rotate: -2 }}
                 animate={{
                   opacity: [0, 1, 1, 1, 0],
@@ -138,6 +153,11 @@ export function EntranceReceipt({
                   ease: EASE_OUT,
                 }}
               >
+                {/* Lightweight vector shadow offset */}
+                <path
+                  d="M8 16 L36 8 L60 18 L84 6 L108 18 L132 6 L156 18 L180 6 L200 16 L220 8 V210 L212 218 L200 210 L188 218 L176 210 L164 218 L152 210 L140 218 L128 210 L116 218 L104 210 L92 218 L80 210 L68 218 L56 210 L44 218 L32 210 L20 218 L8 210 Z"
+                  fill="rgba(43, 27, 61, 0.12)"
+                />
                 {/* Mated jagged top tear edge and zigzag bottom edge */}
                 <path
                   d="M4 12 L32 4 L56 14 L80 2 L104 14 L128 2 L152 14 L176 2 L196 12 L216 4 V206 L208 214 L196 206 L184 214 L172 206 L160 214 L148 206 L136 214 L124 206 L112 214 L100 206 L88 214 L76 206 L64 214 L52 206 L40 214 L28 206 L16 214 L4 206 Z"
@@ -155,7 +175,6 @@ export function EntranceReceipt({
                 <text x="110" y="108" textAnchor="middle" fill="#6E5A82" fontSize="12" fontWeight="700" fontFamily="ui-monospace, monospace">
                   SPLIT 4 WAYS • ₱815 EA
                 </text>
-                {/* Decorative barcode */}
                 <g fill="#2B1B3D" opacity="0.22">
                   <rect x="38" y="132" width="4" height="36" />
                   <rect x="46" y="132" width="2" height="36" />
@@ -180,6 +199,7 @@ export function EntranceReceipt({
               <motion.svg
                 viewBox="0 0 220 20"
                 fill="none"
+                style={{ willChange: 'transform, opacity' }}
                 className="absolute inset-x-0 top-1/2 z-10 h-5 w-full -translate-y-1/2"
                 initial={{ opacity: 0, scaleX: 0.1 }}
                 animate={{ opacity: [0, 1, 0], scaleX: [0.1, 1.06, 1.12] }}
@@ -203,6 +223,7 @@ export function EntranceReceipt({
               <motion.svg
                 viewBox="0 0 180 68"
                 fill="none"
+                style={{ willChange: 'transform, opacity' }}
                 className="absolute left-1/2 top-1/2 z-20 h-14 w-36 -translate-x-1/2 -translate-y-1/2 sm:h-16 sm:w-44"
                 initial={{ opacity: 0, x: -130, rotate: -10 }}
                 animate={{
@@ -212,7 +233,7 @@ export function EntranceReceipt({
                 }}
                 transition={{
                   duration: s(0.46),
-                  delay: s(0.30),
+                  delay: s(0.3),
                   times: [0, 0.28, 0.76, 1],
                   ease: EASE_OUT,
                 }}
@@ -223,7 +244,6 @@ export function EntranceReceipt({
                   stroke="#2B1B3D"
                   strokeWidth="2.5"
                 />
-                {/* Sucker dots */}
                 <circle cx="144" cy="36" r="5" fill="#FFB8C1" />
                 <circle cx="122" cy="38" r="5.5" fill="#FFB8C1" />
                 <circle cx="98" cy="40" r="5.5" fill="#FFB8C1" />
@@ -235,7 +255,8 @@ export function EntranceReceipt({
               {TORN_SCRAPS.map((scrap, idx) => (
                 <motion.div
                   key={idx}
-                  className="absolute left-1/2 top-1/2 z-20 h-6 w-12 -ml-6 -mt-3 rounded-[4px] border border-[#E5D9C3] bg-[#FFFDF7] shadow-sm"
+                  style={{ willChange: 'transform, opacity' }}
+                  className="absolute left-1/2 top-1/2 z-20 -ml-6 -mt-3 h-6 w-12 rounded-[4px] border border-[#E5D9C3] bg-[#FFFDF7]"
                   initial={{ opacity: 0, x: 0, y: 0, scale: 0.7, rotate: 0 }}
                   animate={{
                     opacity: [0, 1, 1, 0],
@@ -256,7 +277,7 @@ export function EntranceReceipt({
           </div>
         )}
 
-        {/* Real DOM headline words springing in as the torn pieces arrive (60ms stagger) */}
+        {/* Real DOM headline words springing in as the torn pieces arrive */}
         <h1 className="font-[family-name:var(--font-display)] text-[clamp(2.75rem,6vw,4.85rem)] font-black leading-[1.01] tracking-[-0.03em] text-[var(--ink)] text-balance">
           {HEADLINE_WORDS.map((word, idx) => (
             <motion.span
@@ -333,7 +354,7 @@ export function EntranceReceipt({
         {glowSlot}
 
         <div className="relative">
-          {/* Subtle phone outline visible from frame 0 during receipt drop so screen is never empty */}
+          {/* Subtle phone outline visible from frame 0 during receipt drop */}
           {!instant && (
             <motion.div
               aria-hidden="true"
@@ -348,7 +369,7 @@ export function EntranceReceipt({
             />
           )}
 
-          {/* Grabbing tentacle tip wrapping the phone's top-left corner (same as Variant C) */}
+          {/* Grabbing tentacle tip wrapping the phone's top-left corner */}
           {!instant && (
             <motion.svg
               aria-hidden="true"
@@ -356,6 +377,7 @@ export function EntranceReceipt({
               height="58"
               viewBox="0 0 58 58"
               fill="none"
+              style={{ willChange: 'transform, opacity' }}
               initial={{ opacity: 0, scale: 0.6, x: -16, y: 16, rotate: -22 }}
               animate={{
                 opacity: [0, 1, 1, 0],
@@ -381,7 +403,7 @@ export function EntranceReceipt({
             </motion.svg>
           )}
 
-          {/* Tako peeks up over top-left corner after phone rises (same as Variant C) */}
+          {/* Tako peeks up over top-left corner after phone rises */}
           <motion.div
             initial={
               reducedMotion

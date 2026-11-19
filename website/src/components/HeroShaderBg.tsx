@@ -33,6 +33,12 @@ export function HeroShaderBg() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(true);
   const [useStaticFallback, setUseStaticFallback] = useState(false);
+  const [fadedIn, setFadedIn] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setFadedIn(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -83,12 +89,12 @@ export function HeroShaderBg() {
     >
       <WebGLErrorBoundary fallback={staticGradient}>
         <div
-          className="absolute inset-0 transition-opacity duration-500"
-          style={{ opacity: isDark ? 0.82 : 0.62 }}
+          className="absolute inset-0 transition-opacity duration-700"
+          style={{ opacity: fadedIn ? (isDark ? 0.82 : 0.62) : 0 }}
         >
           <ShaderGradientCanvas
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-            pixelDensity={1}
+            pixelDensity={0.75}
             fov={42}
           >
             <ShaderGradient
