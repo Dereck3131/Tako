@@ -21,18 +21,25 @@ class WebGLErrorBoundary extends React.Component<
   }
 }
 
+function isLowEndDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const cores = navigator.hardwareConcurrency ?? 8;
+  const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+  return cores <= 4 || mem <= 4;
+}
+
 export function HeroShaderBg() {
   const { resolvedTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(true);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [useStaticFallback, setUseStaticFallback] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReducedMotion(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
+    const compute = () => setUseStaticFallback(mq.matches || isLowEndDevice());
+    compute();
+    mq.addEventListener('change', compute);
+    return () => mq.removeEventListener('change', compute);
   }, []);
 
   useEffect(() => {
@@ -40,7 +47,7 @@ export function HeroShaderBg() {
     if (!el || typeof IntersectionObserver === 'undefined') return;
     const obs = new IntersectionObserver(
       ([entry]) => setInView(entry.isIntersecting),
-      { threshold: 0.05 }
+      { threshold: 0.02 }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -48,22 +55,22 @@ export function HeroShaderBg() {
 
   const isDark = resolvedTheme === 'dark';
 
-  const fallback = (
+  const staticGradient = (
     <div
       aria-hidden="true"
       className="pointer-events-none absolute inset-0"
       style={{
         background: isDark
-          ? 'radial-gradient(circle at 75% 30%, rgba(255, 122, 138, 0.24) 0%, rgba(43, 27, 61, 0.72) 48%, #1B1424 100%)'
-          : 'radial-gradient(circle at 75% 30%, rgba(255, 122, 138, 0.22) 0%, rgba(185, 165, 232, 0.18) 45%, #FAFAF7 100%)',
+          ? 'radial-gradient(ellipse 85% 75% at 72% 38%, rgba(229, 64, 94, 0.34) 0%, rgba(125, 58, 140, 0.32) 42%, #1B1424 100%)'
+          : 'radial-gradient(ellipse 90% 80% at 74% 34%, rgba(255, 166, 158, 0.42) 0%, rgba(255, 224, 210, 0.48) 46%, #FAFAF7 100%)',
       }}
     />
   );
 
-  if (reducedMotion) {
+  if (useStaticFallback) {
     return (
-      <div ref={containerRef} className="pointer-events-none absolute inset-0 overflow-hidden">
-        {fallback}
+      <div ref={containerRef} className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        {staticGradient}
       </div>
     );
   }
@@ -72,43 +79,52 @@ export function HeroShaderBg() {
     <div
       ref={containerRef}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 overflow-hidden"
+      className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
     >
-      <WebGLErrorBoundary fallback={fallback}>
+      <WebGLErrorBoundary fallback={staticGradient}>
         <div
           className="absolute inset-0 transition-opacity duration-500"
-          style={{ opacity: isDark ? 0.55 : 0.34 }}
+          style={{ opacity: isDark ? 0.82 : 0.62 }}
         >
           <ShaderGradientCanvas
-            style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
             pixelDensity={1}
-            fov={45}
+            fov={42}
           >
             <ShaderGradient
               control="props"
               animate={inView ? 'on' : 'off'}
-              type="plane"
-              cDistance={32}
-              cPolarAngle={120}
+              type="waterPlane"
+              cDistance={2.8}
+              cPolarAngle={90}
               cAzimuthAngle={180}
               cameraZoom={1}
-              color1="#FF7A8A"
-              color2={isDark ? '#D92D4B' : '#B9A5E8'}
-              color3={isDark ? '#1B1424' : '#FAFAF7'}
+              color1={isDark ? '#E5405E' : '#FAFAF7'}
+              color2={isDark ? '#7B368E' : '#FFD8CC'}
+              color3={isDark ? '#1B1424' : '#FFB0A0'}
               grain="off"
-              brightness={isDark ? 0.95 : 1.15}
+              brightness={isDark ? 1.05 : 1.12}
               wireframe={false}
-              uSpeed={0.2}
-              uStrength={1.6}
-              uDensity={1.2}
-              uFrequency={4.8}
+              uSpeed={0.18}
+              uStrength={1.8}
+              uDensity={1.4}
+              uFrequency={4.2}
             />
           </ShaderGradientCanvas>
         </div>
       </WebGLErrorBoundary>
-      {/* Edge fade into page ground so Hero transitions cleanly into Section 2 */}
+
+      {/* Soft readability scrim on the text side + smooth bottom blend into page bg */}
       <div
-        className="absolute inset-x-0 bottom-0 h-32"
+        className="absolute inset-0"
+        style={{
+          background: isDark
+            ? 'linear-gradient(90deg, rgba(27, 20, 36, 0.72) 0%, rgba(27, 20, 36, 0.35) 55%, rgba(27, 20, 36, 0.15) 100%)'
+            : 'linear-gradient(90deg, rgba(250, 250, 247, 0.78) 0%, rgba(250, 250, 247, 0.42) 55%, rgba(250, 250, 247, 0.12) 100%)',
+        }}
+      />
+      <div
+        className="absolute inset-x-0 bottom-0 h-28"
         style={{
           background: 'linear-gradient(to bottom, transparent, var(--bg))',
         }}
