@@ -1,7 +1,66 @@
 'use client';
 
-import { motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react';
+import {
+  type MotionValue,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+  useTransform,
+} from 'motion/react';
 import React from 'react';
+
+function IsometricCoin({
+  layer,
+  isTop,
+  sx,
+  sy,
+  reducedMotion,
+}: {
+  layer: number;
+  isTop: boolean;
+  sx: MotionValue<number>;
+  sy: MotionValue<number>;
+  reducedMotion: boolean | null;
+}) {
+  const cy = 128 - layer * 16;
+  const factor = layer * 0.34;
+  const x = useTransform(sx, (v) => v * factor);
+  const y = useTransform(sy, (v) => v * factor * 0.75);
+
+  return (
+    <motion.g style={reducedMotion ? undefined : { x, y }}>
+      <path
+        d={`M142 ${cy} V${cy + 9} C142 ${cy + 20} 206 ${cy + 20} 206 ${cy + 9} V${cy}`}
+        stroke={isTop ? 'var(--cta-bg)' : 'var(--ink)'}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="var(--bg)"
+      />
+      <ellipse
+        cx="174"
+        cy={cy}
+        rx="32"
+        ry="14"
+        stroke={isTop ? 'var(--cta-bg)' : 'var(--ink)'}
+        strokeWidth="1.6"
+        fill="var(--surface)"
+      />
+      {isTop && (
+        <ellipse
+          cx="174"
+          cy={cy}
+          rx="22"
+          ry="9"
+          stroke="var(--coral)"
+          strokeWidth="1.2"
+          strokeDasharray="3 3"
+        />
+      )}
+    </motion.g>
+  );
+}
 
 /**
  * Interactive isometric line figure inspired by `hairline-create`:
@@ -103,55 +162,17 @@ export function HairlineMoment() {
                 />
               </motion.g>
 
-              {/* Stacked isometric coins that riffle subtly toward cursor */}
-              {coinLayers.map((layer) => {
-                const cy = 128 - layer * 16;
-                const isTop = layer === coinLayers.length - 1;
-                return (
-                  <motion.g
-                    key={layer}
-                    style={
-                      reducedMotion
-                        ? undefined
-                        : {
-                            x: sx,
-                            y: sy,
-                          }
-                    }
-                  >
-                    {/* Coin side rim */}
-                    <path
-                      d={`M142 ${cy} V${cy + 9} C142 ${cy + 20} 206 ${cy + 20} 206 ${cy + 9} V${cy}`}
-                      stroke={isTop ? 'var(--cta-bg)' : 'var(--ink)'}
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      fill="var(--bg)"
-                    />
-                    {/* Coin top face */}
-                    <ellipse
-                      cx="174"
-                      cy={cy}
-                      rx="32"
-                      ry="14"
-                      stroke={isTop ? 'var(--cta-bg)' : 'var(--ink)'}
-                      strokeWidth="1.6"
-                      fill="var(--surface)"
-                    />
-                    {isTop && (
-                      <ellipse
-                        cx="174"
-                        cy={cy}
-                        rx="22"
-                        ry="9"
-                        stroke="var(--coral)"
-                        strokeWidth="1.2"
-                        strokeDasharray="3 3"
-                      />
-                    )}
-                  </motion.g>
-                );
-              })}
+              {/* Stacked isometric coins that riffle with depth toward cursor */}
+              {coinLayers.map((layer) => (
+                <IsometricCoin
+                  key={layer}
+                  layer={layer}
+                  isTop={layer === coinLayers.length - 1}
+                  sx={sx}
+                  sy={sy}
+                  reducedMotion={reducedMotion}
+                />
+              ))}
             </svg>
           </div>
         </div>
