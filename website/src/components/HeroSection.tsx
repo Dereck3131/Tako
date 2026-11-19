@@ -12,8 +12,18 @@ import {
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { EntranceCoin } from './hero-entrances/EntranceCoin';
+import { EntranceInk } from './hero-entrances/EntranceInk';
+import { EntrancePeek } from './hero-entrances/EntrancePeek';
+import { EntranceReceipt } from './hero-entrances/EntranceReceipt';
+import { HeroEntrancePicker } from './hero-entrances/HeroEntrancePicker';
+import {
+  ENTRANCE_VARIANTS,
+  type EntranceSpeed,
+  type EntranceVariantId,
+} from './hero-entrances/types';
 import { HeroDownloadControls } from './HeroDownloadControls';
 import { HeroTako } from './HeroTako';
 import { PhoneMockup } from './PhoneMockup';
@@ -23,19 +33,11 @@ const HeroShaderBg = dynamic(
   { ssr: false }
 );
 
-const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-const HEADLINE_WORDS = ['Split', 'bills,', 'not', 'friendships.'];
+const STORAGE_KEY = 'tako_hero_proto_variant_v1';
 
-/**
- * Loads the real app screenshot `/public/screens/splits-home-{theme}.png`,
- * cropping slightly from the top so Expo Go status bar / dev toast chrome stays hidden.
- * When the real screenshot is not dropped in yet, renders an honest placeholder slot
- * instead of inventing fake UI or balances.
- */
 function RealHeroAppScreen({ theme }: { theme: 'light' | 'dark' }) {
   const [missing, setMissing] = useState(false);
 
-  // Reset error state if theme flips so both light and dark PNGs are checked independently
   useEffect(() => {
     setMissing(false);
   }, [theme]);
@@ -50,7 +52,6 @@ function RealHeroAppScreen({ theme }: { theme: 'light' | 'dark' }) {
           sizes="(max-width: 768px) 260px, 300px"
           priority
           draggable={false}
-          // Slight upward shift & scale crops out top status bar / Expo Go dev banner
           className="pointer-events-none select-none object-cover object-top scale-[1.06] -translate-y-[2.5%]"
           onError={() => setMissing(true)}
         />
@@ -68,8 +69,14 @@ function RealHeroAppScreen({ theme }: { theme: 'light' | 'dark' }) {
         App screenshot slot
       </p>
       <p className="text-xs leading-relaxed text-[var(--mute)]">
-        Drop <code className="rounded bg-[var(--surface-alt)] px-1 py-0.5 text-[10px]">splits-home-{theme}.png</code> into{' '}
-        <code className="rounded bg-[var(--surface-alt)] px-1 py-0.5 text-[10px]">/public/screens</code>
+        Drop{' '}
+        <code className="rounded bg-[var(--surface-alt)] px-1 py-0.5 text-[10px]">
+          splits-home-{theme}.png
+        </code>{' '}
+        into{' '}
+        <code className="rounded bg-[var(--surface-alt)] px-1 py-0.5 text-[10px]">
+          /public/screens
+        </code>
       </p>
     </div>
   );
@@ -78,12 +85,87 @@ function RealHeroAppScreen({ theme }: { theme: 'light' | 'dark' }) {
 export function HeroSection() {
   const heroRef = useRef<HTMLElement>(null);
   const { resolvedTheme } = useTheme();
-  const reducedMotion = useReducedMotion();
-  const [mounted, setMounted] = useState(false);
+  const reducedMotion = Boolean(useReducedMotion());
 
+  const [mounted, setMounted] = useState(false);
+  const [shaderReady, setShaderReady] = useState(false);
+  const [variant, setVariant] = useState<EntranceVariantId>('peek');
+  const [speed, setSpeed] = useState<EntranceSpeed>(1);
+  const [playKey, setPlayKey] = useState(0);
+  const [skipped, setSkipped] = useState(false);
+
+  // Hydrate persisted variant choice (try/catch localStorage) + defer shader after entrance starts
   useEffect(() => {
     setMounted(true);
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEY) as EntranceVariantId | null;
+      if (saved && ENTRANCE_VARIANTS.some((v) => v.id === saved)) {
+        setVariant(saved);
+      }
+    } catch {
+      // localStorage blocked
+    }
+    const timer = window.setTimeout(() => setShaderReady(true), 140);
+    return () => window.clearTimeout(timer);
   }, []);
+
+  const handleSelectVariant = useCallback((nextId: EntranceVariantId) => {
+    setVariant(nextId);
+    setSkipped(false);
+    setPlayKey((k) => k + 1);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, nextId);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  const handleReplay = useCallback(() => {
+    setSkipped(false);
+    setPlayKey((k) => k + 1);
+  }, []);
+
+  const handleSpeedChange = useCallback((nextSpeed: EntranceSpeed) => {
+    setSpeed(nextSpeed);
+    setSkipped(false);
+    setPlayKey((k) => k + 1);
+  }, []);
+
+  // Any click, key press (except prototype picker shortcuts), or scroll skips straight to resting state
+  useEffect(() => {
+    if (skipped || reducedMotion) return;
+
+    const skip = () => setSkipped(true);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.key >= '1' && e.key <= '4') ||
+        e.key === 'r' ||
+        e.key === 'R' ||
+        e.key === 'ArrowLeft' ||
+        e.key === 'ArrowRight'
+      ) {
+        return;
+      }
+      skip();
+    };
+    const onScroll = () => {
+      if (window.scrollY > 12) skip();
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.proto-picker')) return;
+      skip();
+    };
+
+    window.addEventListener('pointerdown', onPointerDown, { passive: true });
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [skipped, reducedMotion, playKey]);
 
   const screenTheme: 'light' | 'dark' = mounted && resolvedTheme === 'dark' ? 'dark' : 'light';
 
@@ -99,8 +181,8 @@ export function HeroSection() {
   const handleHeroPointerMove = (e: React.PointerEvent<HTMLElement>) => {
     if (reducedMotion || e.pointerType !== 'mouse') return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const nx = ((e.clientX - rect.left) / rect.width - 0.5) * 2; // -1..1
-    const ny = ((e.clientY - rect.top) / rect.height - 0.5) * 2; // -1..1
+    const nx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+    const ny = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
     rawRotY.set(nx * 8);
     rawRotX.set(-ny * 6);
     eyeX.set(nx * 3.2);
@@ -114,7 +196,7 @@ export function HeroSection() {
     eyeY.set(0);
   };
 
-  // Scroll-out choreography (strictly clamped so scrollY = 0 is always 100% resting state)
+  // Scroll-out choreography (strictly clamped so scrollY = 0 is ALWAYS resting state opacity 1)
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ['start start', 'end start'],
@@ -133,6 +215,111 @@ export function HeroSection() {
     clamp: true,
   });
 
+  // Shared resting slots passed into each entrance variant
+  const sublineNode = (
+    /* TODO: Confirm if offline auto-sync or marking paid offline should be mentioned here once verified */
+    <p className="max-w-xl text-base leading-relaxed text-[var(--mute)] sm:text-lg lg:text-[1.15rem]">
+      Share a QR, everyone hops in, and Tako does the peso math for your barkada dinners,
+      roommates, and trips. No signal? The splitting still works.
+    </p>
+  );
+
+  const controlsNode = <HeroDownloadControls />;
+
+  const glowNode = (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute left-1/2 top-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl sm:h-[420px] sm:w-[420px]"
+      style={{
+        background:
+          screenTheme === 'dark'
+            ? 'radial-gradient(circle, rgba(255, 122, 138, 0.32) 0%, rgba(185, 165, 232, 0.14) 52%, transparent 72%)'
+            : 'radial-gradient(circle, rgba(255, 122, 138, 0.28) 0%, rgba(255, 200, 87, 0.14) 55%, transparent 74%)',
+      }}
+    />
+  );
+
+  // Outer scroll-out wrappers live inside the slots so entrance motion NEVER collides with scroll MotionValues
+  const takoNode = (
+    <motion.div
+      style={
+        reducedMotion
+          ? undefined
+          : {
+              y: takoScrollY,
+              rotate: takoScrollRotate,
+              opacity: takoScrollOpacity,
+            }
+      }
+      className="pointer-events-none absolute -left-14 -top-16 z-20 sm:-left-24 sm:-top-20 lg:-left-32 lg:-top-16"
+    >
+      <HeroTako eyeX={eyeX} eyeY={eyeY} />
+    </motion.div>
+  );
+
+  const chipNewSplitNode = (
+    <motion.div
+      style={reducedMotion ? undefined : { y: chipTopY }}
+      aria-hidden="true"
+      className="pointer-events-none absolute -right-4 top-12 z-20 hidden sm:block lg:-right-10"
+    >
+      <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)]">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--cta-bg)] text-white">
+          <Plus className="h-3.5 w-3.5" />
+        </span>
+        New split
+      </div>
+    </motion.div>
+  );
+
+  const chipScanQrNode = (
+    <motion.div
+      style={reducedMotion ? undefined : { y: chipBottomY }}
+      aria-hidden="true"
+      className="pointer-events-none absolute -left-6 bottom-14 z-20 hidden sm:block lg:-left-12"
+    >
+      <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)]">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--plum)] text-[#FFF6EE]">
+          <QrCode className="h-3.5 w-3.5" />
+        </span>
+        Scan QR
+      </div>
+    </motion.div>
+  );
+
+  const phoneNode = (
+    <motion.div
+      style={
+        reducedMotion
+          ? undefined
+          : {
+              rotateX,
+              rotateY,
+              y: phoneScrollY,
+              scale: phoneScrollScale,
+            }
+      }
+      className="relative z-10"
+    >
+      <PhoneMockup>
+        <RealHeroAppScreen theme={screenTheme} />
+      </PhoneMockup>
+    </motion.div>
+  );
+
+  const sharedEntranceProps = {
+    speed,
+    skipped,
+    reducedMotion,
+    subline: sublineNode,
+    controls: controlsNode,
+    phoneSlot: phoneNode,
+    takoSlot: takoNode,
+    chipNewSplitSlot: chipNewSplitNode,
+    chipScanQrSlot: chipScanQrNode,
+    glowSlot: glowNode,
+  };
+
   return (
     <section
       id="top"
@@ -141,10 +328,10 @@ export function HeroSection() {
       onPointerLeave={handleHeroPointerLeave}
       className="relative flex min-h-[calc(100dvh-4rem)] scroll-mt-16 items-center overflow-x-clip pt-10 pb-10 sm:pt-12 sm:pb-12 lg:pt-16 lg:pb-12"
     >
-      {/* Full-bleed ShaderGradient background behind all hero content */}
-      <HeroShaderBg />
+      {/* Lazy-loaded ShaderGradient mounted after entrance starts so LCP is never delayed */}
+      {shaderReady && <HeroShaderBg />}
 
-      {/* Subtle scroll-out hue veil transitioning into the next section */}
+      {/* Scroll-out veil transitioning cleanly into the next section */}
       {!reducedMotion && (
         <motion.div
           aria-hidden="true"
@@ -153,157 +340,22 @@ export function HeroSection() {
         />
       )}
 
-      <div className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-10 px-5 sm:px-8 lg:grid-cols-12 lg:gap-8">
-        {/* Left: Headline, Subline, Primary CTA + Compact QR Pill */}
-        <div className="lg:col-span-6">
-          <h1 className="font-[family-name:var(--font-display)] text-[clamp(2.75rem,6vw,4.85rem)] font-black leading-[1.01] tracking-[-0.03em] text-[var(--ink)] text-balance">
-            {HEADLINE_WORDS.map((word, idx) => (
-              <motion.span
-                key={word}
-                initial={reducedMotion ? false : { opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.42,
-                  delay: reducedMotion ? 0 : idx * 0.055,
-                  ease: EASE_OUT,
-                }}
-                className="mr-[0.22em] inline-block"
-              >
-                {word}
-              </motion.span>
-            ))}
-          </h1>
+      {/* Keyed by variant + playKey so switching or pressing R replays from pre-entrance state */}
+      <React.Fragment key={`${variant}-${playKey}`}>
+        {variant === 'coin' && <EntranceCoin {...sharedEntranceProps} />}
+        {variant === 'ink' && <EntranceInk {...sharedEntranceProps} />}
+        {variant === 'peek' && <EntrancePeek {...sharedEntranceProps} />}
+        {variant === 'receipt' && <EntranceReceipt {...sharedEntranceProps} />}
+      </React.Fragment>
 
-          {/* TODO: Confirm if offline auto-sync or marking paid offline should be mentioned here once verified */}
-          <motion.p
-            initial={reducedMotion ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.42, delay: 0.21, ease: EASE_OUT }}
-            className="mt-4 max-w-xl text-base leading-relaxed text-[var(--mute)] sm:text-lg lg:text-[1.15rem]"
-          >
-            Share a QR, everyone hops in, and Tako does the peso math for your barkada dinners,
-            roommates, and trips. No signal? The splitting still works.
-          </motion.p>
-
-          <motion.div
-            initial={reducedMotion ? false : { opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.42, delay: 0.27, ease: EASE_OUT }}
-            className="mt-7"
-          >
-            <HeroDownloadControls />
-          </motion.div>
-        </div>
-
-        {/* Right: Phone + Hero Tako peeking over top-left shoulder + verified app chips */}
-        <div
-          className="relative flex items-center justify-center pt-16 sm:pt-20 lg:col-span-6 lg:justify-end lg:pr-6 lg:pt-16"
-          style={{ perspective: 1100 }}
-        >
-          {/* Subtle radial glow directly behind the phone */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute left-1/2 top-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl sm:h-[420px] sm:w-[420px]"
-            style={{
-              background:
-                screenTheme === 'dark'
-                  ? 'radial-gradient(circle, rgba(255, 122, 138, 0.32) 0%, rgba(185, 165, 232, 0.14) 52%, transparent 72%)'
-                  : 'radial-gradient(circle, rgba(255, 122, 138, 0.28) 0%, rgba(255, 200, 87, 0.14) 55%, transparent 74%)',
-            }}
-          />
-
-          <div className="relative">
-            {/* Hero Tako: Outer layer owns scroll-out transforms; inner layer owns mount entrance (prevents MotionValue/animate collision at scrollY = 0) */}
-            <motion.div
-              style={
-                reducedMotion
-                  ? undefined
-                  : {
-                      y: takoScrollY,
-                      rotate: takoScrollRotate,
-                      opacity: takoScrollOpacity,
-                    }
-              }
-              className="pointer-events-none absolute -left-14 -top-16 z-20 sm:-left-24 sm:-top-20 lg:-left-32 lg:-top-16"
-            >
-              <motion.div
-                initial={reducedMotion ? false : { opacity: 0, y: 36, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={
-                  reducedMotion
-                    ? undefined
-                    : { type: 'spring', duration: 0.58, bounce: 0.24, delay: 0.36 }
-                }
-              >
-                <HeroTako eyeX={eyeX} eyeY={eyeY} />
-              </motion.div>
-            </motion.div>
-
-            {/* Orbiting verified app action chip 1: New split */}
-            <motion.div
-              style={reducedMotion ? undefined : { y: chipTopY }}
-              aria-hidden="true"
-              className="pointer-events-none absolute -right-4 top-12 z-20 hidden sm:block lg:-right-10"
-            >
-              <motion.div
-                initial={reducedMotion ? false : { opacity: 0, scale: 0.92, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.36, ease: EASE_OUT }}
-                className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)]"
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--cta-bg)] text-white">
-                  <Plus className="h-3.5 w-3.5" />
-                </span>
-                New split
-              </motion.div>
-            </motion.div>
-
-            {/* Orbiting verified app action chip 2: Scan QR */}
-            <motion.div
-              style={reducedMotion ? undefined : { y: chipBottomY }}
-              aria-hidden="true"
-              className="pointer-events-none absolute -left-6 bottom-14 z-20 hidden sm:block lg:-left-12"
-            >
-              <motion.div
-                initial={reducedMotion ? false : { opacity: 0, scale: 0.92, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.42, ease: EASE_OUT }}
-                className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)]"
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--plum)] text-[#FFF6EE]">
-                  <QrCode className="h-3.5 w-3.5" />
-                </span>
-                Scan QR
-              </motion.div>
-            </motion.div>
-
-            {/* Tilting Phone Frame: outer layer owns scroll + 3D tilt, inner layer owns mount entrance */}
-            <motion.div
-              style={
-                reducedMotion
-                  ? undefined
-                  : {
-                      rotateX,
-                      rotateY,
-                      y: phoneScrollY,
-                      scale: phoneScrollScale,
-                    }
-              }
-              className="relative z-10"
-            >
-              <motion.div
-                initial={reducedMotion ? false : { opacity: 0, y: 20, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.48, delay: 0.28, ease: EASE_OUT }}
-              >
-                <PhoneMockup>
-                  <RealHeroAppScreen theme={screenTheme} />
-                </PhoneMockup>
-              </motion.div>
-            </motion.div>
-          </div>
-        </div>
-      </div>
+      {/* Dev-only (or ?proto=1) floating prototype picker */}
+      <HeroEntrancePicker
+        activeId={variant}
+        speed={speed}
+        onSelect={handleSelectVariant}
+        onReplay={handleReplay}
+        onSpeedChange={handleSpeedChange}
+      />
     </section>
   );
 }
