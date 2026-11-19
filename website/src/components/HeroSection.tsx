@@ -1,14 +1,12 @@
 'use client';
 
-import { ArrowDown, Download } from 'lucide-react';
 import { motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
 import React, { useEffect, useState } from 'react';
 
-import { APK_CONFIG } from '@/lib/config';
-
 import { AppScreen } from './AppScreen';
+import { DownloadBlock } from './DownloadBlock';
 import { PhoneMockup } from './PhoneMockup';
 import { TakoMascot } from './TakoMascot';
 
@@ -83,34 +81,10 @@ export function HeroSection() {
             initial={reducedMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.14, ease: EASE_OUT }}
-            className="mt-8 flex flex-wrap items-center gap-3.5"
+            className="mt-8"
           >
-            <a
-              href={APK_CONFIG.url}
-              download
-              className="tako-press inline-flex min-h-13 items-center justify-center gap-2.5 rounded-full bg-[var(--cta-bg)] px-7 text-base font-bold text-[var(--cta-ink)] shadow-[0_10px_24px_-8px_rgba(217,45,75,0.45)]"
-            >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              Download for Android
-            </a>
-
-            <a
-              href="#how-it-works"
-              className="tako-press inline-flex min-h-13 items-center justify-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 text-base font-bold text-[var(--ink)]"
-            >
-              See how it works
-              <ArrowDown className="h-4 w-4" aria-hidden="true" />
-            </a>
+            <DownloadBlock variant="hero" surface="default" />
           </motion.div>
-
-          <motion.p
-            initial={reducedMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="mt-4 text-xs font-semibold text-[var(--mute)] tabular-nums"
-          >
-            v{APK_CONFIG.version} · {APK_CONFIG.sizeLabel} · {APK_CONFIG.platformLabel} · iOS coming soon
-          </motion.p>
         </div>
 
         {/* Right: Floating Phone + Peeking Tako */}

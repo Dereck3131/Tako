@@ -1,11 +1,9 @@
 'use client';
 
-import { Download } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import React from 'react';
 
-import { APK_CONFIG } from '@/lib/config';
-
+import { DownloadBlock } from './DownloadBlock';
 import { TakoMascot } from './TakoMascot';
 
 const CONFETTI_PIECES = [
@@ -87,16 +85,7 @@ export function FinalCtaSection({
           </p>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-4">
-            {downloadSlot ?? (
-              <a
-                href={APK_CONFIG.url}
-                download
-                className="tako-press inline-flex min-h-13 items-center justify-center gap-2.5 rounded-full bg-[var(--coral)] px-8 text-base font-extrabold text-[#2B1B3D]"
-              >
-                <Download className="h-4 w-4" aria-hidden="true" />
-                Download Tako for Android
-              </a>
-            )}
+            {downloadSlot ?? <DownloadBlock variant="final" surface="plum" />}
           </div>
         </div>
       </div>
