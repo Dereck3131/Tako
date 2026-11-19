@@ -93,6 +93,7 @@ export const EIGHT_ARMS: ArmFeature[] = [
     shortLabel: 'Pay details',
     title: 'Payment details',
     description: 'Keep your GCash, Maya, and bank accounts in your profile.',
+    note: "Tako keeps the record. It doesn't send or receive money.",
     // TODO: confirm exactly what Payment details does for friends before adding more detail.
     screen: 'profile',
     screenAlt: 'Tako Profile screen showing saved GCash, Maya, and bank payment details',

@@ -4,11 +4,11 @@ import { type MotionValue, motion, useReducedMotion, useSpring } from 'motion/re
 import React from 'react';
 
 interface HeroTakoProps {
-  /** Normalized cursor offset (-1 to 1) for subtle eye tracking */
+  /** Normalized cursor/scroll offset (-1 to 1) for subtle eye tracking */
   eyeX: MotionValue<number>;
   eyeY: MotionValue<number>;
-  /** Extra scroll-out wave boost */
-  isScrollingOut?: boolean;
+  /** Pause idle float/wave/blink when hero is off-screen or browser tab is hidden */
+  paused?: boolean;
 }
 
 /**
@@ -16,22 +16,23 @@ interface HeroTakoProps {
  * directly as an inline SVG (zero wasted image fallback requests, zero per-frame
  * CSS drop-shadow filter re-rasterization).
  */
-export function HeroTako({ eyeX, eyeY }: HeroTakoProps) {
+export function HeroTako({ eyeX, eyeY, paused = false }: HeroTakoProps) {
   const reducedMotion = useReducedMotion();
+  const stopIdle = Boolean(reducedMotion) || paused;
 
   const pupilX = useSpring(eyeX, { stiffness: 160, damping: 20 });
   const pupilY = useSpring(eyeY, { stiffness: 160, damping: 20 });
 
   return (
     <motion.div
-      animate={reducedMotion ? undefined : { y: [0, -8, 0] }}
+      animate={stopIdle ? { y: 0 } : { y: [0, -8, 0] }}
       transition={
-        reducedMotion
-          ? undefined
+        stopIdle
+          ? { duration: 0.2 }
           : { duration: 4, repeat: Infinity, ease: 'easeInOut' }
       }
-      style={{ willChange: reducedMotion ? undefined : 'transform' }}
-      className="relative h-[220px] w-[220px] sm:h-[270px] sm:w-[270px] lg:h-[310px] lg:w-[310px] select-none"
+      style={{ willChange: stopIdle ? undefined : 'transform' }}
+      className="relative h-[156px] w-[156px] sm:h-[240px] sm:w-[240px] lg:h-[310px] lg:w-[310px] select-none"
       role="img"
       aria-label="Tako the coral octopus waving while holding a receipt and peso coin"
     >
@@ -103,15 +104,15 @@ export function HeroTako({ eyeX, eyeY }: HeroTakoProps) {
         <motion.g
           style={{ transformOrigin: '104px 78px' }}
           animate={
-            reducedMotion
-              ? undefined
+            stopIdle
+              ? { rotate: 0 }
               : {
                   rotate: [0, -18, 12, -14, 0, 0, 0, 0],
                 }
           }
           transition={
-            reducedMotion
-              ? undefined
+            stopIdle
+              ? { duration: 0.2 }
               : {
                   duration: 4.6,
                   times: [0, 0.08, 0.16, 0.24, 0.34, 0.6, 0.85, 1],
@@ -136,15 +137,15 @@ export function HeroTako({ eyeX, eyeY }: HeroTakoProps) {
         <motion.g
           style={{ transformOrigin: '62px 54px' }}
           animate={
-            reducedMotion
-              ? undefined
+            stopIdle
+              ? { scaleY: 1 }
               : {
                   scaleY: [1, 1, 1, 0.08, 1, 1],
                 }
           }
           transition={
-            reducedMotion
-              ? undefined
+            stopIdle
+              ? { duration: 0.2 }
               : {
                   duration: 4.4,
                   times: [0, 0.78, 0.82, 0.85, 0.89, 1],

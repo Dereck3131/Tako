@@ -6,9 +6,9 @@ import React, { useRef } from 'react';
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 const HEADLINE_WORDS = ['Split', 'bills,', 'not', 'friendships.'] as const;
 
-/** Relaxed 0.5x pacing multiplier chosen for the final Receipt Tear entrance */
-const PACE = 2;
-const s = (t: number) => t * PACE;
+/** Desktop uses your chosen relaxed 0.5x pacing (2x); mobile (<768px) uses 1x so it finishes under 2s */
+const DESKTOP_PACE = 2;
+const MOBILE_PACE = 1;
 
 /**
  * 4 torn paper scraps that fly from the receipt tear midpoint toward the 4 headline words.
@@ -23,6 +23,7 @@ const TORN_SCRAPS = [
 export interface HeroReceiptEntranceProps {
   skipped: boolean;
   reducedMotion: boolean;
+  isMobile?: boolean;
   onEntranceComplete?: () => void;
   subline: React.ReactNode;
   controls: React.ReactNode;
@@ -34,12 +35,13 @@ export interface HeroReceiptEntranceProps {
 }
 
 /**
- * Final Hero Entrance — Receipt Tear (relaxed 0.5x pacing, GPU transform/opacity only).
+ * Final Hero Entrance — Receipt Tear (0.5x relaxed pacing on desktop, <2s 1x on mobile).
  * Zero animated CSS drop-shadow filters so every frame stays locked on the compositor.
  */
 export function HeroReceiptEntrance({
   skipped,
   reducedMotion,
+  isMobile = false,
   onEntranceComplete,
   subline,
   controls,
@@ -49,6 +51,8 @@ export function HeroReceiptEntrance({
   chipScanQrSlot,
   glowSlot,
 }: HeroReceiptEntranceProps) {
+  const pace = isMobile ? MOBILE_PACE : DESKTOP_PACE;
+  const s = (t: number) => t * pace;
   const instant = skipped || reducedMotion;
   const completedRef = useRef(false);
 
@@ -278,7 +282,7 @@ export function HeroReceiptEntrance({
         )}
 
         {/* Real DOM headline words springing in as the torn pieces arrive */}
-        <h1 className="font-[family-name:var(--font-display)] text-[clamp(2.75rem,6vw,4.85rem)] font-black leading-[1.01] tracking-[-0.03em] text-[var(--ink)] text-balance">
+        <h1 className="font-[family-name:var(--font-display)] text-[clamp(2.25rem,8.4vw,4.85rem)] font-black leading-[1.02] tracking-[-0.03em] text-[var(--ink)] text-balance">
           {HEADLINE_WORDS.map((word, idx) => (
             <motion.span
               key={word}
@@ -348,7 +352,7 @@ export function HeroReceiptEntrance({
 
       {/* Right Column: Phone outline visible from frame 0 -> phone rises -> Tako Peek-a-Boo */}
       <div
-        className="relative flex items-center justify-center pt-16 sm:pt-20 lg:col-span-6 lg:justify-end lg:pr-6 lg:pt-16"
+        className="relative flex items-center justify-center pt-12 sm:pt-18 lg:col-span-6 lg:justify-end lg:pr-6 lg:pt-16"
         style={{ perspective: 1100 }}
       >
         {glowSlot}

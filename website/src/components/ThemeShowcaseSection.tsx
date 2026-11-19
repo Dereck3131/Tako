@@ -16,6 +16,8 @@ export function ThemeShowcaseSection() {
   const [isDragging, setIsDragging] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
+  const dragIntentRef = useRef<'none' | 'horizontal' | 'vertical'>('none');
+  const startPointRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   useEffect(() => {
     setMounted(true);
@@ -32,20 +34,46 @@ export function ThemeShowcaseSection() {
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    draggingRef.current = true;
-    setIsDragging(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
-    updateFromClientX(e.clientX);
+    startPointRef.current = { x: e.clientX, y: e.clientY };
+    if (e.pointerType === 'mouse') {
+      e.preventDefault();
+      draggingRef.current = true;
+      dragIntentRef.current = 'horizontal';
+      setIsDragging(true);
+      e.currentTarget.setPointerCapture(e.pointerId);
+      updateFromClientX(e.clientX);
+    } else {
+      // On touch, defer capture until gesture is clearly horizontal so vertical page scroll never blocks
+      dragIntentRef.current = 'none';
+      draggingRef.current = false;
+    }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== 'mouse' && dragIntentRef.current === 'none') {
+      const dx = Math.abs(e.clientX - startPointRef.current.x);
+      const dy = Math.abs(e.clientY - startPointRef.current.y);
+      if (dx > 8 && dx > dy * 1.2) {
+        dragIntentRef.current = 'horizontal';
+        draggingRef.current = true;
+        setIsDragging(true);
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          // ignore if capture not allowed
+        }
+      } else if (dy > 8) {
+        dragIntentRef.current = 'vertical';
+        return;
+      }
+    }
     if (!draggingRef.current) return;
     updateFromClientX(e.clientX);
   };
 
   const handlePointerUp = () => {
     draggingRef.current = false;
+    dragIntentRef.current = 'none';
     setIsDragging(false);
   };
 
@@ -81,7 +109,7 @@ export function ThemeShowcaseSection() {
               type="button"
               onClick={() => handleThemeSelect('light')}
               className={clsx(
-                'tako-press inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold',
+                'tako-press inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold',
                 !isDark
                   ? 'bg-[var(--surface)] text-[var(--ink)] shadow-sm'
                   : 'text-[var(--mute)] hover:text-[var(--ink)]'
@@ -94,7 +122,7 @@ export function ThemeShowcaseSection() {
               type="button"
               onClick={() => handleThemeSelect('dark')}
               className={clsx(
-                'tako-press inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold',
+                'tako-press inline-flex min-h-11 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold',
                 isDark
                   ? 'bg-[var(--surface)] text-[var(--ink)] shadow-sm'
                   : 'text-[var(--mute)] hover:text-[var(--ink)]'
@@ -125,7 +153,7 @@ export function ThemeShowcaseSection() {
                 if (e.key === 'ArrowLeft') setSplitPct((p) => Math.max(0, p - 10));
                 if (e.key === 'ArrowRight') setSplitPct((p) => Math.min(100, p + 10));
               }}
-              className="relative h-full w-full cursor-ew-resize select-none touch-none"
+              className="relative h-full w-full cursor-ew-resize select-none touch-pan-y"
             >
               {/* Base layer: Dark theme screenshot */}
               <div className="absolute inset-0">

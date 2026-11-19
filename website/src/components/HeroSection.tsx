@@ -39,7 +39,7 @@ function RealHeroAppScreen({ theme }: { theme: 'light' | 'dark' }) {
           src={`/screens/splits-home-${theme}.png`}
           alt="Tako app Splits home screen"
           fill
-          sizes="(max-width: 768px) 260px, 300px"
+          sizes="(max-width: 768px) 240px, 276px"
           priority
           draggable={false}
           className="pointer-events-none select-none object-cover object-top scale-[1.06] -translate-y-[2.5%]"
@@ -77,22 +77,52 @@ export function HeroSection() {
   const reducedMotion = Boolean(useReducedMotion());
 
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [inView, setInView] = useState(true);
+  const [tabHidden, setTabHidden] = useState(false);
   const [shaderReady, setShaderReady] = useState(false);
   const [skipped, setSkipped] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // Safety fallback so HeroShaderBg always mounts after the entrance finishes
+    const checkMobile = () => {
+      const narrow = window.innerWidth < 768;
+      const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+      setIsMobile(narrow || coarse);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile, { passive: true });
+    // Safety fallback so desktop HeroShaderBg always mounts after entrance
     const fallbackTimer = window.setTimeout(() => setShaderReady(true), 4200);
-    return () => window.clearTimeout(fallbackTimer);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.clearTimeout(fallbackTimer);
+    };
   }, []);
 
-  // Mount WebGL shader right after the Receipt Tear entrance settles (never during it)
+  // Pause idle animations when hero leaves viewport or browser tab is hidden
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.05 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const onVis = () => setTabHidden(document.hidden);
+    onVis();
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
   const handleEntranceComplete = useCallback(() => {
     setShaderReady(true);
   }, []);
 
-  // If user skips or prefers reduced motion, allow WebGL/static bg immediately
   useEffect(() => {
     if (skipped || reducedMotion) {
       setShaderReady(true);
@@ -119,8 +149,9 @@ export function HeroSection() {
   }, [skipped, reducedMotion]);
 
   const screenTheme: 'light' | 'dark' = mounted && resolvedTheme === 'dark' ? 'dark' : 'light';
+  const idlePaused = !inView || tabHidden;
 
-  // Pointer-driven 3D phone tilt (max ~8deg) + Tako eye tracking
+  // Desktop pointer-driven 3D phone tilt (max ~8deg) + Tako eye tracking (touch/scroll on mobile)
   const rawRotX = useMotionValue(0);
   const rawRotY = useMotionValue(0);
   const rotateX = useSpring(rawRotX, { stiffness: 120, damping: 18 });
@@ -130,14 +161,16 @@ export function HeroSection() {
   const eyeY = useMotionValue(0);
 
   const handleHeroPointerMove = (e: React.PointerEvent<HTMLElement>) => {
-    if (reducedMotion || e.pointerType !== 'mouse') return;
+    if (reducedMotion) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const nx = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
     const ny = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-    rawRotY.set(nx * 8);
-    rawRotX.set(-ny * 6);
     eyeX.set(nx * 3.2);
     eyeY.set(ny * 2.2);
+    if (e.pointerType === 'mouse' && !isMobile) {
+      rawRotY.set(nx * 8);
+      rawRotX.set(-ny * 6);
+    }
   };
 
   const handleHeroPointerLeave = () => {
@@ -152,6 +185,14 @@ export function HeroSection() {
     target: heroRef,
     offset: ['start start', 'end start'],
   });
+
+  // On mobile, let Tako's eyes glance down gently as the visitor scrolls
+  useEffect(() => {
+    if (!isMobile || reducedMotion) return;
+    return scrollYProgress.on('change', (v) => {
+      eyeY.set(Math.min(2.6, v * 5.2));
+    });
+  }, [isMobile, reducedMotion, scrollYProgress, eyeY]);
 
   const phoneScrollY = useTransform(scrollYProgress, [0, 1], [0, -48], { clamp: true });
   const phoneScrollScale = useTransform(scrollYProgress, [0, 1], [1, 0.92], { clamp: true });
@@ -180,7 +221,7 @@ export function HeroSection() {
   const glowNode = (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute left-1/2 top-1/2 h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full sm:h-[460px] sm:w-[460px]"
+      className="pointer-events-none absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full sm:h-[420px] sm:w-[420px] lg:h-[460px] lg:w-[460px]"
       style={{
         background:
           screenTheme === 'dark'
@@ -194,7 +235,7 @@ export function HeroSection() {
   const takoNode = (
     <motion.div
       style={
-        reducedMotion
+        reducedMotion || isMobile
           ? undefined
           : {
               y: takoScrollY,
@@ -202,21 +243,22 @@ export function HeroSection() {
               opacity: takoScrollOpacity,
             }
       }
-      className="pointer-events-none absolute -left-14 -top-16 z-20 sm:-left-24 sm:-top-20 lg:-left-32 lg:-top-16"
+      className="pointer-events-none absolute -left-6 -top-12 z-20 sm:-left-20 sm:-top-16 lg:-left-32 lg:-top-16"
     >
-      <HeroTako eyeX={eyeX} eyeY={eyeY} />
+      <HeroTako eyeX={eyeX} eyeY={eyeY} paused={idlePaused} />
     </motion.div>
   );
 
+  // Chips stay visible & tucked safely inside viewport on phones and orbit on desktop
   const chipNewSplitNode = (
     <motion.div
-      style={reducedMotion ? undefined : { y: chipTopY }}
+      style={reducedMotion || isMobile ? undefined : { y: chipTopY }}
       aria-hidden="true"
-      className="pointer-events-none absolute -right-4 top-12 z-20 hidden sm:block lg:-right-10"
+      className="pointer-events-none absolute -right-2 top-8 z-20 sm:-right-4 sm:top-12 lg:-right-10"
     >
-      <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)]">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--cta-bg)] text-white">
-          <Plus className="h-3.5 w-3.5" />
+      <div className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[11px] font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)] sm:gap-2 sm:px-3.5 sm:py-2 sm:text-xs">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--cta-bg)] text-white sm:h-6 sm:w-6">
+          <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
         </span>
         New split
       </div>
@@ -225,20 +267,35 @@ export function HeroSection() {
 
   const chipScanQrNode = (
     <motion.div
-      style={reducedMotion ? undefined : { y: chipBottomY }}
+      style={reducedMotion || isMobile ? undefined : { y: chipBottomY }}
       aria-hidden="true"
-      className="pointer-events-none absolute -left-6 bottom-14 z-20 hidden sm:block lg:-left-12"
+      className="pointer-events-none absolute -left-2 bottom-10 z-20 sm:-left-6 sm:bottom-14 lg:-left-12"
     >
-      <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)]">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--plum)] text-[#FFF6EE]">
-          <QrCode className="h-3.5 w-3.5" />
+      <div className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[11px] font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)] sm:gap-2 sm:px-3.5 sm:py-2 sm:text-xs">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--plum)] text-[#FFF6EE] sm:h-6 sm:w-6">
+          <QrCode className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
         </span>
         Scan QR
       </div>
     </motion.div>
   );
 
-  const phoneNode = (
+  // Desktop: pointer 3D tilt + scroll parallax. Mobile: gentle idle float (paused when off-screen/reducedMotion)
+  const phoneNode = isMobile ? (
+    <motion.div
+      animate={reducedMotion || idlePaused ? { y: 0 } : { y: [0, -5, 0] }}
+      transition={
+        reducedMotion || idlePaused
+          ? { duration: 0.2 }
+          : { duration: 4.5, repeat: Infinity, ease: 'easeInOut' }
+      }
+      className="relative z-10"
+    >
+      <PhoneMockup>
+        <RealHeroAppScreen theme={screenTheme} />
+      </PhoneMockup>
+    </motion.div>
+  ) : (
     <motion.div
       style={
         reducedMotion
@@ -264,25 +321,25 @@ export function HeroSection() {
       ref={heroRef}
       onPointerMove={handleHeroPointerMove}
       onPointerLeave={handleHeroPointerLeave}
-      className="relative flex min-h-[calc(100dvh-4rem)] scroll-mt-16 items-center overflow-x-clip pt-10 pb-10 sm:pt-12 sm:pb-12 lg:pt-16 lg:pb-12"
+      className="relative flex min-h-[calc(100svh-4rem)] scroll-mt-16 items-center overflow-x-clip pt-6 pb-10 sm:min-h-[calc(100dvh-4rem)] sm:pt-12 sm:pb-12 lg:pt-16 lg:pb-12"
     >
-      {/* Frame-0 ambient gradient backdrop so background is immediately rich before ShaderGradient mounts */}
+      {/* Frame-0 ambient gradient backdrop (also serves as zero-JS gradient on mobile phones) */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0"
         style={{
           background:
             screenTheme === 'dark'
-              ? 'radial-gradient(ellipse 80% 70% at 72% 40%, rgba(255, 122, 138, 0.22) 0%, rgba(125, 58, 140, 0.18) 46%, transparent 78%)'
-              : 'radial-gradient(ellipse 80% 70% at 72% 40%, rgba(255, 166, 158, 0.28) 0%, rgba(255, 224, 210, 0.26) 46%, transparent 78%)',
+              ? 'radial-gradient(ellipse 85% 75% at 72% 38%, rgba(229, 64, 94, 0.28) 0%, rgba(125, 58, 140, 0.24) 46%, transparent 78%)'
+              : 'radial-gradient(ellipse 90% 80% at 72% 34%, rgba(255, 166, 158, 0.34) 0%, rgba(255, 224, 210, 0.32) 48%, transparent 78%)',
         }}
       />
 
-      {/* Lazy-loaded ShaderGradient mounted AFTER Receipt Tear entrance settles so it never stalls the entrance */}
-      {shaderReady && <HeroShaderBg />}
+      {/* Lazy-loaded WebGL ShaderGradient on desktop only, mounted AFTER entrance settles */}
+      {!isMobile && shaderReady && <HeroShaderBg />}
 
       {/* Scroll-out veil transitioning cleanly into the next section */}
-      {!reducedMotion && (
+      {!reducedMotion && !isMobile && (
         <motion.div
           aria-hidden="true"
           style={{ opacity: hueShiftOpacity }}
@@ -293,6 +350,7 @@ export function HeroSection() {
       <HeroReceiptEntrance
         skipped={skipped}
         reducedMotion={reducedMotion}
+        isMobile={isMobile}
         onEntranceComplete={handleEntranceComplete}
         subline={sublineNode}
         controls={controlsNode}

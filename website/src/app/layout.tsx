@@ -84,6 +84,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${nunito.variable} ${jakarta.variable}`}
     >
       <body className="min-h-[100dvh] antialiased">
+        <noscript>
+          <style>{`h1, h1 *, p, a, button, section * { opacity: 1 !important; transform: none !important; }`}</style>
+        </noscript>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(mobileAppJsonLd) }}

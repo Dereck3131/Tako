@@ -1,7 +1,6 @@
 'use client';
 
-import Image from 'next/image';
-import React, { useState } from 'react';
+import React from 'react';
 
 export type MascotMood = 'happy' | 'sad' | 'peeking' | 'celebrating';
 
@@ -21,39 +20,16 @@ const DEFAULT_ALTS: Record<MascotMood, string> = {
 };
 
 /**
- * Renders the user-supplied mascot from `/public/mascot/{mood}.png` (or `.svg`),
- * falling back to the EXACT real Tako octopus SVG from the mobile app (`src/components/TakoMascot.tsx`).
+ * Renders the EXACT real Tako octopus SVG from the mobile app (`src/components/TakoMascot.tsx`)
+ * directly inline (zero wasted image fallback requests or layout shifts).
  */
 export function TakoMascot({
   mood = 'happy',
   size = 120,
   className,
   alt,
-  priority = false,
 }: TakoMascotProps) {
-  const [srcStage, setSrcStage] = useState<'png' | 'svg' | 'vector'>('png');
   const label = alt ?? DEFAULT_ALTS[mood];
-
-  if (srcStage !== 'vector') {
-    const src = `/mascot/${mood}.${srcStage}`;
-    return (
-      <div
-        className={className}
-        style={{ width: size, height: size, position: 'relative', flexShrink: 0 }}
-      >
-        <Image
-          src={src}
-          alt={label}
-          width={size}
-          height={size}
-          priority={priority}
-          unoptimized={srcStage === 'svg'}
-          className="h-full w-full object-contain select-none"
-          onError={() => setSrcStage((prev) => (prev === 'png' ? 'svg' : 'vector'))}
-        />
-      </div>
-    );
-  }
 
   return (
     <div

@@ -114,10 +114,10 @@ export function HowItWorksSection() {
                 aria-selected={active}
                 onClick={() => setActiveIndex(idx)}
                 className={clsx(
-                  'tako-press flex-1 rounded-full border px-3 py-2 text-xs font-bold',
+                  'tako-press min-h-11 flex-1 rounded-full border px-3 py-2 text-sm font-bold',
                   active
                     ? 'border-[var(--cta-bg)] bg-[var(--cta-bg)] text-[var(--cta-ink)]'
-                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--mute)]'
+                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]'
                 )}
               >
                 {step.stepNum}
@@ -183,7 +183,7 @@ export function HowItWorksSection() {
                       'tako-press w-full rounded-2xl border p-6 text-left transition-colors duration-200 sm:p-8',
                       isActive
                         ? 'border-[var(--coral)] bg-[var(--surface)] shadow-[var(--card-shadow)]'
-                        : 'border-[var(--border)]/70 bg-[var(--surface-alt)]/60 opacity-75 hover:opacity-100'
+                        : 'border-[var(--border)] bg-[var(--surface-alt)] hover:border-[var(--coral)]/60'
                     )}
                   >
                     <span
@@ -191,7 +191,7 @@ export function HowItWorksSection() {
                         'inline-flex rounded-full px-3 py-1 text-xs font-extrabold tabular-nums',
                         isActive
                           ? 'bg-[var(--coral-soft)] text-[var(--coral-accent)]'
-                          : 'bg-[var(--chip)] text-[var(--mute)]'
+                          : 'bg-[var(--chip)] text-[var(--ink)]'
                       )}
                     >
                       {step.stepNum}

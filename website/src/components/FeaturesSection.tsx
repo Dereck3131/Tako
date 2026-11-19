@@ -2,6 +2,8 @@
 
 import clsx from 'clsx';
 import {
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Coins,
   MoveHorizontal,
@@ -63,6 +65,7 @@ export function FeaturesSection() {
 
   const [mounted, setMounted] = useState(false);
   const [inView, setInView] = useState(false);
+  const [tabHidden, setTabHidden] = useState(false);
   const [hasEntered, setHasEntered] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -80,7 +83,7 @@ export function FeaturesSection() {
     setMounted(true);
   }, []);
 
-  // Pause idle sway/blink when section is off-screen
+  // Pause idle sway/blink when section is off-screen or tab is hidden
   useEffect(() => {
     const el = sectionRef.current;
     if (!el || typeof IntersectionObserver === 'undefined') return;
@@ -94,6 +97,15 @@ export function FeaturesSection() {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  useEffect(() => {
+    const onVis = () => setTabHidden(document.hidden);
+    onVis();
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  const canIdleAnimate = inView && !tabHidden;
 
   // Active arm on desktop (open card wins over hover; hovering another arm switches smoothly)
   const activeId = openId ?? hoveredId;
@@ -326,7 +338,7 @@ export function FeaturesSection() {
                     opacity: hasEntered ? (isDimmed ? 0.38 : 1) : 0,
                     scale: hasEntered ? (isActive ? 1.05 : 1) : 0.72,
                     rotate:
-                      inView && !isActive && !activeId
+                      canIdleAnimate && !isActive && !activeId
                         ? [0, arm.side === 'left' ? -2.2 : 2.2, 0, arm.side === 'left' ? 1.8 : -1.8, 0]
                         : isActive
                           ? arm.side === 'left'
@@ -338,7 +350,7 @@ export function FeaturesSection() {
                     opacity: { duration: 0.22, ease: EASE_OUT },
                     scale: { type: 'spring', duration: 0.5, bounce: 0.22, delay: hasEntered ? 0 : idx * 0.04 },
                     rotate:
-                      inView && !isActive && !activeId
+                      canIdleAnimate && !isActive && !activeId
                         ? {
                             duration: 5.2,
                             delay: arm.swayDelay,
@@ -381,14 +393,14 @@ export function FeaturesSection() {
               <motion.g
                 style={{ transformOrigin: '500px 282px' }}
                 animate={
-                  inView
+                  canIdleAnimate
                     ? {
                         scaleY: [1, 1, 1, 0.08, 1, 1],
                       }
                     : { scaleY: 1 }
                 }
                 transition={
-                  inView
+                  canIdleAnimate
                     ? {
                         duration: 4.5,
                         times: [0, 0.8, 0.84, 0.87, 0.91, 1],
@@ -643,8 +655,8 @@ export function FeaturesSection() {
                   onClick={() => !isCentered && scrollToMobileCard(idx)}
                   style={{
                     transform: `scale(${isCentered ? 1 : 0.92}) rotate(${rotateDeg}deg)`,
-                    opacity: isCentered ? 1 : 0.72,
-                    touchAction: 'pan-y',
+                    opacity: isCentered ? 1 : 0.9,
+                    touchAction: 'pan-x pan-y',
                   }}
                   className="w-[76vw] max-w-[300px] shrink-0 snap-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--card-shadow)] transition-[transform,opacity] duration-200 ease-[var(--ease-out)]"
                 >
@@ -663,12 +675,12 @@ export function FeaturesSection() {
                     alt={arm.screenAlt}
                   />
 
-                  <p className="mt-3.5 text-sm leading-relaxed text-[var(--mute)]">
+                  <p className="mt-3.5 text-base leading-relaxed text-[var(--mute)]">
                     {arm.description}
                   </p>
 
                   {arm.note && (
-                    <p className="mt-2 inline-flex rounded-full bg-[var(--surface-alt)] px-2.5 py-1 text-xs font-bold text-[var(--mute)]">
+                    <p className="mt-2 inline-flex rounded-full bg-[var(--surface-alt)] px-2.5 py-1 text-xs font-bold text-[var(--ink)]">
                       {arm.note}
                     </p>
                   )}
@@ -677,33 +689,56 @@ export function FeaturesSection() {
             })}
           </div>
 
-          {/* 8 Dot Indicators (44px tall touch targets, fluid width for 320px viewports) */}
-          <div
-            className="mx-auto mt-1 flex max-w-[352px] items-center justify-center"
-            role="tablist"
-            aria-label="Choose a Tako feature"
-          >
-            {EIGHT_ARMS.map((arm, idx) => {
-              const active = idx === mobileIndex;
-              return (
-                <button
-                  key={arm.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  aria-label={`Show ${arm.title}`}
-                  onClick={() => scrollToMobileCard(idx)}
-                  className="tako-press inline-flex h-11 flex-1 max-w-[44px] items-center justify-center"
-                >
-                  <span
-                    className={clsx(
-                      'block h-2 w-2 rounded-full transition-[transform,background-color] duration-200 ease-[var(--ease-out)]',
-                      active ? 'scale-x-[2.2] bg-[var(--cta-bg)]' : 'scale-x-100 bg-[var(--border)]'
-                    )}
-                  />
-                </button>
-              );
-            })}
+          {/* Accessible Prev / 8 Dot Indicators / Next Controls (all >= 44px touch targets) */}
+          <div className="mx-auto mt-2 flex max-w-[380px] items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={() =>
+                scrollToMobileCard((mobileIndex - 1 + EIGHT_ARMS.length) % EIGHT_ARMS.length)
+              }
+              aria-label="Previous feature"
+              className="tako-press inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]"
+            >
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+            </button>
+
+            <div
+              className="flex flex-1 items-center justify-center"
+              role="tablist"
+              aria-label="Choose a Tako feature"
+            >
+              {EIGHT_ARMS.map((arm, idx) => {
+                const active = idx === mobileIndex;
+                return (
+                  <button
+                    key={arm.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    aria-current={active ? 'true' : undefined}
+                    aria-label={`Show ${arm.title}`}
+                    onClick={() => scrollToMobileCard(idx)}
+                    className="tako-press inline-flex h-11 flex-1 max-w-[36px] items-center justify-center"
+                  >
+                    <span
+                      className={clsx(
+                        'block h-2 w-2 rounded-full transition-[transform,background-color] duration-200 ease-[var(--ease-out)]',
+                        active ? 'scale-x-[2.2] bg-[var(--cta-bg)]' : 'scale-x-100 bg-[var(--border)]'
+                      )}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => scrollToMobileCard((mobileIndex + 1) % EIGHT_ARMS.length)}
+              aria-label="Next feature"
+              className="tako-press inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]"
+            >
+              <ChevronRight className="h-5 w-5" aria-hidden="true" />
+            </button>
           </div>
         </div>
       </div>

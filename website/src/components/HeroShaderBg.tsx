@@ -21,17 +21,21 @@ class WebGLErrorBoundary extends React.Component<
   }
 }
 
-function isLowEndDevice(): boolean {
-  if (typeof navigator === 'undefined') return false;
+function isLowEndOrMobileDevice(): boolean {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
   const cores = navigator.hardwareConcurrency ?? 8;
   const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
-  return cores <= 4 || mem <= 4;
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+  const narrowViewport = window.innerWidth < 768;
+  return cores <= 4 || mem <= 4 || Boolean(conn?.saveData) || coarsePointer || narrowViewport;
 }
 
 export function HeroShaderBg() {
   const { resolvedTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(true);
+  const [tabHidden, setTabHidden] = useState(false);
   const [useStaticFallback, setUseStaticFallback] = useState(false);
   const [fadedIn, setFadedIn] = useState(false);
 
@@ -42,10 +46,17 @@ export function HeroShaderBg() {
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const compute = () => setUseStaticFallback(mq.matches || isLowEndDevice());
+    const compute = () => setUseStaticFallback(mq.matches || isLowEndOrMobileDevice());
     compute();
     mq.addEventListener('change', compute);
     return () => mq.removeEventListener('change', compute);
+  }, []);
+
+  useEffect(() => {
+    const onVis = () => setTabHidden(document.hidden);
+    onVis();
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
   }, []);
 
   useEffect(() => {
@@ -99,7 +110,7 @@ export function HeroShaderBg() {
           >
             <ShaderGradient
               control="props"
-              animate={inView ? 'on' : 'off'}
+              animate={inView && !tabHidden ? 'on' : 'off'}
               type="waterPlane"
               cDistance={2.8}
               cPolarAngle={90}

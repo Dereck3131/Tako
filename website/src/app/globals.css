@@ -5,12 +5,12 @@
   --surface: #FFFFFF;
   --surface-alt: #F3F1E9;
   --ink: #2B2B2B;
-  --mute: #59554E;
+  --mute: #524E47;
   --border: #D7D0BE;
   --chip: #EEECE3;
   --coral: #FF7A8A;
   --coral-deep: #F0627A;
-  --coral-accent: #D92D4B;
+  --coral-accent: #B91C3B;
   --coral-soft: #FFE8EC;
   --cta-bg: #D92D4B;
   --cta-ink: #FFFFFF;
@@ -61,6 +61,7 @@
 /* Mobile-native baseline & browser surface theming */
 html {
   -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
   overscroll-behavior: none;
   background-color: var(--bg);
@@ -73,6 +74,7 @@ body {
   background-color: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
+  font-size: 16px;
   overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -150,6 +152,21 @@ button,
   background: var(--border);
   border-radius: 999px;
   border: 2px solid var(--bg);
+}
+
+/* Smooth FAQ accordion panel reveal using CSS grid-template-rows (zero JS layout thrash) */
+.tako-accordion-panel {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 240ms var(--ease-out), opacity 200ms ease-out;
+}
+.tako-accordion-panel[data-starting-style],
+.tako-accordion-panel[data-ending-style] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.tako-accordion-panel > div {
+  overflow: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {

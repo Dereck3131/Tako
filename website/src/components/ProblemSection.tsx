@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react';
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { TakoMascot } from './TakoMascot';
 
@@ -23,6 +23,16 @@ const CHOPPED_SHARES = [
 export function ProblemSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const reducedMotion = useReducedMotion();
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const update = () => setIsDesktop(window.innerWidth >= 1024);
+    update();
+    window.addEventListener('resize', update, { passive: true });
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  const useScrollScrub = isDesktop && !reducedMotion;
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -74,14 +84,18 @@ export function ProblemSection() {
           <div className="lg:col-span-7">
             <div className="relative mx-auto max-w-md">
               <motion.div
+                initial={!useScrollScrub && !reducedMotion ? { opacity: 0, y: 18 } : undefined}
+                whileInView={!useScrollScrub && !reducedMotion ? { opacity: 1, y: 0 } : undefined}
+                viewport={!useScrollScrub ? { once: true, amount: 0.2 } : undefined}
+                transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
                 style={
-                  reducedMotion
-                    ? undefined
-                    : {
+                  useScrollScrub
+                    ? {
                         scaleY: receiptScaleY,
                         y: receiptY,
                         transformOrigin: 'top center',
                       }
+                    : undefined
                 }
                 className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--card-shadow)]"
               >
@@ -120,16 +134,20 @@ export function ProblemSection() {
 
               {/* Chopped share pills emerging below the receipt */}
               <motion.div
-                style={reducedMotion ? undefined : { opacity: chipOpacity }}
+                initial={!useScrollScrub && !reducedMotion ? { opacity: 0, y: 12 } : undefined}
+                whileInView={!useScrollScrub && !reducedMotion ? { opacity: 1, y: 0 } : undefined}
+                viewport={!useScrollScrub ? { once: true, amount: 0.25 } : undefined}
+                transition={{ duration: 0.4, delay: 0.12, ease: [0.23, 1, 0.32, 1] }}
+                style={useScrollScrub ? { opacity: chipOpacity } : undefined}
                 className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4"
               >
                 {CHOPPED_SHARES.map((share, idx) => (
                   <motion.div
                     key={share.name}
                     style={
-                      reducedMotion
-                        ? undefined
-                        : { x: idx % 2 === 0 ? chipLeftX : chipRightX }
+                      useScrollScrub
+                        ? { x: idx % 2 === 0 ? chipLeftX : chipRightX }
+                        : undefined
                     }
                     className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5"
                   >

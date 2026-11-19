@@ -60,11 +60,14 @@ export function FaqSection() {
           Questions before you split
         </h2>
 
-        <Accordion.Root className="mt-8 divide-y divide-[var(--border)] rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+        <Accordion.Root
+          multiple={false}
+          className="mt-8 divide-y divide-[var(--border)] rounded-2xl border border-[var(--border)] bg-[var(--surface)]"
+        >
           {FAQ_ITEMS.map((item) => (
             <Accordion.Item key={item.id} value={item.id} className="group">
               <Accordion.Header>
-                <Accordion.Trigger className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left font-[family-name:var(--font-display)] text-base font-extrabold text-[var(--ink)] transition-colors duration-150 hover:text-[var(--cta-bg)] sm:px-6 sm:text-lg">
+                <Accordion.Trigger className="flex min-h-14 w-full items-center justify-between gap-4 px-5 py-4 text-left font-[family-name:var(--font-display)] text-base font-extrabold text-[var(--ink)] transition-colors duration-150 hover:text-[var(--cta-bg)] sm:px-6 sm:text-lg">
                   <span>{item.question}</span>
                   <ChevronDown
                     aria-hidden="true"
@@ -72,8 +75,10 @@ export function FaqSection() {
                   />
                 </Accordion.Trigger>
               </Accordion.Header>
-              <Accordion.Panel className="overflow-hidden px-5 pb-5 text-sm leading-relaxed text-[var(--mute)] sm:px-6 sm:text-base">
-                {item.answer}
+              <Accordion.Panel className="tako-accordion-panel">
+                <div className="px-5 pb-5 text-base leading-relaxed text-[var(--mute)] sm:px-6">
+                  {item.answer}
+                </div>
               </Accordion.Panel>
             </Accordion.Item>
           ))}

@@ -17,12 +17,12 @@ export function Footer() {
           <span>Made by {SITE_CONFIG.author}</span>
         </div>
 
-        <nav aria-label="Footer" className="flex flex-wrap items-center gap-6 font-medium">
+        <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 font-medium">
           <a
             href={SITE_CONFIG.links.github}
             target="_blank"
             rel="noopener noreferrer"
-            className="transition-colors duration-150 hover:text-[var(--ink)]"
+            className="tako-press inline-flex min-h-11 items-center rounded-full px-3 transition-colors duration-150 hover:text-[var(--ink)]"
           >
             GitHub
           </a>
@@ -30,13 +30,13 @@ export function Footer() {
             href={SITE_CONFIG.links.facebook}
             target="_blank"
             rel="noopener noreferrer"
-            className="transition-colors duration-150 hover:text-[var(--ink)]"
+            className="tako-press inline-flex min-h-11 items-center rounded-full px-3 transition-colors duration-150 hover:text-[var(--ink)]"
           >
             Facebook
           </a>
           <a
             href={SITE_CONFIG.links.privacy}
-            className="transition-colors duration-150 hover:text-[var(--ink)]"
+            className="tako-press inline-flex min-h-11 items-center rounded-full px-3 transition-colors duration-150 hover:text-[var(--ink)]"
           >
             Privacy (TODO)
           </a>
