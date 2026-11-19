@@ -113,20 +113,24 @@ export function HeroSection() {
     eyeY.set(0);
   };
 
-  // Scroll-out choreography (pure transform & opacity)
+  // Scroll-out choreography (strictly clamped so scrollY = 0 is always 100% resting state)
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ['start start', 'end start'],
   });
 
-  const phoneScrollY = useTransform(scrollYProgress, [0, 1], [0, -48]);
-  const phoneScrollScale = useTransform(scrollYProgress, [0, 1], [1, 0.92]);
-  const takoScrollY = useTransform(scrollYProgress, [0, 0.85], [0, 72]);
-  const takoScrollRotate = useTransform(scrollYProgress, [0, 0.85], [0, -10]);
-  const takoScrollOpacity = useTransform(scrollYProgress, [0.15, 0.85], [1, 0.2]);
-  const chipTopY = useTransform(scrollYProgress, [0, 1], [0, -64]);
-  const chipBottomY = useTransform(scrollYProgress, [0, 1], [0, -28]);
-  const hueShiftOpacity = useTransform(scrollYProgress, [0.25, 1], [0, 0.65]);
+  const phoneScrollY = useTransform(scrollYProgress, [0, 1], [0, -48], { clamp: true });
+  const phoneScrollScale = useTransform(scrollYProgress, [0, 1], [1, 0.92], { clamp: true });
+  const takoScrollY = useTransform(scrollYProgress, [0, 0.85], [0, 72], { clamp: true });
+  const takoScrollRotate = useTransform(scrollYProgress, [0, 0.85], [0, -10], { clamp: true });
+  const takoScrollOpacity = useTransform(scrollYProgress, [0, 0.18, 0.85], [1, 1, 0.2], {
+    clamp: true,
+  });
+  const chipTopY = useTransform(scrollYProgress, [0, 1], [0, -64], { clamp: true });
+  const chipBottomY = useTransform(scrollYProgress, [0, 1], [0, -28], { clamp: true });
+  const hueShiftOpacity = useTransform(scrollYProgress, [0, 0.25, 1], [0, 0, 0.65], {
+    clamp: true,
+  });
 
   return (
     <section
@@ -134,7 +138,7 @@ export function HeroSection() {
       ref={heroRef}
       onPointerMove={handleHeroPointerMove}
       onPointerLeave={handleHeroPointerLeave}
-      className="relative flex min-h-[calc(100dvh-4rem)] items-center overflow-x-clip py-8 sm:py-10 lg:py-12"
+      className="relative flex min-h-[calc(100dvh-4rem)] scroll-mt-16 items-center overflow-x-clip pt-10 pb-10 sm:pt-12 sm:pb-12 lg:pt-16 lg:pb-12"
     >
       {/* Full-bleed ShaderGradient background behind all hero content */}
       <HeroShaderBg />
@@ -192,7 +196,7 @@ export function HeroSection() {
 
         {/* Right: Phone + Hero Tako peeking over top-left shoulder + verified app chips */}
         <div
-          className="relative flex items-center justify-center pt-16 sm:pt-20 lg:col-span-6 lg:justify-end lg:pr-6 lg:pt-12"
+          className="relative flex items-center justify-center pt-16 sm:pt-20 lg:col-span-6 lg:justify-end lg:pr-6 lg:pt-16"
           style={{ perspective: 1100 }}
         >
           {/* Subtle radial glow directly behind the phone */}
@@ -208,15 +212,8 @@ export function HeroSection() {
           />
 
           <div className="relative">
-            {/* Hero Tako: Large, expressive, peeking over TOP-LEFT shoulder IN FRONT of the phone frame */}
+            {/* Hero Tako: Outer layer owns scroll-out transforms; inner layer owns mount entrance (prevents MotionValue/animate collision at scrollY = 0) */}
             <motion.div
-              initial={reducedMotion ? false : { opacity: 0, y: 42, scale: 0.88 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={
-                reducedMotion
-                  ? undefined
-                  : { type: 'spring', duration: 0.58, bounce: 0.24, delay: 0.42 }
-              }
               style={
                 reducedMotion
                   ? undefined
@@ -226,46 +223,61 @@ export function HeroSection() {
                       opacity: takoScrollOpacity,
                     }
               }
-              className="pointer-events-none absolute -left-16 -top-24 z-20 sm:-left-28 sm:-top-28 lg:-left-36 lg:-top-24"
+              className="pointer-events-none absolute -left-14 -top-16 z-20 sm:-left-24 sm:-top-20 lg:-left-32 lg:-top-16"
             >
-              <HeroTako eyeX={eyeX} eyeY={eyeY} />
+              <motion.div
+                initial={reducedMotion ? false : { opacity: 0, y: 36, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={
+                  reducedMotion
+                    ? undefined
+                    : { type: 'spring', duration: 0.58, bounce: 0.24, delay: 0.36 }
+                }
+              >
+                <HeroTako eyeX={eyeX} eyeY={eyeY} />
+              </motion.div>
             </motion.div>
 
             {/* Orbiting verified app action chip 1: New split */}
             <motion.div
-              initial={reducedMotion ? false : { opacity: 0, scale: 0.92, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.36, ease: EASE_OUT }}
               style={reducedMotion ? undefined : { y: chipTopY }}
               aria-hidden="true"
-              className="pointer-events-none absolute -right-4 top-12 z-20 hidden items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)] sm:flex lg:-right-10"
+              className="pointer-events-none absolute -right-4 top-12 z-20 hidden sm:block lg:-right-10"
             >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--cta-bg)] text-white">
-                <Plus className="h-3.5 w-3.5" />
-              </span>
-              New split
+              <motion.div
+                initial={reducedMotion ? false : { opacity: 0, scale: 0.92, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.36, ease: EASE_OUT }}
+                className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)]"
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--cta-bg)] text-white">
+                  <Plus className="h-3.5 w-3.5" />
+                </span>
+                New split
+              </motion.div>
             </motion.div>
 
             {/* Orbiting verified app action chip 2: Scan QR */}
             <motion.div
-              initial={reducedMotion ? false : { opacity: 0, scale: 0.92, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.42, ease: EASE_OUT }}
               style={reducedMotion ? undefined : { y: chipBottomY }}
               aria-hidden="true"
-              className="pointer-events-none absolute -left-6 bottom-14 z-20 hidden items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)] sm:flex lg:-left-12"
+              className="pointer-events-none absolute -left-6 bottom-14 z-20 hidden sm:block lg:-left-12"
             >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--plum)] text-[#FFF6EE]">
-                <QrCode className="h-3.5 w-3.5" />
-              </span>
-              Scan QR
+              <motion.div
+                initial={reducedMotion ? false : { opacity: 0, scale: 0.92, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.42, ease: EASE_OUT }}
+                className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-extrabold text-[var(--ink)] shadow-[var(--card-shadow)]"
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--plum)] text-[#FFF6EE]">
+                  <QrCode className="h-3.5 w-3.5" />
+                </span>
+                Scan QR
+              </motion.div>
             </motion.div>
 
-            {/* Tilting Phone Frame with real screenshot slot */}
+            {/* Tilting Phone Frame: outer layer owns scroll + 3D tilt, inner layer owns mount entrance */}
             <motion.div
-              initial={reducedMotion ? false : { opacity: 0, y: 20, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.48, delay: 0.31, ease: EASE_OUT }}
               style={
                 reducedMotion
                   ? undefined
@@ -278,9 +290,15 @@ export function HeroSection() {
               }
               className="relative z-10"
             >
-              <PhoneMockup>
-                <RealHeroAppScreen theme={screenTheme} />
-              </PhoneMockup>
+              <motion.div
+                initial={reducedMotion ? false : { opacity: 0, y: 20, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.48, delay: 0.28, ease: EASE_OUT }}
+              >
+                <PhoneMockup>
+                  <RealHeroAppScreen theme={screenTheme} />
+                </PhoneMockup>
+              </motion.div>
             </motion.div>
           </div>
         </div>
