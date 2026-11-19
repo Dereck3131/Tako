@@ -1,11 +1,14 @@
 'use client';
 
+import { Clock, QrCode, ReceiptText, Share2, User } from 'lucide-react';
 import Image from 'next/image';
+import { QRCodeSVG } from 'qrcode.react';
 import React, { useState } from 'react';
 
 export type AppScreenName =
   | 'splits-home'
   | 'new-split'
+  | 'split-ready'
   | 'scan-to-join'
   | 'activity'
   | 'profile';
@@ -20,6 +23,7 @@ interface AppScreenProps {
 const SCREEN_ALTS: Record<AppScreenName, string> = {
   'splits-home': 'Tako app Splits home screen showing active group bills',
   'new-split': 'Tako app New Split screen for entering amount and friends',
+  'split-ready': 'Tako app Split Ready screen showing scannable QR code and TAKO-4821 invite code',
   'scan-to-join': 'Tako app Scan to Join QR viewfinder screen',
   activity: 'Tako app Activity feed showing recent splits and settlements',
   profile: 'Tako app Profile screen with theme and account settings',
@@ -70,6 +74,62 @@ function FallbackScreenMock({
   const tealSoft = isDark ? '#19353B' : '#E2F8F5';
   const teal = isDark ? '#2EC4B6' : '#1D9B90';
   const coralSoft = isDark ? '#3D2234' : '#FFE8EC';
+
+  if (screen === 'split-ready') {
+    return (
+      <div
+        className="flex h-full w-full flex-col justify-between p-4 text-center"
+        style={{ backgroundColor: '#2B1B3D', color: '#FFF6EE' }}
+      >
+        <div className="pt-4">
+          <div className="text-[11px] font-bold text-[#FFF6EE]">Split ready</div>
+        </div>
+
+        <div className="flex flex-col items-center">
+          <div className="w-full rounded-2xl bg-white p-3.5 text-[#2B1B3D] shadow-md">
+            <div className="text-[10px] font-extrabold text-[#6A6A6A]">Ramen Nagi dinner</div>
+            <div className="mx-auto my-2.5 inline-flex rounded-xl bg-white p-1.5">
+              <QRCodeSVG
+                value="tako://join/TAKO-4821"
+                size={112}
+                bgColor="#FFFFFF"
+                fgColor="#2B1B3D"
+                level="M"
+              />
+            </div>
+            <div className="mx-auto inline-block rounded-full bg-[#F3F1E9] px-3 py-1 font-[family-name:var(--font-display)] text-xs font-black tracking-wider text-[#2B1B3D]">
+              TAKO-4821
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-center gap-1.5">
+            <div className="flex">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#2B1B3D] bg-[#FF7A8A] text-[9px] font-black text-[#2B1B3D]">
+                Y
+              </span>
+              <span className="-ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#2B1B3D] bg-[#2EC4B6] text-[9px] font-black text-[#2B1B3D]">
+                M
+              </span>
+            </div>
+            <span className="text-[10px] text-[#D5C7E8]">2 joined · waiting for 2 more</span>
+          </div>
+        </div>
+
+        <div className="space-y-1.5 pb-1">
+          <div
+            className="flex items-center justify-center gap-1.5 rounded-full py-2 text-[11px] font-extrabold text-white"
+            style={{ backgroundColor: ctaBg }}
+          >
+            <Share2 className="h-3 w-3" />
+            Share invite link
+          </div>
+          <div className="rounded-full border border-white/25 py-1.5 text-[11px] font-bold text-[#FFF6EE]">
+            Done
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (screen === 'scan-to-join') {
     return (
@@ -254,15 +314,50 @@ function FallbackScreenMock({
         </div>
       </div>
 
-      {/* Bottom floating pill nav mock */}
+      {/* Bottom floating pill nav matching Tako's real (tabs)/_layout.tsx */}
       <div
-        className="flex items-center justify-around rounded-full border py-2 text-[10px] font-bold"
-        style={{ backgroundColor: surface, borderColor: border, color: mute }}
+        className="flex items-center justify-between gap-0.5 rounded-full border p-1"
+        style={{
+          backgroundColor: surface,
+          borderColor: border,
+          boxShadow: isDark
+            ? '0 6px 16px rgba(0, 0, 0, 0.35)'
+            : '0 6px 16px rgba(43, 27, 61, 0.08)',
+        }}
       >
-        <span style={{ color: ctaBg }}>Splits</span>
-        <span>Scan</span>
-        <span>Activity</span>
-        <span>Profile</span>
+        {[
+          { label: 'Splits', icon: ReceiptText, active: true },
+          { label: 'Scan', icon: QrCode, active: false },
+          { label: 'Activity', icon: Clock, active: false },
+          { label: 'Profile', icon: User, active: false },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const activeColor = isDark ? '#FF6B84' : '#D92D4B';
+          return (
+            <div
+              key={tab.label}
+              className="flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-1.5"
+              style={{
+                backgroundColor: tab.active
+                  ? isDark
+                    ? surfaceAlt
+                    : '#F5E6E8'
+                  : 'transparent',
+              }}
+            >
+              <Icon
+                className="h-3.5 w-3.5"
+                style={{ color: tab.active ? activeColor : ink }}
+              />
+              <span
+                className="text-[8.5px] font-extrabold leading-none"
+                style={{ color: tab.active ? activeColor : mute }}
+              >
+                {tab.label}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

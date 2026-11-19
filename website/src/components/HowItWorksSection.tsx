@@ -34,7 +34,7 @@ const STEPS: StepDef[] = [
     stepNum: 'Step 2',
     title: 'Share a QR. Everyone joins.',
     body: 'Tako generates a scannable QR and a short TAKO- code so you can pass your phone around the table or drop the code in chat.',
-    screen: 'splits-home',
+    screen: 'split-ready',
     mood: 'peeking',
   },
   {

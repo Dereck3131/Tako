@@ -13,6 +13,7 @@ export function ThemeShowcaseSection() {
   const [mounted, setMounted] = useState(false);
   // Percentage (0-100) showing Light on the left and Dark on the right
   const [splitPct, setSplitPct] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
 
@@ -27,11 +28,12 @@ export function ThemeShowcaseSection() {
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const pct = ((clientX - rect.left) / rect.width) * 100;
-    setSplitPct(Math.max(8, Math.min(92, pct)));
+    setSplitPct(Math.max(0, Math.min(100, pct)));
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     draggingRef.current = true;
+    setIsDragging(true);
     e.currentTarget.setPointerCapture(e.pointerId);
     updateFromClientX(e.clientX);
   };
@@ -43,11 +45,12 @@ export function ThemeShowcaseSection() {
 
   const handlePointerUp = () => {
     draggingRef.current = false;
+    setIsDragging(false);
   };
 
   const handleThemeSelect = (mode: 'light' | 'dark') => {
     setTheme(mode);
-    setSplitPct(mode === 'light' ? 82 : 18);
+    setSplitPct(mode === 'light' ? 100 : 0);
   };
 
   return (
@@ -112,13 +115,13 @@ export function ThemeShowcaseSection() {
               onPointerCancel={handlePointerUp}
               role="slider"
               aria-label="Compare light and dark theme screenshots"
-              aria-valuemin={8}
-              aria-valuemax={92}
+              aria-valuemin={0}
+              aria-valuemax={100}
               aria-valuenow={Math.round(splitPct)}
               tabIndex={0}
               onKeyDown={(e) => {
-                if (e.key === 'ArrowLeft') setSplitPct((p) => Math.max(8, p - 8));
-                if (e.key === 'ArrowRight') setSplitPct((p) => Math.min(92, p + 8));
+                if (e.key === 'ArrowLeft') setSplitPct((p) => Math.max(0, p - 10));
+                if (e.key === 'ArrowRight') setSplitPct((p) => Math.min(100, p + 10));
               }}
               className="relative h-full w-full cursor-ew-resize select-none touch-none"
             >
@@ -129,16 +132,23 @@ export function ThemeShowcaseSection() {
 
               {/* Clipped top layer: Light theme screenshot */}
               <div
-                className="absolute inset-0"
+                className={clsx(
+                  'absolute inset-0',
+                  !isDragging && 'transition-[clip-path] duration-300 ease-[var(--ease-out)]'
+                )}
                 style={{ clipPath: `inset(0 ${100 - splitPct}% 0 0)` }}
               >
                 <AppScreen screen="splits-home" theme="light" />
               </div>
 
-              {/* Divider line + handle */}
+              {/* Divider line + handle (tucks away cleanly when fully covered at 0% or 100%) */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 z-20 w-0.5 bg-[var(--coral)]"
+                className={clsx(
+                  'pointer-events-none absolute inset-y-0 z-20 w-0.5 bg-[var(--coral)]',
+                  !isDragging && 'transition-[left,opacity] duration-300 ease-[var(--ease-out)]',
+                  splitPct <= 1 || splitPct >= 99 ? 'opacity-0' : 'opacity-100'
+                )}
                 style={{ left: `${splitPct}%` }}
               >
                 <div className="absolute left-1/2 top-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-[var(--cta-bg)] text-white shadow-md">
