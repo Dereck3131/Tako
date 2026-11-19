@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #FAFAF7;
+  --surface: #FFFFFF;
+  --surface-alt: #F3F1E9;
+  --ink: #2B2B2B;
+  --mute: #59554E;
+  --border: #D7D0BE;
+  --chip: #EEECE3;
+  --coral: #FF7A8A;
+  --coral-deep: #F0627A;
+  --coral-accent: #D92D4B;
+  --coral-soft: #FFE8EC;
+  --cta-bg: #D92D4B;
+  --cta-ink: #FFFFFF;
+  --teal: #1D9B90;
+  --teal-soft: #E2F8F5;
+  --lavender: #7D64C8;
+  --lavender-soft: #F1ECFC;
+  --gold: #FFC857;
+  --gold-soft: #FFF5DA;
+  --plum: #2B1B3D;
+  --plum-ink: #FFF6EE;
+  --card-shadow: 0 12px 32px -12px rgba(43, 27, 61, 0.12);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.dark {
+  --bg: #1B1424;
+  --surface: #241B30;
+  --surface-alt: #2C2139;
+  --ink: #FFF6EE;
+  --mute: #C2B4D4;
+  --border: #3A2C4D;
+  --chip: #2C2139;
+  --coral: #FF7A8A;
+  --coral-deep: #F0627A;
+  --coral-accent: #FF6B84;
+  --coral-soft: #3D2234;
+  --cta-bg: #E5405E;
+  --cta-ink: #FFFFFF;
+  --teal: #2EC4B6;
+  --teal-soft: #19353B;
+  --lavender: #B9A5E8;
+  --lavender-soft: #2E2447;
+  --gold: #FFC857;
+  --gold-soft: #3A2F1C;
+  --plum: #2B1B3D;
+  --plum-ink: #FFF6EE;
+  --card-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.5);
+}
+
+@theme inline {
+  --font-display: var(--font-nunito), ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+}
+
+/* Mobile-native baseline & browser surface theming */
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+  overscroll-behavior: none;
+  background-color: var(--bg);
+  color: var(--ink);
+  color-scheme: light dark;
+}
+
+body {
+  overscroll-behavior: none;
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background-color: var(--coral);
+  color: var(--plum);
+}
+
+input,
+textarea {
+  caret-color: var(--cta-bg);
+}
+
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+button,
+[role="button"] {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cta-bg);
+  outline-offset: 3px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tactile press feedback (Emil Kowalski / Apple HIG) */
+.tako-press {
+  transition: transform 140ms var(--ease-out), background-color 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+
+.tako-press:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tako-lift {
+    transition: transform 200ms var(--ease-out), border-color 180ms ease;
+  }
+  .tako-lift:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
