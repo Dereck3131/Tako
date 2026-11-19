@@ -11,6 +11,7 @@ import {
 interface HeroEntrancePickerProps {
   activeId: EntranceVariantId;
   speed: EntranceSpeed;
+  measuredSec: number | null;
   onSelect: (id: EntranceVariantId) => void;
   onReplay: () => void;
   onSpeedChange: (speed: EntranceSpeed) => void;
@@ -25,6 +26,7 @@ const SPEEDS: EntranceSpeed[] = [0.5, 1, 2];
 export function HeroEntrancePicker({
   activeId,
   speed,
+  measuredSec,
   onSelect,
   onReplay,
   onSpeedChange,
@@ -104,7 +106,8 @@ export function HeroEntrancePicker({
 
   if (!visible) return null;
 
-  const effectiveDuration = (activeMeta.durationSec / speed).toFixed(2);
+  const durationLabel =
+    measuredSec !== null ? `${measuredSec.toFixed(1)}s` : `${(activeMeta.durationSec / speed).toFixed(1)}s…`;
 
   return (
     <nav
@@ -164,7 +167,13 @@ export function HeroEntrancePicker({
       ))}
 
       <span className="proto-picker-divider" aria-hidden="true" />
-      <span className="proto-picker-meta">{effectiveDuration}s</span>
+      <span
+        className="proto-picker-meta"
+        data-measured-sec={measuredSec !== null ? measuredSec.toFixed(2) : ''}
+        title="Measured entrance duration"
+      >
+        {durationLabel}
+      </span>
     </nav>
   );
 }

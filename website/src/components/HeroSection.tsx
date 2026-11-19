@@ -45,6 +45,7 @@ function RealHeroAppScreen({ theme }: { theme: 'light' | 'dark' }) {
   if (!missing) {
     return (
       <div className="relative h-full w-full overflow-hidden">
+        {/* TODO: Use /screens/splits-home-populated.png once added to website/public/screens/ */}
         <Image
           src={`/screens/splits-home-${theme}.png`}
           alt="Tako app Splits home screen"
@@ -90,17 +91,22 @@ export function HeroSection() {
   const [mounted, setMounted] = useState(false);
   const [shaderReady, setShaderReady] = useState(false);
   const [variant, setVariant] = useState<EntranceVariantId>('peek');
+  // Always default playback speed to 1x on every load (never persisted)
   const [speed, setSpeed] = useState<EntranceSpeed>(1);
   const [playKey, setPlayKey] = useState(0);
   const [skipped, setSkipped] = useState(false);
+  const [measuredSec, setMeasuredSec] = useState<number | null>(null);
+  const playStartRef = useRef<number>(0);
 
-  // Hydrate persisted variant choice (try/catch localStorage) + defer shader after entrance starts
+  // Hydrate persisted variant choice ONLY (never speed) + defer shader after entrance starts
   useEffect(() => {
     setMounted(true);
+    playStartRef.current = performance.now();
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY) as EntranceVariantId | null;
       if (saved && ENTRANCE_VARIANTS.some((v) => v.id === saved)) {
         setVariant(saved);
+        setPlayKey((k) => k + 1);
       }
     } catch {
       // localStorage blocked
@@ -109,9 +115,23 @@ export function HeroSection() {
     return () => window.clearTimeout(timer);
   }, []);
 
+  // Stamp exact start time whenever a play starts
+  useEffect(() => {
+    playStartRef.current = performance.now();
+    setMeasuredSec(null);
+  }, [variant, playKey, speed]);
+
+  const handleEntranceComplete = useCallback(() => {
+    const start = playStartRef.current;
+    if (!start) return;
+    const elapsed = (performance.now() - start) / 1000;
+    setMeasuredSec(elapsed);
+  }, []);
+
   const handleSelectVariant = useCallback((nextId: EntranceVariantId) => {
     setVariant(nextId);
     setSkipped(false);
+    setMeasuredSec(null);
     setPlayKey((k) => k + 1);
     try {
       window.localStorage.setItem(STORAGE_KEY, nextId);
@@ -122,12 +142,14 @@ export function HeroSection() {
 
   const handleReplay = useCallback(() => {
     setSkipped(false);
+    setMeasuredSec(null);
     setPlayKey((k) => k + 1);
   }, []);
 
   const handleSpeedChange = useCallback((nextSpeed: EntranceSpeed) => {
     setSpeed(nextSpeed);
     setSkipped(false);
+    setMeasuredSec(null);
     setPlayKey((k) => k + 1);
   }, []);
 
@@ -311,6 +333,7 @@ export function HeroSection() {
     speed,
     skipped,
     reducedMotion,
+    onEntranceComplete: handleEntranceComplete,
     subline: sublineNode,
     controls: controlsNode,
     phoneSlot: phoneNode,
@@ -328,6 +351,18 @@ export function HeroSection() {
       onPointerLeave={handleHeroPointerLeave}
       className="relative flex min-h-[calc(100dvh-4rem)] scroll-mt-16 items-center overflow-x-clip pt-10 pb-10 sm:pt-12 sm:pb-12 lg:pt-16 lg:pb-12"
     >
+      {/* Frame-0 ambient gradient backdrop so background is immediately rich before ShaderGradient mounts */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          background:
+            screenTheme === 'dark'
+              ? 'radial-gradient(ellipse 80% 70% at 72% 40%, rgba(255, 122, 138, 0.16) 0%, rgba(185, 165, 232, 0.08) 45%, transparent 75%)'
+              : 'radial-gradient(ellipse 80% 70% at 72% 40%, rgba(255, 122, 138, 0.14) 0%, rgba(255, 200, 87, 0.10) 45%, transparent 75%)',
+        }}
+      />
+
       {/* Lazy-loaded ShaderGradient mounted after entrance starts so LCP is never delayed */}
       {shaderReady && <HeroShaderBg />}
 
@@ -352,6 +387,7 @@ export function HeroSection() {
       <HeroEntrancePicker
         activeId={variant}
         speed={speed}
+        measuredSec={measuredSec}
         onSelect={handleSelectVariant}
         onReplay={handleReplay}
         onSpeedChange={handleSpeedChange}

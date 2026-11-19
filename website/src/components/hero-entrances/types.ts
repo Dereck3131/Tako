@@ -11,9 +11,9 @@ export interface EntranceVariantMeta {
 }
 
 export const ENTRANCE_VARIANTS: EntranceVariantMeta[] = [
-  { id: 'coin', keyLabel: 'A', name: 'Coin Split', durationSec: 1.8 },
-  { id: 'ink', keyLabel: 'B', name: 'Ink Reveal', durationSec: 1.75 },
-  { id: 'peek', keyLabel: 'C', name: 'Peek-a-Boo', durationSec: 1.6 },
+  { id: 'coin', keyLabel: 'A', name: 'Coin Split', durationSec: 1.6 },
+  { id: 'ink', keyLabel: 'B', name: 'Ink Reveal', durationSec: 1.4 },
+  { id: 'peek', keyLabel: 'C', name: 'Peek-a-Boo', durationSec: 1.4 },
   { id: 'receipt', keyLabel: 'D', name: 'Receipt Tear', durationSec: 1.85 },
 ];
 
@@ -26,6 +26,8 @@ export interface HeroEntranceProps {
   skipped: boolean;
   /** True when prefers-reduced-motion is active (fades final state over ~200ms) */
   reducedMotion: boolean;
+  /** Called once when the final settling element of the entrance completes */
+  onEntranceComplete?: () => void;
   subline: React.ReactNode;
   controls: React.ReactNode;
   /** Right-column phone + Tako + chips stage wrapper slots */

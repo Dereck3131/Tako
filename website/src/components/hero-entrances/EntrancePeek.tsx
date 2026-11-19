@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
-import React from 'react';
+import React, { useRef } from 'react';
 
 import { HEADLINE_WORDS, type HeroEntranceProps } from './types';
 
@@ -17,6 +17,7 @@ export function EntrancePeek({
   speed,
   skipped,
   reducedMotion,
+  onEntranceComplete,
   subline,
   controls,
   phoneSlot,
@@ -27,6 +28,13 @@ export function EntrancePeek({
 }: HeroEntranceProps) {
   const s = (t: number) => t / speed;
   const instant = skipped || reducedMotion;
+  const completedRef = useRef(false);
+
+  const handleFinalComplete = () => {
+    if (completedRef.current || instant) return;
+    completedRef.current = true;
+    onEntranceComplete?.();
+  };
 
   return (
     <div className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-10 px-5 sm:px-8 lg:grid-cols-12 lg:gap-8">
@@ -175,6 +183,7 @@ export function EntrancePeek({
                   ? { duration: 0 }
                   : { duration: s(0.36), delay: s(0.96), ease: EASE_OUT }
             }
+            onAnimationComplete={handleFinalComplete}
             className="relative z-20"
           >
             {chipScanQrSlot}
