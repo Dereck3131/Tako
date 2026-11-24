@@ -8,8 +8,8 @@ export const SITE_CONFIG = {
   author: 'Frederick',
   links: {
     github: 'https://github.com/Dereck3131/Tako',
-    facebook: 'https://facebook.com/TODO-your-page',
-    privacy: '#privacy-todo',
+    facebook: 'https://www.facebook.com/profile.php?id=61595547320374',
+    privacy: '/privacy',
   },
 } as const;
 
@@ -19,6 +19,6 @@ export const APK_CONFIG = {
     process.env.NEXT_PUBLIC_APK_URL ||
     'https://github.com/Dereck3131/Tako/releases/download/v1.0.0/tako-v1.0.0.apk',
   version: '1.0.0',
-  sizeLabel: '128 MB',
+  sizeLabel: '129 MB',
   platformLabel: 'Android 8.0+',
 } as const;

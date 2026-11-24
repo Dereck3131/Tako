@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import React from 'react';
 
 import { SITE_CONFIG } from '@/lib/config';
@@ -34,12 +35,12 @@ export function Footer() {
           >
             Facebook
           </a>
-          <a
+          <Link
             href={SITE_CONFIG.links.privacy}
             className="tako-press inline-flex min-h-11 items-center rounded-full px-3 transition-colors duration-150 hover:text-[var(--ink)]"
           >
-            Privacy (TODO)
-          </a>
+            Privacy
+          </Link>
         </nav>
       </div>
     </footer>
