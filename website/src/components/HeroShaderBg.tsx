@@ -78,8 +78,8 @@ export function HeroShaderBg() {
       className="pointer-events-none absolute inset-0"
       style={{
         background: isDark
-          ? 'radial-gradient(ellipse 85% 75% at 72% 38%, rgba(229, 64, 94, 0.34) 0%, rgba(125, 58, 140, 0.32) 42%, #1B1424 100%)'
-          : 'radial-gradient(ellipse 90% 80% at 74% 34%, rgba(255, 166, 158, 0.42) 0%, rgba(255, 224, 210, 0.48) 46%, #FAFAF7 100%)',
+          ? 'radial-gradient(ellipse 46% 58% at 75% 48%, rgba(235, 62, 94, 0.38) 0%, rgba(235, 62, 94, 0.12) 45%, transparent 74%), radial-gradient(ellipse 36% 52% at 96% 36%, rgba(142, 86, 204, 0.28) 0%, transparent 72%), #120B1C'
+          : 'radial-gradient(ellipse 48% 58% at 75% 46%, rgba(255, 112, 130, 0.34) 0%, rgba(255, 166, 158, 0.14) 48%, transparent 76%), radial-gradient(ellipse 36% 52% at 96% 36%, rgba(154, 118, 214, 0.22) 0%, transparent 72%), #FAFAF7',
       }}
     />
   );
@@ -101,7 +101,7 @@ export function HeroShaderBg() {
       <WebGLErrorBoundary fallback={staticGradient}>
         <div
           className="absolute inset-0 transition-opacity duration-700"
-          style={{ opacity: fadedIn ? (isDark ? 0.82 : 0.62) : 0 }}
+          style={{ opacity: fadedIn ? (isDark ? 0.78 : 0.56) : 0 }}
         >
           <ShaderGradientCanvas
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
@@ -117,10 +117,10 @@ export function HeroShaderBg() {
               cAzimuthAngle={180}
               cameraZoom={1}
               color1={isDark ? '#E5405E' : '#FAFAF7'}
-              color2={isDark ? '#7B368E' : '#FFD8CC'}
-              color3={isDark ? '#1B1424' : '#FFB0A0'}
+              color2={isDark ? '#6E328A' : '#FFD6C9'}
+              color3={isDark ? '#120B1C' : '#FFA69E'}
               grain="off"
-              brightness={isDark ? 1.05 : 1.12}
+              brightness={isDark ? 1.02 : 1.08}
               wireframe={false}
               uSpeed={0.18}
               uStrength={1.8}
@@ -131,13 +131,13 @@ export function HeroShaderBg() {
         </div>
       </WebGLErrorBoundary>
 
-      {/* Soft readability scrim on the text side + smooth bottom blend into page bg */}
+      {/* Readability scrim keeps the left headline & subline completely clear of glow */}
       <div
         className="absolute inset-0"
         style={{
           background: isDark
-            ? 'linear-gradient(90deg, rgba(27, 20, 36, 0.72) 0%, rgba(27, 20, 36, 0.35) 55%, rgba(27, 20, 36, 0.15) 100%)'
-            : 'linear-gradient(90deg, rgba(250, 250, 247, 0.78) 0%, rgba(250, 250, 247, 0.42) 55%, rgba(250, 250, 247, 0.12) 100%)',
+            ? 'linear-gradient(90deg, rgba(18, 11, 28, 0.94) 0%, rgba(18, 11, 28, 0.78) 44%, rgba(18, 11, 28, 0.22) 72%, rgba(18, 11, 28, 0.14) 100%)'
+            : 'linear-gradient(90deg, rgba(250, 250, 247, 0.95) 0%, rgba(250, 250, 247, 0.8) 44%, rgba(250, 250, 247, 0.22) 72%, rgba(250, 250, 247, 0.12) 100%)',
         }}
       />
       <div

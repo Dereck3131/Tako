@@ -1,8 +1,8 @@
 'use client';
 
-import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react';
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 
+import { ReceiptLineHeader } from './ReceiptThread';
 import { TakoMascot } from './TakoMascot';
 
 const RECEIPT_LINES = [
@@ -14,159 +14,198 @@ const RECEIPT_LINES = [
 ];
 
 const CHOPPED_SHARES = [
-  { name: 'You', amount: '₱620', color: '#FF7A8A', x: -56, y: -10, rot: -5 },
-  { name: 'Mika', amount: '₱620', color: '#2EC4B6', x: 56, y: -6, rot: 4 },
-  { name: 'Ken', amount: '₱620', color: '#B9A5E8', x: -48, y: 12, rot: -3 },
-  { name: 'Jules', amount: '₱620', color: '#FFC857', x: 48, y: 10, rot: 5 },
+  { name: 'You', amount: '₱620', bg: '#FF7A8A', ink: '#2B1B3D', rot: '-2deg' },
+  { name: 'Mika', amount: '₱620', bg: '#FFC857', ink: '#2B1B3D', rot: '1.5deg' },
+  { name: 'Ken', amount: '₱620', bg: '#2B1B3D', ink: '#FFF6EE', rot: '-1.5deg' },
+  { name: 'Jules', amount: '₱620', bg: '#F5EFE2', ink: '#2B1B3D', rot: '2deg' },
 ];
 
+/**
+ * Section 2 — "The bill lands" Centered Stage:
+ * Centered headline above, centered sample thermal receipt in the middle,
+ * surrounded by 4 tilted annotation cards on curved connector lines.
+ */
 export function ProblemSection() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const reducedMotion = useReducedMotion();
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  useEffect(() => {
-    const update = () => setIsDesktop(window.innerWidth >= 1024);
-    update();
-    window.addEventListener('resize', update, { passive: true });
-    return () => window.removeEventListener('resize', update);
-  }, []);
-
-  const useScrollScrub = isDesktop && !reducedMotion;
-
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ['start end', 'end start'],
-  });
-
-  const receiptScaleY = useTransform(scrollYProgress, [0.12, 0.45], [0.68, 1]);
-  const receiptY = useTransform(scrollYProgress, [0.12, 0.45], [24, 0]);
-  const chipsProgress = useTransform(scrollYProgress, [0.42, 0.68], [0, 1]);
-  const chipOpacity = useTransform(scrollYProgress, [0.38, 0.56], [0, 1]);
-  const chipLeftX = useTransform(chipsProgress, [0, 1], [0, -10]);
-  const chipRightX = useTransform(chipsProgress, [0, 1], [0, 10]);
-
   return (
     <section
-      ref={sectionRef}
       aria-labelledby="problem-heading"
-      className="relative py-20 sm:py-28 lg:py-32"
+      className="relative overflow-x-clip bg-[var(--bg)] py-20 sm:py-28 lg:py-32"
     >
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12">
-          {/* Left: Story Copy + Sad Tako */}
-          <div className="lg:col-span-5">
-            <h2
-              id="problem-heading"
-              className="font-[family-name:var(--font-display)] text-[clamp(2rem,4.5vw,3.25rem)] font-black leading-[1.06] tracking-[-0.03em] text-[var(--ink)] text-balance"
-            >
-              The bill lands. Everyone suddenly checks their phone.
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-[var(--mute)] sm:text-lg">
-              &ldquo;Sino ulit nag-extra rice?&rdquo; One person ends up typing into a calculator
-              while the group chat goes quiet for three days.
-            </p>
+        <ReceiptLineHeader
+          code="01"
+          label="The table silence"
+          amount="₱2,480.00"
+          className="mx-auto max-w-3xl"
+        />
 
-            <div className="mt-8 flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-              <TakoMascot mood="sad" size={76} />
-              <div className="min-w-0">
-                <p className="font-[family-name:var(--font-display)] text-base font-extrabold text-[var(--ink)]">
-                  Mental math shouldn&apos;t ruin dinner.
-                </p>
-                <p className="mt-0.5 text-sm text-[var(--mute)]">
-                  Tako chops the receipt down to the exact centavo so nobody plays treasurer.
+        {/* Centered Headline */}
+        <div className="mx-auto mt-8 max-w-3xl text-center">
+          <h2
+            id="problem-heading"
+            className="font-[family-name:var(--font-display)] text-[clamp(2.2rem,5.4vw,3.9rem)] font-black leading-[1.02] tracking-[-0.03em] text-[var(--ink)] text-balance"
+          >
+            The bill lands. Everyone suddenly checks their phone.
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[var(--mute)] sm:text-lg">
+            One person ends up typing into a calculator while the group chat goes quiet for three
+            days.
+          </p>
+        </div>
+
+        {/* Centered Receipt Stage with 4 tilted annotation cards around it on desktop */}
+        <div className="relative mx-auto mt-14 max-w-5xl">
+          {/* Desktop Left-Top Annotation: mental math = sakit sa ulo + Sad Tako */}
+          <div className="pointer-events-none absolute left-0 top-6 z-20 hidden items-center lg:flex">
+            <div className="w-[230px] -rotate-2 rounded-2xl border-2 border-[#2B1B3D] bg-[var(--surface)] p-3.5 text-left shadow-[var(--card-shadow-sm)] dark:border-[var(--border)]">
+              <div className="flex items-center gap-2.5">
+                <TakoMascot mood="sad" size={48} />
+                <p className="font-[family-name:var(--font-hand)] text-2xl font-bold leading-tight text-[var(--coral-accent)]">
+                  mental math = sakit sa ulo
                 </p>
               </div>
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mute)]">
+                Nobody has to play table treasurer after dinner.
+              </p>
+            </div>
+            <svg width="78" height="44" viewBox="0 0 78 44" fill="none" aria-hidden="true" className="-ml-1 shrink-0">
+              <path
+                d="M2 22 C28 22 48 12 74 26"
+                stroke="var(--coral-accent)"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeDasharray="4 4"
+              />
+            </svg>
+          </div>
+
+          {/* Desktop Left-Bottom Annotation */}
+          <div className="pointer-events-none absolute bottom-16 left-2 z-20 hidden items-center lg:flex">
+            <div className="w-[216px] rotate-2 rounded-2xl border-2 border-[#2B1B3D] bg-[var(--surface)] p-3.5 text-left shadow-[var(--card-shadow-sm)] dark:border-[var(--border)]">
+              <p className="font-[family-name:var(--font-display)] text-sm font-black text-[var(--ink)]">
+                Equal, by items, or custom
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--mute)]">
+                Pick the split mode that fits the order.
+              </p>
+            </div>
+            <svg width="84" height="44" viewBox="0 0 84 44" fill="none" aria-hidden="true" className="-ml-1 shrink-0">
+              <path
+                d="M2 24 C30 28 54 14 80 12"
+                stroke="var(--coral-accent)"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeDasharray="4 4"
+              />
+            </svg>
+          </div>
+
+          {/* Desktop Right-Top Annotation */}
+          <div className="pointer-events-none absolute right-0 top-10 z-20 hidden items-center lg:flex">
+            <svg width="78" height="44" viewBox="0 0 78 44" fill="none" aria-hidden="true" className="-mr-1 shrink-0">
+              <path
+                d="M76 22 C50 22 30 12 4 26"
+                stroke="var(--coral-accent)"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeDasharray="4 4"
+              />
+            </svg>
+            <div className="w-[224px] rotate-2 rounded-2xl border-2 border-[#2B1B3D] bg-[var(--surface)] p-3.5 text-left shadow-[var(--card-shadow-sm)] dark:border-[var(--border)]">
+              <p className="font-[family-name:var(--font-hand)] text-2xl font-bold leading-tight text-[var(--coral-accent)]">
+                &ldquo;sino nag-extra rice?&rdquo;
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--mute)]">
+                Assign shared platters or solo bowls in seconds.
+              </p>
             </div>
           </div>
 
-          {/* Right: Scroll-unrolling receipt + chopped total shares */}
-          <div className="lg:col-span-7">
-            <div className="relative mx-auto max-w-md">
-              <motion.div
-                initial={!useScrollScrub && !reducedMotion ? { opacity: 0, y: 18 } : undefined}
-                whileInView={!useScrollScrub && !reducedMotion ? { opacity: 1, y: 0 } : undefined}
-                viewport={!useScrollScrub ? { once: true, amount: 0.2 } : undefined}
-                transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
-                style={
-                  useScrollScrub
-                    ? {
-                        scaleY: receiptScaleY,
-                        y: receiptY,
-                        transformOrigin: 'top center',
-                      }
-                    : undefined
-                }
-                className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--card-shadow)]"
+          {/* Desktop Right-Bottom Annotation */}
+          <div className="pointer-events-none absolute bottom-14 right-2 z-20 hidden items-center lg:flex">
+            <svg width="84" height="44" viewBox="0 0 84 44" fill="none" aria-hidden="true" className="-mr-1 shrink-0">
+              <path
+                d="M82 24 C54 28 30 14 4 12"
+                stroke="var(--coral-accent)"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeDasharray="4 4"
+              />
+            </svg>
+            <div className="w-[216px] -rotate-2 rounded-2xl border-2 border-[#2B1B3D] bg-[var(--surface)] p-3.5 text-left shadow-[var(--card-shadow-sm)] dark:border-[var(--border)]">
+              <p className="font-[family-name:var(--font-display)] text-sm font-black text-[var(--ink)]">
+                Clear shares, less drama
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--mute)]">
+                Everyone sees who owes what right on their screen.
+              </p>
+            </div>
+          </div>
+
+          {/* Centered Sample Thermal Receipt */}
+          <div className="relative z-10 mx-auto max-w-sm border-2 border-[#2B1B3D] bg-[#FFFDF8] p-6 text-[#2B1B3D] shadow-[var(--card-shadow)] -rotate-1">
+            <div className="flex items-center justify-between border-b-2 border-dashed border-[#2B1B3D]/25 pb-3 font-mono">
+              <span className="text-sm font-black uppercase tracking-wider">Barkada Dinner</span>
+              <span className="text-xs font-bold text-[#574B66] tabular-nums">TBL 08 · 4 PAX</span>
+            </div>
+
+            <ul className="divide-y divide-dashed divide-[#2B1B3D]/20 py-2 font-mono">
+              {RECEIPT_LINES.map((line) => (
+                <li key={line.item} className="flex items-center justify-between py-2 text-sm">
+                  <span>{line.item}</span>
+                  <span className="font-bold tabular-nums">{line.price}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-2 flex items-baseline justify-between border-t-2 border-[#2B1B3D] pt-3">
+              <span className="font-mono text-sm font-black uppercase tracking-wider">TOTAL</span>
+              <span className="font-[family-name:var(--font-display)] text-3xl font-black text-[#D92D4B] tabular-nums">
+                ₱2,480.00
+              </span>
+            </div>
+          </div>
+
+          {/* Torn Share Stubs centered beneath receipt */}
+          <div className="mx-auto mt-6 grid max-w-md grid-cols-2 gap-3 sm:grid-cols-4">
+            {CHOPPED_SHARES.map((share) => (
+              <div
+                key={share.name}
+                style={{
+                  backgroundColor: share.bg,
+                  color: share.ink,
+                  transform: `rotate(${share.rot})`,
+                }}
+                className="border-2 border-[#2B1B3D] px-3 py-2.5 text-center shadow-[var(--card-shadow-sm)]"
               >
-                <div className="flex items-center justify-between border-b border-dashed border-[var(--border)] pb-3">
-                  <span className="font-[family-name:var(--font-display)] text-sm font-black uppercase tracking-wider text-[var(--ink)]">
-                    Barkada Dinner
-                  </span>
-                  <span className="text-xs font-semibold text-[var(--mute)] tabular-nums">
-                    Table 08 · 4 pax
-                  </span>
+                <div className="font-mono text-[11px] font-bold uppercase">{share.name}</div>
+                <div className="font-[family-name:var(--font-display)] text-lg font-black tabular-nums">
+                  {share.amount}
                 </div>
+              </div>
+            ))}
+          </div>
 
-                <ul className="divide-y divide-dashed divide-[var(--border)]/60 py-2">
-                  {RECEIPT_LINES.map((line) => (
-                    <li
-                      key={line.item}
-                      className="flex items-center justify-between py-2 text-sm"
-                    >
-                      <span className="text-[var(--ink)]">{line.item}</span>
-                      <span className="font-semibold text-[var(--mute)] tabular-nums">
-                        {line.price}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="mt-2 flex items-baseline justify-between border-t-2 border-[var(--ink)]/15 pt-3">
-                  <span className="font-[family-name:var(--font-display)] text-base font-black text-[var(--ink)]">
-                    TOTAL
-                  </span>
-                  <span className="font-[family-name:var(--font-display)] text-2xl font-black text-[var(--cta-bg)] tabular-nums">
-                    ₱2,480.00
-                  </span>
-                </div>
-              </motion.div>
-
-              {/* Chopped share pills emerging below the receipt */}
-              <motion.div
-                initial={!useScrollScrub && !reducedMotion ? { opacity: 0, y: 12 } : undefined}
-                whileInView={!useScrollScrub && !reducedMotion ? { opacity: 1, y: 0 } : undefined}
-                viewport={!useScrollScrub ? { once: true, amount: 0.25 } : undefined}
-                transition={{ duration: 0.4, delay: 0.12, ease: [0.23, 1, 0.32, 1] }}
-                style={useScrollScrub ? { opacity: chipOpacity } : undefined}
-                className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4"
-              >
-                {CHOPPED_SHARES.map((share, idx) => (
-                  <motion.div
-                    key={share.name}
-                    style={
-                      useScrollScrub
-                        ? { x: idx % 2 === 0 ? chipLeftX : chipRightX }
-                        : undefined
-                    }
-                    className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="h-3 w-3 shrink-0 rounded-full"
-                      style={{ backgroundColor: share.color }}
-                    />
-                    <div className="min-w-0">
-                      <div className="truncate text-xs font-bold text-[var(--mute)]">
-                        {share.name}
-                      </div>
-                      <div className="font-[family-name:var(--font-display)] text-sm font-black text-[var(--ink)] tabular-nums">
-                        {share.amount}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </motion.div>
+          {/* Mobile Stacked Annotations (hidden on lg where desktop callouts show) */}
+          <div className="mx-auto mt-8 grid max-w-md grid-cols-1 gap-3 sm:grid-cols-2 lg:hidden">
+            <div className="rounded-2xl border-2 border-[#2B1B3D] bg-[var(--surface)] p-4 text-left shadow-[var(--card-shadow-sm)] dark:border-[var(--border)]">
+              <div className="flex items-center gap-2.5">
+                <TakoMascot mood="sad" size={44} />
+                <p className="font-[family-name:var(--font-hand)] text-xl font-bold leading-tight text-[var(--coral-accent)]">
+                  mental math = sakit sa ulo
+                </p>
+              </div>
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mute)]">
+                Nobody has to play table treasurer after dinner.
+              </p>
+            </div>
+            <div className="rounded-2xl border-2 border-[#2B1B3D] bg-[var(--surface)] p-4 text-left shadow-[var(--card-shadow-sm)] dark:border-[var(--border)]">
+              <p className="font-[family-name:var(--font-hand)] text-xl font-bold leading-tight text-[var(--coral-accent)]">
+                &ldquo;sino nag-extra rice?&rdquo;
+              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mute)]">
+                Split equally, by receipt items, or custom amounts.
+              </p>
             </div>
           </div>
         </div>

@@ -1,487 +1,80 @@
 'use client';
 
 import { motion } from 'motion/react';
-import React, { useRef } from 'react';
+import React from 'react';
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-const HEADLINE_WORDS = ['Split', 'bills,', 'not', 'friendships.'] as const;
-
-/** Desktop uses your chosen relaxed 0.5x pacing (2x); mobile (<768px) uses 1x so it finishes under 2s */
-const DESKTOP_PACE = 2;
-const MOBILE_PACE = 1;
-
-/**
- * 4 torn paper scraps that fly from the receipt tear midpoint toward the 4 headline words.
- */
-const TORN_SCRAPS = [
-  { tx: -90, ty: -42, rot: -14, delay: 0.5 },
-  { tx: 18, ty: -34, rot: 11, delay: 0.56 },
-  { tx: -68, ty: 28, rot: -9, delay: 0.62 },
-  { tx: 46, ty: 38, rot: 13, delay: 0.68 },
-] as const;
 
 export interface HeroReceiptEntranceProps {
   skipped: boolean;
   reducedMotion: boolean;
   isMobile?: boolean;
-  onEntranceComplete?: () => void;
+  eyebrow: React.ReactNode;
   subline: React.ReactNode;
   controls: React.ReactNode;
-  phoneSlot: React.ReactNode;
-  takoSlot: React.ReactNode;
-  chipNewSplitSlot: React.ReactNode;
-  chipScanQrSlot: React.ReactNode;
-  glowSlot: React.ReactNode;
+  badgeSlot: React.ReactNode;
+  stageSlot: React.ReactNode;
 }
 
 /**
- * Final Hero Entrance — Receipt Tear (0.5x relaxed pacing on desktop, <2s 1x on mobile).
- * Zero animated CSS drop-shadow filters so every frame stays locked on the compositor.
+ * Centered Hero Entrance for the Fan of Three Phones:
+ * - Headline, subline, and CTAs are real DOM text from first paint.
+ * - Tightened vertical spacing so Headline + CTAs + entire Fan fit above the fold
+ *   at 1366x768, 1440x900, and 1920x1080.
  */
 export function HeroReceiptEntrance({
   skipped,
   reducedMotion,
   isMobile = false,
-  onEntranceComplete,
+  eyebrow,
   subline,
   controls,
-  phoneSlot,
-  takoSlot,
-  chipNewSplitSlot,
-  chipScanQrSlot,
-  glowSlot,
+  badgeSlot,
+  stageSlot,
 }: HeroReceiptEntranceProps) {
-  const pace = isMobile ? MOBILE_PACE : DESKTOP_PACE;
-  const s = (t: number) => t * pace;
-  const instant = skipped || reducedMotion;
-  const completedRef = useRef(false);
-
-  const handleFinalComplete = () => {
-    if (completedRef.current) return;
-    completedRef.current = true;
-    onEntranceComplete?.();
-  };
+  const instant = skipped || reducedMotion || isMobile;
 
   return (
-    <div className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-10 px-5 sm:px-8 lg:grid-cols-12 lg:gap-8">
-      {/* Left Column: Hero-sized Receipt Tear -> Real DOM Headline Words */}
-      <div className="relative lg:col-span-6">
-        {/* Ephemeral hero-sized receipt (220x420 desktop, 150x286 mobile) + tentacle swipe */}
-        {!instant && (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 -top-10 z-30 flex items-start justify-center sm:-top-16 lg:justify-start lg:pl-14"
-          >
-            <div className="relative h-[286px] w-[150px] sm:h-[420px] sm:w-[220px]">
-              {/* TOP HALF of the receipt (drops with bounce, then tears up-left) */}
-              <motion.svg
-                viewBox="0 0 220 218"
-                fill="none"
-                style={{ willChange: 'transform, opacity' }}
-                className="absolute inset-x-0 top-0 h-[52%] w-full"
-                initial={{ opacity: 0, y: -180, rotate: -2 }}
-                animate={{
-                  opacity: [0, 1, 1, 1, 0],
-                  y: [-180, 10, 0, -22, -40],
-                  x: [0, 0, 0, -24, -46],
-                  rotate: [-2, 1.5, 0, -9, -15],
-                }}
-                transition={{
-                  duration: s(0.86),
-                  times: [0, 0.28, 0.44, 0.76, 1],
-                  ease: EASE_OUT,
-                }}
-              >
-                {/* Lightweight vector shadow offset (no per-frame CSS filter) */}
-                <path
-                  d="M8 16 L20 8 L32 16 L44 8 L56 16 L68 8 L80 16 L92 8 L104 16 L116 8 L128 16 L140 8 L152 16 L164 8 L176 16 L188 8 L200 16 L212 8 L220 16 V208 L200 216 L180 206 L156 218 L132 206 L108 218 L84 206 L60 218 L36 208 L8 216 Z"
-                  fill="rgba(43, 27, 61, 0.12)"
-                />
-                {/* Cream receipt body with zigzag top edge and jagged bottom tear edge */}
-                <path
-                  d="M4 12 L16 4 L28 12 L40 4 L52 12 L64 4 L76 12 L88 4 L100 12 L112 4 L124 12 L136 4 L148 12 L160 4 L172 12 L184 4 L196 12 L208 4 L216 12 V204 L196 212 L176 202 L152 214 L128 202 L104 214 L80 202 L56 214 L32 204 L4 212 Z"
-                  fill="#FFFDF7"
-                  stroke="#E5D9C3"
-                  strokeWidth="2.5"
-                />
-                <text
-                  x="110"
-                  y="44"
-                  textAnchor="middle"
-                  fill="#2B1B3D"
-                  fontSize="15"
-                  fontWeight="900"
-                  letterSpacing="2"
-                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-                >
-                  TAKO TAB
-                </text>
-                <line x1="22" y1="58" x2="198" y2="58" stroke="#D8CBB3" strokeWidth="1.5" strokeDasharray="4 4" />
-                <text x="22" y="88" fill="#2B1B3D" fontSize="13" fontWeight="700" fontFamily="ui-monospace, monospace">
-                  RAMEN YA
-                </text>
-                <text x="198" y="88" textAnchor="end" fill="#2B1B3D" fontSize="13" fontWeight="800" fontFamily="ui-monospace, monospace">
-                  ₱2,480
-                </text>
-                <text x="22" y="118" fill="#4A3A5C" fontSize="12" fontWeight="600" fontFamily="ui-monospace, monospace">
-                  GYOZA (x2)
-                </text>
-                <text x="198" y="118" textAnchor="end" fill="#4A3A5C" fontSize="12" fontWeight="700" fontFamily="ui-monospace, monospace">
-                  ₱420
-                </text>
-                <text x="22" y="148" fill="#4A3A5C" fontSize="12" fontWeight="600" fontFamily="ui-monospace, monospace">
-                  ICED TEA (x4)
-                </text>
-                <text x="198" y="148" textAnchor="end" fill="#4A3A5C" fontSize="12" fontWeight="700" fontFamily="ui-monospace, monospace">
-                  ₱360
-                </text>
-                <line x1="22" y1="176" x2="198" y2="176" stroke="#FF7A8A" strokeWidth="2" strokeDasharray="5 4" opacity="0.7" />
-              </motion.svg>
+    <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col items-center justify-between px-5 text-center sm:px-8">
+      {/* Top-right rotating circular text badge (away from CTAs) */}
+      {badgeSlot}
 
-              {/* BOTTOM HALF of the receipt (drops mated to top half, then tears down-right) */}
-              <motion.svg
-                viewBox="0 0 220 218"
-                fill="none"
-                style={{ willChange: 'transform, opacity' }}
-                className="absolute inset-x-0 bottom-0 h-[52%] w-full"
-                initial={{ opacity: 0, y: -180, rotate: -2 }}
-                animate={{
-                  opacity: [0, 1, 1, 1, 0],
-                  y: [-180, 10, 0, 28, 52],
-                  x: [0, 0, 0, 26, 50],
-                  rotate: [-2, 1.5, 0, 10, 17],
-                }}
-                transition={{
-                  duration: s(0.86),
-                  times: [0, 0.28, 0.44, 0.76, 1],
-                  ease: EASE_OUT,
-                }}
-              >
-                {/* Lightweight vector shadow offset */}
-                <path
-                  d="M8 16 L36 8 L60 18 L84 6 L108 18 L132 6 L156 18 L180 6 L200 16 L220 8 V210 L212 218 L200 210 L188 218 L176 210 L164 218 L152 210 L140 218 L128 210 L116 218 L104 210 L92 218 L80 210 L68 218 L56 210 L44 218 L32 210 L20 218 L8 210 Z"
-                  fill="rgba(43, 27, 61, 0.12)"
-                />
-                {/* Mated jagged top tear edge and zigzag bottom edge */}
-                <path
-                  d="M4 12 L32 4 L56 14 L80 2 L104 14 L128 2 L152 14 L176 2 L196 12 L216 4 V206 L208 214 L196 206 L184 214 L172 206 L160 214 L148 206 L136 214 L124 206 L112 214 L100 206 L88 214 L76 206 L64 214 L52 206 L40 214 L28 206 L16 214 L4 206 Z"
-                  fill="#FFFDF7"
-                  stroke="#E5D9C3"
-                  strokeWidth="2.5"
-                />
-                <text x="22" y="56" fill="#2B1B3D" fontSize="15" fontWeight="900" fontFamily="ui-monospace, monospace">
-                  TOTAL
-                </text>
-                <text x="198" y="56" textAnchor="end" fill="#D92D4B" fontSize="16" fontWeight="900" fontFamily="ui-monospace, monospace">
-                  ₱3,260
-                </text>
-                <line x1="22" y1="76" x2="198" y2="76" stroke="#D8CBB3" strokeWidth="1.5" strokeDasharray="4 4" />
-                <text x="110" y="108" textAnchor="middle" fill="#6E5A82" fontSize="12" fontWeight="700" fontFamily="ui-monospace, monospace">
-                  SPLIT 4 WAYS • ₱815 EA
-                </text>
-                <g fill="#2B1B3D" opacity="0.22">
-                  <rect x="38" y="132" width="4" height="36" />
-                  <rect x="46" y="132" width="2" height="36" />
-                  <rect x="52" y="132" width="6" height="36" />
-                  <rect x="64" y="132" width="3" height="36" />
-                  <rect x="72" y="132" width="5" height="36" />
-                  <rect x="82" y="132" width="2" height="36" />
-                  <rect x="88" y="132" width="7" height="36" />
-                  <rect x="100" y="132" width="3" height="36" />
-                  <rect x="108" y="132" width="5" height="36" />
-                  <rect x="118" y="132" width="2" height="36" />
-                  <rect x="124" y="132" width="6" height="36" />
-                  <rect x="136" y="132" width="3" height="36" />
-                  <rect x="144" y="132" width="5" height="36" />
-                  <rect x="154" y="132" width="2" height="36" />
-                  <rect x="162" y="132" width="6" height="36" />
-                  <rect x="174" y="132" width="4" height="36" />
-                </g>
-              </motion.svg>
+      {/* Top Centered Header Block */}
+      <div className="flex w-full flex-col items-center">
+        <div className="mb-1.5">{eyebrow}</div>
 
-              {/* Crisp coral tear-line flash right along the rip */}
-              <motion.svg
-                viewBox="0 0 220 20"
-                fill="none"
-                style={{ willChange: 'transform, opacity' }}
-                className="absolute inset-x-0 top-1/2 z-10 h-5 w-full -translate-y-1/2"
-                initial={{ opacity: 0, scaleX: 0.1 }}
-                animate={{ opacity: [0, 1, 0], scaleX: [0.1, 1.06, 1.12] }}
-                transition={{
-                  duration: s(0.28),
-                  delay: s(0.42),
-                  times: [0, 0.45, 1],
-                  ease: EASE_OUT,
-                }}
-              >
-                <path
-                  d="M4 10 L32 3 L56 15 L80 4 L104 16 L128 4 L152 16 L176 4 L196 14 L216 6"
-                  stroke="#FF7A8A"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </motion.svg>
-
-              {/* Visible coral tentacle with sucker dots swiping across the receipt */}
-              <motion.svg
-                viewBox="0 0 180 68"
-                fill="none"
-                style={{ willChange: 'transform, opacity' }}
-                className="absolute left-1/2 top-1/2 z-20 h-14 w-36 -translate-x-1/2 -translate-y-1/2 sm:h-16 sm:w-44"
-                initial={{ opacity: 0, x: -130, rotate: -10 }}
-                animate={{
-                  opacity: [0, 1, 1, 0],
-                  x: [-130, -10, 96, 140],
-                  rotate: [-10, 4, 10, 16],
-                }}
-                transition={{
-                  duration: s(0.46),
-                  delay: s(0.3),
-                  times: [0, 0.28, 0.76, 1],
-                  ease: EASE_OUT,
-                }}
-              >
-                <path
-                  d="M6 42 C38 14 108 10 162 24 C176 28 174 44 156 46 C112 49 58 48 16 56 Z"
-                  fill="#FF7A8A"
-                  stroke="#2B1B3D"
-                  strokeWidth="2.5"
-                />
-                <circle cx="144" cy="36" r="5" fill="#FFB8C1" />
-                <circle cx="122" cy="38" r="5.5" fill="#FFB8C1" />
-                <circle cx="98" cy="40" r="5.5" fill="#FFB8C1" />
-                <circle cx="74" cy="42" r="5" fill="#FFB8C1" />
-                <circle cx="52" cy="44" r="4.5" fill="#FFB8C1" />
-              </motion.svg>
-
-              {/* 4 torn paper scraps visibly flying toward the 4 headline word positions */}
-              {TORN_SCRAPS.map((scrap, idx) => (
-                <motion.div
-                  key={idx}
-                  style={{ willChange: 'transform, opacity' }}
-                  className="absolute left-1/2 top-1/2 z-20 -ml-6 -mt-3 h-6 w-12 rounded-[4px] border border-[#E5D9C3] bg-[#FFFDF7]"
-                  initial={{ opacity: 0, x: 0, y: 0, scale: 0.7, rotate: 0 }}
-                  animate={{
-                    opacity: [0, 1, 1, 0],
-                    x: [0, scrap.tx * 0.65, scrap.tx],
-                    y: [0, scrap.ty * 0.65, scrap.ty],
-                    scale: [0.7, 1.05, 0.8],
-                    rotate: [0, scrap.rot, scrap.rot * 1.4],
-                  }}
-                  transition={{
-                    duration: s(0.32),
-                    delay: s(scrap.delay),
-                    times: [0, 0.35, 0.75, 1],
-                    ease: EASE_OUT,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Real DOM headline words springing in as the torn pieces arrive */}
-        <h1 className="font-[family-name:var(--font-display)] text-[clamp(2.25rem,8.4vw,4.85rem)] font-black leading-[1.02] tracking-[-0.03em] text-[var(--ink)] text-balance">
-          {HEADLINE_WORDS.map((word, idx) => (
-            <motion.span
-              key={word}
-              initial={
-                reducedMotion
-                  ? { opacity: 0 }
-                  : skipped
-                    ? false
-                    : {
-                        opacity: 0,
-                        y: idx < 2 ? -24 : 20,
-                        x: idx % 2 === 0 ? -16 : 16,
-                        rotate: idx % 2 === 0 ? -5 : 5,
-                        scale: 0.88,
-                      }
-              }
-              animate={{ opacity: 1, y: 0, x: 0, rotate: 0, scale: 1 }}
-              transition={
-                reducedMotion
-                  ? { duration: 0.2 }
-                  : skipped
-                    ? { duration: 0 }
-                    : {
-                        type: 'spring',
-                        duration: s(0.46),
-                        bounce: 0.24,
-                        delay: s(0.64 + idx * 0.06),
-                      }
-              }
-              className="mr-[0.22em] inline-block"
+        <h1 className="max-w-4xl font-[family-name:var(--font-display)] text-[clamp(2rem,min(4.4vw,5.4dvh),3.75rem)] font-black leading-[0.98] tracking-[-0.035em] text-[var(--ink)] text-balance">
+          <span className="block">Split bills,</span>
+          <span className="relative inline-block text-[var(--cta-bg)] dark:text-[var(--coral)]">
+            not friendships.
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 340 18"
+              fill="none"
+              preserveAspectRatio="none"
+              className="pointer-events-none absolute -bottom-1 left-0 h-2.5 w-full overflow-visible sm:-bottom-1.5 sm:h-3"
             >
-              {word}
-            </motion.span>
-          ))}
+              <motion.path
+                d="M4 13 Q90 3 174 10 T336 7"
+                stroke="var(--gold)"
+                strokeWidth="4.5"
+                strokeLinecap="round"
+                initial={instant ? false : { pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={instant ? { duration: 0 } : { duration: 0.65, delay: 0.25, ease: EASE_OUT }}
+              />
+            </svg>
+          </span>
         </h1>
 
-        <motion.div
-          initial={reducedMotion ? { opacity: 0 } : skipped ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={
-            reducedMotion
-              ? { duration: 0.2 }
-              : skipped
-                ? { duration: 0 }
-                : { duration: s(0.36), delay: s(0.96), ease: EASE_OUT }
-          }
-          className="mt-4"
-        >
-          {subline}
-        </motion.div>
+        <div className="mt-2.5 max-w-[52ch]">{subline}</div>
 
-        <motion.div
-          initial={reducedMotion ? { opacity: 0 } : skipped ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={
-            reducedMotion
-              ? { duration: 0.2 }
-              : skipped
-                ? { duration: 0 }
-                : { duration: s(0.36), delay: s(1.06), ease: EASE_OUT }
-          }
-          className="mt-7"
-        >
-          {controls}
-        </motion.div>
+        <div className="mt-3 w-full">{controls}</div>
       </div>
 
-      {/* Right Column: Phone outline visible from frame 0 -> phone rises -> Tako Peek-a-Boo */}
-      <div
-        className="relative flex items-center justify-center pt-12 sm:pt-18 lg:col-span-6 lg:justify-end lg:pr-6 lg:pt-16"
-        style={{ perspective: 1100 }}
-      >
-        {glowSlot}
-
-        <div className="relative">
-          {/* Subtle phone outline visible from frame 0 during receipt drop */}
-          {!instant && (
-            <motion.div
-              aria-hidden="true"
-              initial={{ opacity: 0.65 }}
-              animate={{ opacity: [0.65, 0.65, 0] }}
-              transition={{
-                duration: s(1.18),
-                times: [0, 0.76, 1],
-                ease: EASE_OUT,
-              }}
-              className="pointer-events-none absolute inset-0 z-0 rounded-[44px] border-2 border-dashed border-[var(--coral-accent)]/40 bg-[var(--surface)]/25"
-            />
-          )}
-
-          {/* Grabbing tentacle tip wrapping the phone's top-left corner */}
-          {!instant && (
-            <motion.svg
-              aria-hidden="true"
-              width="58"
-              height="58"
-              viewBox="0 0 58 58"
-              fill="none"
-              style={{ willChange: 'transform, opacity' }}
-              initial={{ opacity: 0, scale: 0.6, x: -16, y: 16, rotate: -22 }}
-              animate={{
-                opacity: [0, 1, 1, 0],
-                scale: [0.6, 1.05, 1, 0.9],
-                x: [-16, 0, 2, -6],
-                y: [16, 0, -2, 4],
-                rotate: [-22, 4, 0, -10],
-              }}
-              transition={{
-                duration: s(0.56),
-                delay: s(1.04),
-                times: [0, 0.35, 0.72, 1],
-                ease: EASE_OUT,
-              }}
-              className="pointer-events-none absolute -left-4 top-2 z-30"
-            >
-              <path
-                d="M12 46 C8 30 16 14 34 10 C42 8 48 14 44 21 C40 28 30 24 26 36 C24 43 18 50 12 46 Z"
-                fill="#F0627A"
-              />
-              <circle cx="34" cy="17" r="3.2" fill="#FFB3BC" />
-              <circle cx="25" cy="26" r="3" fill="#FFB3BC" />
-            </motion.svg>
-          )}
-
-          {/* Tako peeks up over top-left corner after phone rises */}
-          <motion.div
-            initial={
-              reducedMotion
-                ? { opacity: 0 }
-                : skipped
-                  ? false
-                  : { opacity: 0, y: 68, scale: 0.86, rotate: -8 }
-            }
-            animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-            transition={
-              reducedMotion
-                ? { duration: 0.2 }
-                : skipped
-                  ? { duration: 0 }
-                  : { type: 'spring', duration: s(0.62), bounce: 0.28, delay: s(1.18) }
-            }
-            className="relative z-20"
-          >
-            {takoSlot}
-          </motion.div>
-
-          <motion.div
-            initial={
-              reducedMotion ? { opacity: 0 } : skipped ? false : { opacity: 0, scale: 0.92, y: 8 }
-            }
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={
-              reducedMotion
-                ? { duration: 0.2 }
-                : skipped
-                  ? { duration: 0 }
-                  : { duration: s(0.32), delay: s(1.42), ease: EASE_OUT }
-            }
-            className="relative z-20"
-          >
-            {chipNewSplitSlot}
-          </motion.div>
-
-          <motion.div
-            initial={
-              reducedMotion ? { opacity: 0 } : skipped ? false : { opacity: 0, scale: 0.92, y: 8 }
-            }
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={
-              reducedMotion
-                ? { duration: 0.2 }
-                : skipped
-                  ? { duration: 0 }
-                  : { duration: s(0.32), delay: s(1.48), ease: EASE_OUT }
-            }
-            onAnimationComplete={handleFinalComplete}
-            className="relative z-20"
-          >
-            {chipScanQrSlot}
-          </motion.div>
-
-          {/* Phone rises cleanly over its outline after the receipt tears */}
-          <motion.div
-            initial={
-              reducedMotion ? { opacity: 0 } : skipped ? false : { opacity: 0, y: 34, scale: 0.95 }
-            }
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={
-              reducedMotion
-                ? { duration: 0.2 }
-                : skipped
-                  ? { duration: 0 }
-                  : { duration: s(0.42), delay: s(0.84), ease: EASE_OUT }
-            }
-            className="relative z-10"
-          >
-            {phoneSlot}
-          </motion.div>
-        </div>
+      {/* Centered Giant-Tako Stage anchored to bottom edge */}
+      <div className="relative mt-2 flex w-full flex-1 flex-col items-center justify-end lg:mt-1">
+        {stageSlot}
       </div>
     </div>
   );

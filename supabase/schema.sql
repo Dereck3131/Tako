@@ -1,10 +1,32 @@
 -- Tako Supabase Schema (project: jdwoszkyonkzxhgzfgnb)
 
+-- Email verification codes (accessed only by service_role Edge Functions)
+create table if not exists public.email_verification_codes (
+  email text primary key,
+  code_hash text not null,
+  expires_at timestamptz not null,
+  attempts int not null default 0,
+  last_sent_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+alter table public.email_verification_codes enable row level security;
+
+do $$ begin
+  create policy "No client access to email verification codes"
+    on public.email_verification_codes
+    for all
+    to anon, authenticated
+    using (false)
+    with check (false);
+exception when duplicate_object then null; end $$;
+
 -- Profiles table
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text not null default 'Tako Friend',
   avatar_color text not null default '#FF7A8A',
+  avatar_url text,
   payment_handle text,
   created_at timestamptz not null default now()
 );
@@ -16,11 +38,11 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create policy "Users can insert their own profile" on public.profiles for insert to authenticated with check (auth.uid() = id);
+  create policy "Users can insert their own profile" on public.profiles for insert to authenticated with check ((select auth.uid()) = id);
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create policy "Users can update their own profile" on public.profiles for update to authenticated using (auth.uid() = id);
+  create policy "Users can update their own profile" on public.profiles for update to authenticated using ((select auth.uid()) = id);
 exception when duplicate_object then null; end $$;
 
 create or replace function public.handle_new_user()
@@ -77,10 +99,10 @@ set search_path = public
 as $$
   select exists (
     select 1 from public.group_members
-    where group_id = gid and user_id = auth.uid()
+    where group_id = gid and user_id = (select auth.uid())
   ) or exists (
     select 1 from public.groups
-    where id = gid and created_by = auth.uid()
+    where id = gid and created_by = (select auth.uid())
   );
 $$;
 
@@ -90,7 +112,7 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create policy "Authenticated users can create groups" on public.groups for insert to authenticated with check (auth.uid() = created_by);
+  create policy "Authenticated users can create groups" on public.groups for insert to authenticated with check ((select auth.uid()) = created_by);
 exception when duplicate_object then null; end $$;
 
 do $$ begin
@@ -98,7 +120,7 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create policy "Group creator can delete group" on public.groups for delete to authenticated using (created_by = auth.uid());
+  create policy "Group creator can delete group" on public.groups for delete to authenticated using (created_by = (select auth.uid()));
 exception when duplicate_object then null; end $$;
 
 -- Group members policies
@@ -197,8 +219,77 @@ do $$ begin
   create policy "Members can delete settlements" on public.settlements for delete to authenticated using (public.is_group_member(group_id));
 exception when duplicate_object then null; end $$;
 
+-- Preview group by invite code RPC
+create or replace function public.preview_group_by_code(p_code text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_group public.groups%rowtype;
+  v_total_cents bigint;
+  v_item_count bigint;
+  v_member_count bigint;
+  v_host_name text;
+  v_members jsonb;
+begin
+  select * into v_group
+  from public.groups
+  where upper(invite_code) = upper(trim(regexp_replace(p_code, '^TAKO-', '', 'i')))
+  limit 1;
+
+  if v_group.id is null then
+    return null;
+  end if;
+
+  select coalesce(sum(amount_cents), 0), count(*)
+  into v_total_cents, v_item_count
+  from public.expenses
+  where group_id = v_group.id;
+
+  select count(*),
+         coalesce(
+           jsonb_agg(
+             jsonb_build_object(
+               'id', id,
+               'name', name,
+               'color', color,
+               'is_placeholder', (user_id is null),
+               'is_me', (user_id = auth.uid())
+             ) order by created_at asc
+           ),
+           '[]'::jsonb
+         )
+  into v_member_count, v_members
+  from public.group_members
+  where group_id = v_group.id;
+
+  select name into v_host_name
+  from public.group_members
+  where group_id = v_group.id
+  order by created_at asc
+  limit 1;
+
+  return jsonb_build_object(
+    'id', v_group.id,
+    'name', v_group.name,
+    'invite_code', v_group.invite_code,
+    'total_cents', v_total_cents,
+    'item_count', v_item_count,
+    'member_count', v_member_count,
+    'paid_by', coalesce(v_host_name, 'Host'),
+    'members', v_members
+  );
+end;
+$$;
+
 -- Join group by invite code RPC
-create or replace function public.join_group_by_code(p_code text, p_member_name text default null)
+create or replace function public.join_group_by_code(
+  p_code text,
+  p_member_name text default null,
+  p_claim_member_id uuid default null
+)
 returns uuid
 language plpgsql
 security definer
@@ -207,29 +298,165 @@ as $$
 declare
   v_group_id uuid;
   v_name text;
+  v_my_member_id uuid;
+  v_matched_id uuid;
+  v_is_new_member boolean := false;
+  v_exp record;
+  v_member_ids uuid[];
+  v_count int;
+  v_base bigint;
+  v_rem bigint;
+  v_idx int;
+  v_palette text[] := array['#2EC4B6', '#FF7A8A', '#B9A5E8', '#F5D6BA', '#6C9BFF', '#FFC857'];
+  v_existing_count int;
 begin
   select id into v_group_id
   from public.groups
-  where upper(invite_code) = upper(trim(p_code))
+  where upper(invite_code) = upper(trim(regexp_replace(p_code, '^TAKO-', '', 'i')))
   limit 1;
 
   if v_group_id is null then
     raise exception 'Group not found for code %', p_code;
   end if;
 
-  if not exists (
-    select 1 from public.group_members
-    where group_id = v_group_id and user_id = auth.uid()
-  ) then
+  select id into v_my_member_id
+  from public.group_members
+  where group_id = v_group_id and user_id = auth.uid()
+  limit 1;
+
+  if v_my_member_id is null then
     select coalesce(nullif(trim(p_member_name), ''), p.display_name, 'Friend')
     into v_name
     from public.profiles p
     where p.id = auth.uid();
 
-    insert into public.group_members (group_id, user_id, name, color)
-    values (v_group_id, auth.uid(), coalesce(v_name, 'Friend'), '#2EC4B6');
+    v_name := coalesce(v_name, 'Friend');
+
+    if p_claim_member_id is not null then
+      update public.group_members
+      set user_id = auth.uid()
+      where id = p_claim_member_id
+        and group_id = v_group_id
+        and user_id is null
+      returning id into v_matched_id;
+    end if;
+
+    if v_matched_id is null then
+      select id into v_matched_id
+      from public.group_members
+      where group_id = v_group_id
+        and user_id is null
+        and lower(trim(name)) = lower(trim(v_name))
+      order by created_at asc
+      limit 1;
+
+      if v_matched_id is not null then
+        update public.group_members
+        set user_id = auth.uid()
+        where id = v_matched_id;
+      end if;
+    end if;
+
+    if v_matched_id is null then
+      select count(*) into v_existing_count
+      from public.group_members
+      where group_id = v_group_id;
+
+      insert into public.group_members (group_id, user_id, name, color)
+      values (
+        v_group_id,
+        auth.uid(),
+        v_name,
+        v_palette[(v_existing_count % array_length(v_palette, 1)) + 1]
+      )
+      returning id into v_my_member_id;
+
+      v_is_new_member := true;
+    end if;
+  end if;
+
+  if v_is_new_member then
+    select array_agg(id order by created_at asc, id asc)
+    into v_member_ids
+    from public.group_members
+    where group_id = v_group_id;
+
+    v_count := coalesce(array_length(v_member_ids, 1), 0);
+
+    if v_count > 0 then
+      for v_exp in
+        select id, amount_cents
+        from public.expenses
+        where group_id = v_group_id and split_type = 'equal'
+      loop
+        delete from public.expense_splits where expense_id = v_exp.id;
+        v_base := v_exp.amount_cents / v_count;
+        v_rem := v_exp.amount_cents - (v_base * v_count);
+        for v_idx in 1..v_count loop
+          insert into public.expense_splits (expense_id, member_id, amount_cents)
+          values (
+            v_exp.id,
+            v_member_ids[v_idx],
+            v_base + (case when v_idx <= v_rem then 1 else 0 end)
+          );
+        end loop;
+      end loop;
+    end if;
   end if;
 
   return v_group_id;
 end;
 $$;
+
+-- Covering indexes for foreign keys
+create index if not exists idx_groups_created_by on public.groups(created_by);
+create index if not exists idx_group_members_group_id on public.group_members(group_id);
+create index if not exists idx_group_members_user_id on public.group_members(user_id);
+create index if not exists idx_expenses_group_id on public.expenses(group_id);
+create index if not exists idx_expenses_paid_by_member_id on public.expenses(paid_by_member_id);
+create index if not exists idx_expenses_created_by on public.expenses(created_by);
+create index if not exists idx_expense_splits_expense_id on public.expense_splits(expense_id);
+create index if not exists idx_expense_splits_member_id on public.expense_splits(member_id);
+create index if not exists idx_settlements_group_id on public.settlements(group_id);
+create index if not exists idx_settlements_from_member_id on public.settlements(from_member_id);
+create index if not exists idx_settlements_to_member_id on public.settlements(to_member_id);
+create index if not exists idx_settlements_created_by on public.settlements(created_by);
+
+-- SECURITY DEFINER execute permissions
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.is_group_member(uuid) from public, anon;
+revoke execute on function public.preview_group_by_code(text) from public, anon;
+revoke execute on function public.join_group_by_code(text, text, uuid) from public, anon;
+
+grant execute on function public.is_group_member(uuid) to authenticated, service_role;
+grant execute on function public.preview_group_by_code(text) to authenticated, service_role;
+grant execute on function public.join_group_by_code(text, text, uuid) to authenticated, service_role;
+
+-- Storage bucket & policies for user avatars
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+do $$ begin
+  create policy "Avatar images are publicly accessible"
+    on storage.objects for select
+    using (bucket_id = 'avatars');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "Authenticated users can upload their own avatar"
+    on storage.objects for insert to authenticated
+    with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "Authenticated users can update their own avatar"
+    on storage.objects for update to authenticated
+    using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "Authenticated users can delete their own avatar"
+    on storage.objects for delete to authenticated
+    using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+exception when duplicate_object then null; end $$;

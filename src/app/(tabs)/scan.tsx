@@ -2,11 +2,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Modal,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -16,151 +16,171 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withSequence,
+  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FieldError } from '@/components/FieldError';
 import { TakoMascot } from '@/components/TakoMascot';
-import { Radii, TakoFonts, formatPeso } from '@/constants/theme';
-import { useAuth } from '@/context/AuthContext';
+import { Radii, TakoFonts } from '@/constants/theme';
 import { useTakoTheme } from '@/context/ThemeContext';
-import { supabase } from '@/lib/supabase';
-
-interface SplitPreview {
-  code: string;
-  name?: string;
-  totalCents?: number;
-  memberCount?: number;
-  paidBy?: string;
-}
-
-function extractInviteCode(raw: string): string {
-  const trimmed = raw.trim();
-  const urlMatch = trimmed.match(/(?:join\/|code=)([A-Za-z0-9-]+)/i);
-  const candidate = urlMatch ? urlMatch[1] : trimmed;
-  return candidate.replace(/^TAKO-/i, '').toUpperCase();
-}
+import { previewInviteByCode } from '@/lib/takoData';
 
 export default function ScanScreen() {
   const { palette } = useTakoTheme();
-  const { profile } = useAuth();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const [permission, requestPermission] = useCameraPermissions();
 
   const [code, setCode] = useState('');
-  const [torchOn, setTorchOn] = useState(false);
+  const [focusInput, setFocusInput] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [scannedLock, setScannedLock] = useState(false);
-  const [shakeTick, setShakeTick] = useState(0);
-  const [preview, setPreview] = useState<SplitPreview | null>(null);
+  const [qrFailed, setQrFailed] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const lastScannedRef = useRef<{ value: string; ts: number }>({ value: '', ts: 0 });
 
-  const shakeX = useSharedValue(0);
+  const scanY = useSharedValue(-52);
 
-  React.useEffect(() => {
-    if (shakeTick === 0 || reducedMotion) return;
-    shakeX.value = withSequence(
-      withTiming(-8, { duration: 45 }),
-      withTiming(8, { duration: 45 }),
-      withTiming(-6, { duration: 45 }),
-      withTiming(6, { duration: 45 }),
-      withTiming(0, { duration: 45 })
+  useEffect(() => {
+    if (reducedMotion) return;
+    scanY.value = withRepeat(
+      withTiming(52, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true
     );
-  }, [reducedMotion, shakeTick, shakeX]);
+  }, [reducedMotion, scanY]);
 
-  const triggerShake = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-    }
-    setShakeTick((t) => t + 1);
-  }, []);
-
-  const shakeStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.value }],
+  const scanLineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scanY.value }],
   }));
 
-  const submitCode = useCallback(
-    async (rawInput: string) => {
-      setError(null);
-      const cleaned = extractInviteCode(rawInput);
-      if (!cleaned) {
-        setError('Enter the invite code from your friend’s screen.');
-        triggerShake();
+  const submitCode = async (rawInput: string, fromScanner = false) => {
+    setInlineError(null);
+    setErrorMessage(null);
+    setJoining(true);
+    const res = await previewInviteByCode(rawInput);
+    setJoining(false);
+    setScannedLock(false);
+
+    if (!res.ok) {
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      }
+      if (!fromScanner && res.reason === 'invalid_format') {
+        setInlineError(res.error);
         return;
       }
-
-      setJoining(true);
-      const { data: previewData } = await supabase
-        .rpc('preview_group_by_code', { p_code: cleaned })
-        .maybeSingle();
-
-      setJoining(false);
-      if (previewData && typeof previewData === 'object') {
-        const row = previewData as {
-          name?: string;
-          total_cents?: number;
-          member_count?: number;
-          paid_by?: string;
-        };
-        setPreview({
-          code: cleaned,
-          name: row.name,
-          totalCents: row.total_cents,
-          memberCount: row.member_count,
-          paidBy: row.paid_by,
-        });
-      } else {
-        setPreview({ code: cleaned });
-      }
-    },
-    [triggerShake]
-  );
-
-  const confirmJoin = async () => {
-    if (!preview) return;
-    setJoining(true);
-    const { data: groupId, error: rpcErr } = await supabase.rpc('join_group_by_code', {
-      p_code: preview.code,
-      p_member_name: profile?.display_name ?? null,
-    });
-
-    if (rpcErr || !groupId) {
-      setPreview(null);
-      setError(rpcErr?.message ?? 'Split not found for that code.');
-      setJoining(false);
-      setScannedLock(false);
-      triggerShake();
+      setErrorMessage(res.error);
+      setQrFailed(true);
       return;
     }
 
     if (Platform.OS !== 'web') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
 
-    setPreview(null);
-    setJoining(false);
-    setCode('');
-    setScannedLock(false);
-    router.replace(`/group/${groupId}`);
+    const row = res.preview;
+    router.push({
+      pathname: '/group/join-split',
+      params: {
+        code: row.invite_code,
+        name: row.name,
+        totalCents: String(row.total_cents),
+        itemCount: String(row.item_count),
+        memberCount: String(row.member_count),
+        paidBy: row.paid_by,
+        membersJson: JSON.stringify(row.members ?? []),
+      },
+    });
   };
-
-  const handleJoin = () => submitCode(code);
 
   const handleBarcodeScanned = ({ data }: { data: string }) => {
-    if (scannedLock || joining) return;
+    const now = Date.now();
+    if (
+      scannedLock ||
+      joining ||
+      (lastScannedRef.current.value === data && now - lastScannedRef.current.ts < 3000)
+    ) {
+      return;
+    }
+    lastScannedRef.current = { value: data, ts: now };
     setScannedLock(true);
     setCode(data);
-    submitCode(data);
+    submitCode(data, true);
   };
 
+  // Screen J6: "That QR didn't work" (from Sheet 3)
+  if (qrFailed) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top']}>
+        <View
+          style={[
+            styles.errorScreenWrap,
+            { paddingBottom: Math.max(insets.bottom, 20) + 12 },
+          ]}>
+          <View style={styles.errorCenter}>
+            <TakoMascot state="confused" size={148} interactive />
+            <Text style={[styles.errorTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+              That QR didn’t work
+            </Text>
+            <Text style={[styles.errorSubtitle, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
+              {errorMessage || 'It may have expired, or it isn’t a Tako code. Ask your friend to refresh it and try again.'}
+            </Text>
+          </View>
+
+          <View style={styles.errorActions}>
+            <Pressable
+              onPress={() => {
+                setQrFailed(false);
+                setScannedLock(false);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Try again"
+              style={({ pressed }) => [
+                styles.tryAgainBtn,
+                { backgroundColor: palette.coral },
+                pressed && { opacity: 0.92 },
+              ]}>
+              <Ionicons name="refresh" size={18} color={palette.plum} />
+              <Text style={[styles.tryAgainText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
+                Try again
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setQrFailed(false);
+                setScannedLock(false);
+                setFocusInput(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Enter code instead"
+              style={({ pressed }) => [
+                styles.enterCodeBtn,
+                { backgroundColor: palette.surface, borderColor: palette.border },
+                pressed && { opacity: 0.85 },
+              ]}>
+              <Text style={[styles.enterCodeText, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
+                Enter code instead
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Screen J1: "Scan to join" (Dark Plum full-screen experience from Sheet 3)
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: palette.plum }]} edges={['top']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}>
@@ -176,39 +196,19 @@ export default function ScanScreen() {
               onPress={() => router.back()}
               accessibilityRole="button"
               accessibilityLabel="Go back"
-              style={[styles.topIconBtn, { backgroundColor: palette.surface, borderColor: palette.border }]}
-              hitSlop={8}>
-              <Ionicons name="chevron-back" size={20} color={palette.ink} />
+              style={styles.backBtn}
+              hitSlop={10}>
+              <Ionicons name="chevron-back" size={20} color="#FFF6EE" />
             </Pressable>
-            <Text style={[styles.topTitle, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
+            <Text style={[styles.topTitle, { fontFamily: TakoFonts.bold }]}>
               Join a split
             </Text>
-            <Pressable
-              onPress={() => setTorchOn((t) => !t)}
-              disabled={!permission?.granted || Platform.OS === 'web'}
-              accessibilityRole="button"
-              accessibilityLabel={torchOn ? 'Turn off flashlight' : 'Turn on flashlight'}
-              style={[
-                styles.topIconBtn,
-                {
-                  backgroundColor: torchOn ? palette.coralSoft : palette.surface,
-                  borderColor: torchOn ? palette.coralAccent : palette.border,
-                  opacity: permission?.granted && Platform.OS !== 'web' ? 1 : 0.4,
-                },
-              ]}
-              hitSlop={8}>
-              <Ionicons
-                name={torchOn ? 'flashlight' : 'flashlight-outline'}
-                size={20}
-                color={torchOn ? palette.coralAccent : palette.ink}
-              />
-            </Pressable>
           </View>
 
-          <Text style={[styles.title, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+          <Text style={[styles.title, { fontFamily: TakoFonts.black }]}>
             Scan to join
           </Text>
-          <Text style={[styles.subtitle, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
+          <Text style={[styles.subtitle, { fontFamily: TakoFonts.regular }]}>
             Point your camera at the QR on a friend’s phone to hop into their split.
           </Text>
 
@@ -218,170 +218,99 @@ export default function ScanScreen() {
               <TakoMascot state="peek" size={110} hidePeekCard interactive />
             </View>
 
-            <View style={styles.viewfinder}>
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== 'web' && !permission?.granted) {
+                  if (permission && !permission.canAskAgain) {
+                    Linking.openSettings().catch(() => {});
+                  } else {
+                    requestPermission();
+                  }
+                } else if (code.trim()) {
+                  submitCode(code);
+                } else {
+                  setFocusInput(true);
+                }
+              }}
+              style={styles.viewfinder}>
               {Platform.OS !== 'web' && permission?.granted ? (
                 <CameraView
                   style={StyleSheet.absoluteFill}
                   facing="back"
-                  enableTorch={torchOn}
                   barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
                   onBarcodeScanned={handleBarcodeScanned}
                 />
+              ) : Platform.OS !== 'web' && permission && !permission.canAskAgain ? (
+                <View style={styles.qrInner}>
+                  <Ionicons name="camera-outline" size={44} color="#FFF6EE" />
+                  <Text style={[styles.permDeniedText, { fontFamily: TakoFonts.bold }]}>
+                    Camera access denied.{'\n'}Tap to open Settings.
+                  </Text>
+                </View>
               ) : (
                 <View style={styles.qrInner}>
-                  <Ionicons name="qr-code" size={88} color="#FFF6EE" />
-                  {Platform.OS !== 'web' ? (
-                    <Pressable
-                      onPress={() => requestPermission()}
-                      style={[styles.permBtn, { backgroundColor: palette.coral }]}>
-                      <Text style={[styles.permText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
-                        Enable camera
-                      </Text>
-                    </Pressable>
-                  ) : (
-                    <Text style={[styles.webHint, { fontFamily: TakoFonts.regular }]}>
-                      Enter code below
-                    </Text>
-                  )}
+                  <Ionicons name="qr-code" size={118} color="#FFF6EE" />
                 </View>
               )}
+
+              {/* Animated Horizontal Coral Scan Line */}
+              <Animated.View
+                style={[styles.scanLine, { backgroundColor: palette.coral }, scanLineStyle]}
+                pointerEvents="none"
+              />
 
               {/* 4 Coral Corners */}
               <View style={[styles.corner, styles.tl, { borderColor: palette.coral }]} pointerEvents="none" />
               <View style={[styles.corner, styles.tr, { borderColor: palette.coral }]} pointerEvents="none" />
               <View style={[styles.corner, styles.bl, { borderColor: palette.coral }]} pointerEvents="none" />
               <View style={[styles.corner, styles.br, { borderColor: palette.coral }]} pointerEvents="none" />
-            </View>
+            </Pressable>
           </View>
 
           {/* Code Input */}
           <View style={styles.codeSection}>
-            <Text style={[styles.orLabel, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
+            <Text style={[styles.orLabel, { fontFamily: TakoFonts.regular }]}>
               Or enter the code
             </Text>
 
-            <Animated.View
-              style={[
-                styles.codeBox,
-                {
-                  backgroundColor: palette.surface,
-                  borderColor: error ? palette.destructive : palette.border,
-                },
-                shakeStyle,
-              ]}>
+            <View style={styles.codeBox}>
               <TextInput
                 value={code}
-                onChangeText={(txt) => {
-                  setCode(txt);
-                  if (error) setError(null);
+                onChangeText={(t) => {
+                  setCode(t);
+                  if (inlineError) setInlineError(null);
                 }}
-                placeholder="e.g. TAKO-4821"
-                placeholderTextColor={palette.mute}
+                autoFocus={focusInput}
+                placeholder="e.g. TAKO-4821AB"
+                placeholderTextColor="rgba(43, 27, 61, 0.35)"
                 autoCapitalize="characters"
                 autoCorrect={false}
-                style={[
-                  styles.codeInput,
-                  {
-                    backgroundColor: palette.surfaceAlt,
-                    color: palette.ink,
-                    fontFamily: code.length > 0 ? TakoFonts.black : TakoFonts.regular,
-                  },
-                ]}
+                maxLength={24}
+                style={[styles.codeInput, { fontFamily: TakoFonts.black }]}
               />
               <Pressable
-                onPress={handleJoin}
+                onPress={() => submitCode(code)}
                 disabled={joining}
                 accessibilityRole="button"
                 accessibilityLabel="Join split by code"
                 style={({ pressed }) => [
                   styles.joinBtn,
-                  { backgroundColor: palette.coral },
+                  { backgroundColor: palette.ctaBg },
                   pressed && { opacity: 0.9 },
                 ]}>
                 {joining ? (
-                  <ActivityIndicator color={palette.plum} />
+                  <ActivityIndicator color={palette.ctaInk} />
                 ) : (
-                  <Text style={[styles.joinText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
+                  <Text style={[styles.joinText, { color: palette.ctaInk, fontFamily: TakoFonts.bold }]}>
                     Join
                   </Text>
                 )}
               </Pressable>
-            </Animated.View>
-
-            {error && (
-              <Text style={[styles.errorText, { color: palette.destructive, fontFamily: TakoFonts.bold }]}>
-                {error}
-              </Text>
-            )}
+            </View>
+            <FieldError message={inlineError} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* Split Preview Modal before joining */}
-      <Modal
-        visible={!!preview}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
-          setPreview(null);
-          setScannedLock(false);
-        }}>
-        <View style={styles.modalBackdrop}>
-          <View
-            style={[
-              styles.previewCard,
-              {
-                backgroundColor: palette.surface,
-                paddingBottom: Math.max(insets.bottom, 24) + 8,
-              },
-            ]}>
-            <Text style={[styles.previewKicker, { color: palette.coralAccent, fontFamily: TakoFonts.bold }]}>
-              TAKO-{preview?.code}
-            </Text>
-            <Text style={[styles.previewTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-              {preview?.name ?? 'Join this split?'}
-            </Text>
-            {preview?.name ? (
-              <Text style={[styles.previewMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
-                {preview.totalCents !== undefined ? `${formatPeso(preview.totalCents)} · ` : ''}
-                {preview.memberCount !== undefined
-                  ? `${preview.memberCount} ${preview.memberCount === 1 ? 'person' : 'people'}`
-                  : ''}
-                {preview.paidBy ? ` · paid by ${preview.paidBy}` : ''}
-              </Text>
-            ) : (
-              <Text style={[styles.previewMeta, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
-                Tap Join to hop into this split and see the items.
-              </Text>
-            )}
-
-            <View style={styles.previewActions}>
-              <Pressable
-                onPress={() => {
-                  setPreview(null);
-                  setScannedLock(false);
-                }}
-                style={[styles.cancelPreviewBtn, { borderColor: palette.border }]}>
-                <Text style={[styles.cancelPreviewText, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
-                  Cancel
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={confirmJoin}
-                disabled={joining}
-                style={[styles.confirmJoinBtn, { backgroundColor: palette.coral }]}>
-                {joining ? (
-                  <ActivityIndicator color={palette.plum} />
-                ) : (
-                  <Text style={[styles.confirmJoinText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
-                    Join split
-                  </Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -393,66 +322,54 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 8,
+    justifyContent: 'space-between',
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 14,
   },
-  topIconBtn: {
+  backBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   topTitle: {
-    fontSize: 16,
+    color: '#FFF6EE',
+    fontSize: 15,
   },
   title: {
+    color: '#FFF6EE',
     fontSize: 28,
-    marginBottom: 6,
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
+    color: '#C7B8DB',
+    fontSize: 13,
+    lineHeight: 19,
   },
   viewfinderWrap: {
     alignItems: 'center',
-    marginTop: 22,
-    marginBottom: 24,
+    marginTop: 12,
+    marginBottom: 16,
   },
   mascotPeek: {
-    marginBottom: -20,
+    marginBottom: -22,
     zIndex: 0,
   },
   viewfinder: {
-    width: 248,
-    height: 248,
+    width: 244,
+    height: 244,
     borderRadius: 28,
-    backgroundColor: '#2B1B3D',
+    backgroundColor: '#3A2850',
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
-  },
-  permBtn: {
-    marginTop: 12,
-    paddingHorizontal: 16,
-    minHeight: 40,
-    borderRadius: Radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  permText: {
-    fontSize: 13,
-  },
-  webHint: {
-    marginTop: 10,
-    color: '#D5C7E8',
-    fontSize: 12,
   },
   corner: {
     position: 'absolute',
@@ -491,34 +408,46 @@ const styles = StyleSheet.create({
   qrInner: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  permDeniedText: {
+    color: '#FFF6EE',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   scanLine: {
     position: 'absolute',
-    width: 170,
+    width: 176,
     height: 2.5,
     borderRadius: 2,
   },
   codeSection: {
-    gap: 10,
+    gap: 8,
   },
   orLabel: {
-    fontSize: 13,
+    color: '#C7B8DB',
+    fontSize: 12,
   },
   codeBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    backgroundColor: '#3A2850',
     borderRadius: Radii.xl,
-    borderWidth: 1,
     padding: 6,
   },
   codeInput: {
     flex: 1,
+    backgroundColor: '#FFF6EE',
+    color: '#2B1B3D',
     borderRadius: Radii.lg,
     paddingHorizontal: 16,
     paddingVertical: 13,
     fontSize: 16,
     letterSpacing: 1.2,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as never } : {}),
   },
   joinBtn: {
     paddingHorizontal: 22,
@@ -529,58 +458,61 @@ const styles = StyleSheet.create({
   joinText: {
     fontSize: 15,
   },
-  errorText: {
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 4,
+  invalidDemoLink: {
+    alignItems: 'center',
+    paddingTop: 4,
   },
-  modalBackdrop: {
+  invalidDemoText: {
+    color: '#9B8AB4',
+    fontSize: 11,
+  },
+  errorScreenWrap: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    justifyContent: 'space-between',
   },
-  previewCard: {
-    borderTopLeftRadius: Radii.xl,
-    borderTopRightRadius: Radii.xl,
-    padding: 22,
-    gap: 8,
+  errorCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
-  previewKicker: {
-    fontSize: 12,
-    letterSpacing: 1.4,
+  errorTitle: {
+    fontSize: 24,
+    marginTop: 8,
+    textAlign: 'center',
   },
-  previewTitle: {
-    fontSize: 22,
-  },
-  previewMeta: {
+  errorSubtitle: {
     fontSize: 14,
     lineHeight: 20,
-    fontVariant: ['tabular-nums'],
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
-  previewActions: {
-    flexDirection: 'row',
+  errorActions: {
     gap: 10,
-    marginTop: 12,
   },
-  cancelPreviewBtn: {
-    flex: 1,
-    minHeight: 48,
+  tryAgainBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: Radii.pill,
+    minHeight: 52,
+    paddingVertical: 15,
+  },
+  tryAgainText: {
+    fontSize: 16,
+  },
+  enterCodeBtn: {
     borderRadius: Radii.pill,
     borderWidth: 1,
+    minHeight: 50,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelPreviewText: {
-    fontSize: 15,
-  },
-  confirmJoinBtn: {
-    flex: 1.4,
-    minHeight: 48,
-    borderRadius: Radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmJoinText: {
+  enterCodeText: {
     fontSize: 15,
   },
 });

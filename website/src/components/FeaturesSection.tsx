@@ -21,6 +21,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { ArmScreenshot } from './eight-arms/ArmScreenshot';
 import { type ArmFeature, EIGHT_ARMS } from './eight-arms/armsData';
+import { ReceiptLineHeader } from './ReceiptThread';
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
@@ -282,19 +283,26 @@ export function FeaturesSection() {
       id="features"
       ref={sectionRef}
       aria-labelledby="eight-arms-heading"
-      className="relative overflow-x-clip border-t border-[var(--border)]/60 py-20 sm:py-28 lg:py-32"
+      className="tako-grain relative overflow-x-clip bg-[var(--cream-block)] py-20 sm:py-28 lg:py-32"
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        {/* Heading */}
-        <div className="mx-auto max-w-2xl text-center">
+        <ReceiptLineHeader
+          code="03"
+          label="Eight arms"
+          amount="8 real tools"
+          className="mx-auto max-w-3xl"
+        />
+
+        {/* Centered Editorial Heading */}
+        <div className="mx-auto mt-8 max-w-2xl text-center">
           <h2
             id="eight-arms-heading"
-            className="font-[family-name:var(--font-display)] text-[clamp(2rem,4.5vw,3.35rem)] font-black leading-[1.06] tracking-[-0.03em] text-[var(--ink)] text-balance"
+            className="font-[family-name:var(--font-display)] text-[clamp(2.1rem,5vw,3.6rem)] font-black leading-[1.02] tracking-[-0.03em] text-[var(--ink)] text-balance"
           >
             Eight arms. Zero awkward math.
           </h2>
-          <p className="mt-3 text-base text-[var(--mute)] sm:text-lg">
-            Hover or tap any arm to see how Tako handles the table.
+          <p className="mt-2 font-[family-name:var(--font-hand)] text-2xl font-bold text-[var(--coral-accent)]">
+            hover or tap an arm to peek inside ↓
           </p>
         </div>
 
@@ -317,8 +325,16 @@ export function FeaturesSection() {
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
           >
-            {/* Soft radial halo behind Tako */}
-            <circle cx="500" cy="296" r="142" fill="var(--coral-soft)" opacity="0.45" />
+            {/* Dashed receipt ring framing Tako (replaces generic pastel circle blob) */}
+            <circle
+              cx="500"
+              cy="296"
+              r="142"
+              stroke="var(--border)"
+              strokeWidth="2"
+              strokeDasharray="6 8"
+              opacity="0.7"
+            />
 
             {/* Eight radiating SVG arms */}
             {EIGHT_ARMS.map((arm, idx) => {
@@ -640,8 +656,7 @@ export function FeaturesSection() {
           <div
             ref={carouselRef}
             onScroll={handleCarouselScroll}
-            className="-mx-5 mt-3 flex snap-x snap-mandatory gap-4 overflow-x-auto px-[12%] pb-4 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-[22%]"
-            style={{ touchAction: 'pan-x pan-y' }}
+            className="-mx-5 mt-3 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-[12%] pb-4 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-[22%]"
           >
             {EIGHT_ARMS.map((arm, idx) => {
               const Icon = ARM_ICONS[arm.id] ?? SlidersHorizontal;

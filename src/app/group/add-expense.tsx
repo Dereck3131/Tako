@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -13,28 +13,35 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Radii, TakoFonts, formatPeso } from '@/constants/theme';
+import { FieldError } from '@/components/FieldError';
+import { PrimaryButton } from '@/components/PrimaryButton';
+import { SegmentedControl } from '@/components/SegmentedControl';
+import { Radii, TakoFonts, formatPeso, getCardElevation } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useTakoTheme } from '@/context/ThemeContext';
-import { splitEqually } from '@/lib/split';
-import { supabase } from '@/lib/supabase';
+import { fetchAndCacheSnapshot } from '@/lib/offlineSync';
+import { parsePesoToCents, sanitizeAmountInput } from '@/lib/money';
+import { addSingleExpense } from '@/lib/takoData';
+import { addExpenseSchema, validateCustomAmountsSum } from '@/lib/validation';
 import type { GroupMember } from '@/types/tako';
 
 const CATEGORIES = [
-  { key: 'food', label: 'Food', emoji: '🍜' },
-  { key: 'drinks', label: 'Drinks', emoji: '🍻' },
-  { key: 'ride', label: 'Ride', emoji: '🚕' },
-  { key: 'stay', label: 'Stay', emoji: '🏨' },
-  { key: 'other', label: 'Other', emoji: '🧾' },
+  { key: 'food', label: 'Food' },
+  { key: 'drinks', label: 'Drinks' },
+  { key: 'ride', label: 'Ride' },
+  { key: 'stay', label: 'Stay' },
+  { key: 'other', label: 'Other' },
 ] as const;
 
 export default function AddExpenseScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const router = useRouter();
-  const { palette } = useTakoTheme();
+  const { palette, isDark } = useTakoTheme();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
+  const cardElevation = getCardElevation(isDark);
 
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,121 +56,123 @@ export default function AddExpenseScreen() {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ amount?: string; title?: string; split?: string }>({});
+
+  const amountRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const titleRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
-    if (!groupId) return;
-    supabase
-      .from('group_members')
-      .select('*')
-      .eq('group_id', groupId)
-      .order('created_at', { ascending: true })
-      .then(({ data }) => {
-        const list = (data ?? []) as GroupMember[];
-        setMembers(list);
-        const me = list.find((m) => m.user_id === user?.id) ?? list[0];
-        if (me) setPaidById(me.id);
-        setIncludedIds(list.map((m) => m.id));
-        setLoading(false);
-      });
+    if (!groupId || !user?.id) return;
+    fetchAndCacheSnapshot(user.id).then(({ snapshot }) => {
+      const list = snapshot.members
+        .filter((m) => m.group_id === groupId)
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+      setMembers(list);
+      const me = list.find((m) => m.user_id === user.id) ?? list[0];
+      if (me) setPaidById(me.id);
+      setIncludedIds(list.map((m) => m.id));
+      setLoading(false);
+    });
   }, [groupId, user?.id]);
 
-  const totalCents = useMemo(() => {
-    const parsed = parseFloat(amountText.replace(/[^0-9.]/g, ''));
-    if (Number.isNaN(parsed) || parsed <= 0) return 0;
-    return Math.round(parsed * 100);
-  }, [amountText]);
+  const amountParse = useMemo(
+    () => parsePesoToCents(amountText, { allowZero: false }),
+    [amountText]
+  );
+  const totalCents = amountParse.ok ? amountParse.cents : 0;
 
-  const exactSumCents = useMemo(() => {
-    return members.reduce((sum, m) => {
-      const val = parseFloat((exactAmounts[m.id] ?? '').replace(/[^0-9.]/g, ''));
-      if (Number.isNaN(val) || val < 0) return sum;
-      return sum + Math.round(val * 100);
-    }, 0);
+  const exactCentsList = useMemo(() => {
+    return members.map((m) => {
+      const parsed = parsePesoToCents(exactAmounts[m.id] ?? '', { allowZero: true });
+      return parsed.ok ? parsed.cents : -1;
+    });
   }, [members, exactAmounts]);
 
+  const exactValidation = useMemo(
+    () => validateCustomAmountsSum(totalCents, exactCentsList),
+    [totalCents, exactCentsList]
+  );
+
   const toggleMember = (memberId: string) => {
+    setFieldErrors((e) => ({ ...e, split: undefined }));
     setIncludedIds((prev) =>
       prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]
     );
   };
 
+  const validateFieldOnBlur = (field: 'amount' | 'title') => {
+    if (field === 'amount') {
+      const res = parsePesoToCents(amountText, { allowZero: false });
+      setFieldErrors((prev) => ({ ...prev, amount: res.ok ? undefined : res.error }));
+    } else {
+      const res = addExpenseSchema.shape.title.safeParse(title);
+      setFieldErrors((prev) => ({
+        ...prev,
+        title: res.success ? undefined : res.error.issues[0]?.message,
+      }));
+    }
+  };
+
   const handleSave = async () => {
+    if (submitLockRef.current || saving) return;
     setError(null);
     if (!groupId) return;
-    if (!title.trim()) {
-      setError('Enter a description for this expense.');
-      return;
-    }
-    if (totalCents <= 0) {
-      setError('Enter an amount greater than ₱0.');
-      return;
-    }
-    if (!paidById) {
-      setError('Select who paid.');
-      return;
+
+    const amtRes = parsePesoToCents(amountText, { allowZero: false });
+    const titleRes = addExpenseSchema.shape.title.safeParse(title);
+    const nextErr: { amount?: string; title?: string; split?: string } = {
+      amount: amtRes.ok ? undefined : amtRes.error,
+      title: titleRes.success ? undefined : titleRes.error.issues[0]?.message,
+    };
+
+    if (splitType === 'equal' && includedIds.length === 0) {
+      nextErr.split = 'Select at least one person to split this expense.';
+    } else if (splitType === 'exact' && amtRes.ok) {
+      const sumCheck = validateCustomAmountsSum(amtRes.cents, exactCentsList);
+      if (!sumCheck.ok) nextErr.split = sumCheck.error;
     }
 
-    let splitRows: { member_id: string; amount_cents: number }[] = [];
-
-    if (splitType === 'equal') {
-      if (includedIds.length === 0) {
-        setError('Select at least one person to split with.');
-        return;
+    setFieldErrors(nextErr);
+    if (nextErr.amount || nextErr.title || nextErr.split) {
+      if (nextErr.amount) amountRef.current?.focus();
+      else if (nextErr.title) titleRef.current?.focus();
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       }
-      splitRows = splitEqually(totalCents, includedIds);
-    } else {
-      if (Math.abs(exactSumCents - totalCents) > 1) {
-        setError(
-          `Exact amounts (${formatPeso(exactSumCents)}) must equal total (${formatPeso(totalCents)}).`
-        );
-        return;
-      }
-      splitRows = members.map((m) => {
-        const val = parseFloat((exactAmounts[m.id] ?? '').replace(/[^0-9.]/g, ''));
-        const cents = Number.isNaN(val) || val < 0 ? 0 : Math.round(val * 100);
-        return { member_id: m.id, amount_cents: cents };
-      });
+      return;
     }
+    if (!amtRes.ok || !titleRes.success) return;
 
+    submitLockRef.current = true;
     setSaving(true);
-    const { data: exp, error: expErr } = await supabase
-      .from('expenses')
-      .insert({
-        group_id: groupId,
-        title: title.trim(),
-        amount_cents: totalCents,
-        paid_by_member_id: paidById,
-        split_type: splitType,
-        category,
-      })
-      .select()
-      .single();
+    const res = await addSingleExpense({
+      groupId,
+      title: titleRes.data,
+      amountCents: amtRes.cents,
+      category,
+      paidById,
+      splitType,
+      includedIds,
+      exactSplits: members.map((m, idx) => ({
+        member_id: m.id,
+        amount_cents: Math.max(0, exactCentsList[idx] ?? 0),
+      })),
+    });
+    setSaving(false);
+    submitLockRef.current = false;
 
-    if (expErr || !exp) {
-      setError(expErr?.message ?? 'Failed to save expense.');
-      setSaving(false);
-      return;
-    }
-
-    const { error: splitErr } = await supabase.from('expense_splits').insert(
-      splitRows.map((r) => ({
-        expense_id: exp.id,
-        member_id: r.member_id,
-        amount_cents: r.amount_cents,
-      }))
-    );
-
-    if (splitErr) {
-      setError(splitErr.message);
-      setSaving(false);
+    if (!res.ok) {
+      setError(res.error);
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      }
       return;
     }
 
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
-
-    setSaving(false);
     router.back();
   };
 
@@ -180,17 +189,21 @@ export default function AddExpenseScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+          style={styles.closeBtn}>
           <Ionicons name="close" size={26} color={palette.ink} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
           Add Expense
         </Text>
-        <View style={{ width: 26 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -200,35 +213,61 @@ export default function AddExpenseScreen() {
             style={[
               styles.amountCard,
               { backgroundColor: palette.surface, borderColor: palette.border },
+              cardElevation,
             ]}>
-            <Text style={[styles.pesoSign, { color: palette.coralAccent, fontFamily: TakoFonts.black }]}>
+            <Text
+              style={[
+                styles.pesoSign,
+                {
+                  color: totalCents > 0 ? palette.ctaBg : palette.mute,
+                  fontFamily: TakoFonts.black,
+                },
+              ]}>
               ₱
             </Text>
             <TextInput
+              ref={amountRef}
               value={amountText}
-              onChangeText={setAmountText}
+              onChangeText={(t) => {
+                setAmountText(sanitizeAmountInput(t));
+                if (fieldErrors.amount) setFieldErrors((e) => ({ ...e, amount: undefined }));
+              }}
+              onBlur={() => validateFieldOnBlur('amount')}
               placeholder="0.00"
-              placeholderTextColor={palette.mute}
+              placeholderTextColor={isDark ? 'rgba(185,171,201,0.45)' : 'rgba(106,106,106,0.45)'}
               keyboardType="decimal-pad"
               inputMode="decimal"
               style={[styles.amountInput, { color: palette.ink, fontFamily: TakoFonts.black }]}
             />
           </View>
+          <FieldError message={fieldErrors.amount} />
 
           {/* Description */}
           <Text style={[styles.label, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
             What was it for?
           </Text>
           <TextInput
+            ref={titleRef}
             value={title}
-            onChangeText={setTitle}
+            onChangeText={(t) => {
+              setTitle(t);
+              if (fieldErrors.title) setFieldErrors((e) => ({ ...e, title: undefined }));
+            }}
+            onBlur={() => validateFieldOnBlur('title')}
             placeholder="e.g. Ramen Nagi, Grab, Groceries"
             placeholderTextColor={palette.mute}
+            maxLength={40}
             style={[
               styles.input,
-              { backgroundColor: palette.surface, color: palette.ink, borderColor: palette.border, fontFamily: TakoFonts.regular },
+              {
+                backgroundColor: palette.surface,
+                color: palette.ink,
+                borderColor: fieldErrors.title ? palette.destructive : palette.border,
+                fontFamily: TakoFonts.regular,
+              },
             ]}
           />
+          <FieldError message={fieldErrors.title} />
 
           {/* Category */}
           <Text style={[styles.label, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
@@ -245,7 +284,6 @@ export default function AddExpenseScreen() {
                     styles.catChip,
                     { backgroundColor: active ? palette.chipOn : palette.chip },
                   ]}>
-                  <Text style={{ fontSize: 16 }}>{c.emoji}</Text>
                   <Text
                     style={[
                       styles.chipText,
@@ -296,28 +334,14 @@ export default function AddExpenseScreen() {
           <Text style={[styles.label, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
             Split Method
           </Text>
-          <View style={[styles.segment, { backgroundColor: palette.chip }]}>
-            {(['equal', 'exact'] as const).map((type) => {
-              const active = splitType === type;
-              return (
-                <Pressable
-                  key={type}
-                  onPress={() => setSplitType(type)}
-                  style={[styles.segBtn, active && { backgroundColor: palette.chipOn }]}>
-                  <Text
-                    style={[
-                      styles.segText,
-                      {
-                        color: active ? palette.chipOnInk : palette.ink,
-                        fontFamily: TakoFonts.bold,
-                      },
-                    ]}>
-                    {type === 'equal' ? 'Split Equally' : 'Exact Amounts'}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <SegmentedControl
+            options={[
+              { key: 'equal', label: 'Split Equally' },
+              { key: 'exact', label: 'Exact Amounts' },
+            ]}
+            value={splitType}
+            onChange={setSplitType}
+          />
 
           {/* Split Members */}
           <View
@@ -364,9 +388,13 @@ export default function AddExpenseScreen() {
                       <Text style={{ color: palette.mute, fontFamily: TakoFonts.bold }}>₱</Text>
                       <TextInput
                         value={exactAmounts[m.id] ?? ''}
-                        onChangeText={(txt) =>
-                          setExactAmounts((prev) => ({ ...prev, [m.id]: txt }))
-                        }
+                        onChangeText={(txt) => {
+                          setFieldErrors((e) => ({ ...e, split: undefined }));
+                          setExactAmounts((prev) => ({
+                            ...prev,
+                            [m.id]: sanitizeAmountInput(txt),
+                          }));
+                        }}
                         placeholder="0"
                         placeholderTextColor={palette.mute}
                         keyboardType="decimal-pad"
@@ -379,36 +407,39 @@ export default function AddExpenseScreen() {
                     </View>
                   </View>
                 ))}
-                <Text style={[styles.remainingText, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
-                  Remaining: {formatPeso(totalCents - exactSumCents)}
+                <Text
+                  style={[
+                    styles.remainingText,
+                    {
+                      color: exactValidation.ok ? palette.teal : palette.destructive,
+                      fontFamily: TakoFonts.bold,
+                    },
+                  ]}>
+                  {exactValidation.ok ? 'Balanced ₱0' : exactValidation.error}
                 </Text>
               </>
             )}
           </View>
+          <FieldError message={fieldErrors.split} />
 
           {error && (
             <Text style={[styles.errorText, { color: palette.coralAccent, fontFamily: TakoFonts.bold }]}>
               {error}
             </Text>
           )}
-
-          <Pressable
-            onPress={handleSave}
-            disabled={saving}
-            style={({ pressed }) => [
-              styles.saveBtn,
-              { backgroundColor: palette.coralAccent },
-              pressed && { opacity: 0.9 },
-            ]}>
-            {saving ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={[styles.saveBtnText, { fontFamily: TakoFonts.bold }]}>
-                Save Expense
-              </Text>
-            )}
-          </Pressable>
         </ScrollView>
+
+        <View
+          style={[
+            styles.bottomBar,
+            { backgroundColor: palette.bg, paddingBottom: Math.max(insets.bottom, 16) },
+          ]}>
+          <PrimaryButton
+            label="Save Expense"
+            onPress={handleSave}
+            loading={saving}
+          />
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -422,12 +453,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 10,
+  },
+  closeBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: { fontSize: 19 },
   scroll: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 24,
     gap: 12,
   },
   amountCard: {
@@ -445,6 +482,8 @@ const styles = StyleSheet.create({
     fontSize: 40,
     minWidth: 120,
     textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as never } : {}),
   },
   label: { fontSize: 13, marginTop: 4 },
   input: {
@@ -453,14 +492,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 16,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as never } : {}),
   },
-  chipRow: { gap: 8, paddingVertical: 2 },
+  chipRow: { gap: 8, paddingVertical: 2, paddingRight: 20 },
   catChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    minHeight: 40,
     borderRadius: Radii.pill,
   },
   chipText: { fontSize: 14 },
@@ -518,14 +558,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
   },
-  saveBtn: {
-    borderRadius: Radii.pill,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  saveBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  bottomBar: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
   },
 });

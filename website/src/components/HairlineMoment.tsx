@@ -53,8 +53,8 @@ function IsometricCoin({
           cy={cy}
           rx="22"
           ry="9"
-          stroke="var(--coral)"
-          strokeWidth="1.2"
+          stroke="var(--gold)"
+          strokeWidth="1.4"
           strokeDasharray="3 3"
         />
       )}
@@ -63,11 +63,9 @@ function IsometricCoin({
 }
 
 /**
- * Interactive isometric line figure inspired by `hairline-create`:
- * an isometric peso coin stack beside a folded receipt, drawn in clean
- * single-weight strokes (silhouette + one coral highlight stroke).
- * Answers mouse pointers with spring physics; stays in a composed static
- * rest pose on touch devices and when `prefers-reduced-motion` is enabled.
+ * Section 6 — Small, dense detail band:
+ * tight monospace centavo-remainder ledger beside the interactive isometric
+ * hairline coin stack (no outer rounded card wrapper).
  */
 export function HairlineMoment() {
   const reducedMotion = useReducedMotion();
@@ -95,86 +93,107 @@ export function HairlineMoment() {
 
   return (
     <section
-      aria-label="Isometric coin stack interactive accent"
-      className="border-t border-[var(--border)]/60 py-16 sm:py-20"
+      aria-label="Exact centavo ledger detail"
+      className="border-y-2 border-dashed border-[var(--border)] bg-[var(--bg)] py-12 sm:py-14"
     >
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
+      <div
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+        className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-5 sm:px-8 lg:grid-cols-12"
+      >
+        {/* Left: Small dense editorial copy */}
+        <div className="lg:col-span-4">
+          <h2 className="font-[family-name:var(--font-display)] text-xl font-black tracking-[-0.02em] text-[var(--ink)] sm:text-2xl">
+            Every centavo accounted for.
+          </h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-[var(--mute)]">
+            Stored in integer centavos so uneven splits distribute remainders cleanly—no missing
+            ₱0.01s at the end of the night.
+          </p>
+        </div>
+
+        {/* Center: Dense tabular ledger proof */}
+        <div className="border-y border-dashed border-[var(--border)] py-3 font-mono text-xs leading-relaxed text-[var(--ink)] lg:col-span-5 lg:border-x lg:border-y-0 lg:px-6">
+          <div className="flex justify-between text-[var(--mute)]">
+            <span>BILL_TOTAL (3 PAX)</span>
+            <span className="font-bold text-[var(--ink)] tabular-nums">₱1,000.00</span>
+          </div>
+          <div className="mt-1.5 flex justify-between">
+            <span>SHARE_01 (+₱0.01 rem)</span>
+            <span className="font-bold text-[var(--coral-accent)] tabular-nums">₱333.34</span>
+          </div>
+          <div className="flex justify-between">
+            <span>SHARE_02</span>
+            <span className="tabular-nums">₱333.33</span>
+          </div>
+          <div className="flex justify-between">
+            <span>SHARE_03</span>
+            <span className="tabular-nums">₱333.33</span>
+          </div>
+          <div className="mt-1.5 flex justify-between border-t border-dashed border-[var(--border)] pt-1.5 font-bold">
+            <span>REMAINDER_DRIFT</span>
+            <span className="tabular-nums">₱0.00</span>
+          </div>
+        </div>
+
+        {/* Right: Isometric coin stack + folded receipt */}
         <div
-          onPointerMove={handlePointerMove}
-          onPointerLeave={handlePointerLeave}
-          className="relative flex flex-col items-center justify-between gap-8 rounded-2xl border border-[var(--border)] bg-[var(--surface-alt)]/55 px-6 py-10 sm:flex-row sm:px-10"
+          className="relative mx-auto h-36 w-48 shrink-0 select-none lg:col-span-3"
+          role="img"
+          aria-label="Isometric line drawing of stacked coins beside a folded receipt"
         >
-          <div className="max-w-md text-center sm:text-left">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl font-black tracking-[-0.02em] text-[var(--ink)] sm:text-3xl">
-              Every centavo accounted for.
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--mute)] sm:text-base">
-              Uneven splits distribute remainder centavos cleanly — no rounding headaches, no
-              missing ₱1s at the end of the night.
-            </p>
-          </div>
-
-          <div
-            className="relative h-44 w-56 shrink-0 select-none"
-            role="img"
-            aria-label="Isometric line drawing of stacked coins beside a folded receipt"
+          <svg
+            viewBox="0 0 240 180"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-full w-full overflow-visible"
           >
-            <svg
-              viewBox="0 0 240 180"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-full w-full overflow-visible"
-            >
-              {/* Isometric folded receipt prism */}
-              <motion.g style={reducedMotion ? undefined : { x: sx, y: sy }}>
-                <path
-                  d="M28 118 L76 92 L126 118 L78 144 Z"
-                  stroke="var(--ink)"
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                  opacity="0.35"
-                />
-                <path
-                  d="M42 52 L88 28 L132 50 L86 74 Z"
-                  stroke="var(--ink)"
-                  strokeWidth="1.6"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M42 52 V106 L86 128 V74"
-                  stroke="var(--ink)"
-                  strokeWidth="1.6"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M132 50 V104 L86 128"
-                  stroke="var(--ink)"
-                  strokeWidth="1.6"
-                  strokeLinejoin="round"
-                />
-                {/* Receipt linework creases */}
-                <path
-                  d="M54 74 L74 84 M54 88 L74 98 M54 102 L70 110"
-                  stroke="var(--ink)"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  opacity="0.55"
-                />
-              </motion.g>
+            <motion.g style={reducedMotion ? undefined : { x: sx, y: sy }}>
+              <path
+                d="M28 118 L76 92 L126 118 L78 144 Z"
+                stroke="var(--ink)"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+                opacity="0.35"
+              />
+              <path
+                d="M42 52 L88 28 L132 50 L86 74 Z"
+                stroke="var(--ink)"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M42 52 V106 L86 128 V74"
+                stroke="var(--ink)"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M132 50 V104 L86 128"
+                stroke="var(--ink)"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M54 74 L74 84 M54 88 L74 98 M54 102 L70 110"
+                stroke="var(--ink)"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                opacity="0.55"
+              />
+            </motion.g>
 
-              {/* Stacked isometric coins that riffle with depth toward cursor */}
-              {coinLayers.map((layer) => (
-                <IsometricCoin
-                  key={layer}
-                  layer={layer}
-                  isTop={layer === coinLayers.length - 1}
-                  sx={sx}
-                  sy={sy}
-                  reducedMotion={reducedMotion}
-                />
-              ))}
-            </svg>
-          </div>
+            {coinLayers.map((layer) => (
+              <IsometricCoin
+                key={layer}
+                layer={layer}
+                isTop={layer === coinLayers.length - 1}
+                sx={sx}
+                sy={sy}
+                reducedMotion={reducedMotion}
+              />
+            ))}
+          </svg>
         </div>
       </div>
     </section>

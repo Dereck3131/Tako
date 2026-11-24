@@ -70,7 +70,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       ? 'alert-circle-outline'
       : toast?.tone === 'success'
         ? 'checkmark-circle-outline'
-        : 'sparkles-outline';
+        : 'information-circle-outline';
 
   return (
     <ToastContext.Provider value={{ showToast, hideToast }}>

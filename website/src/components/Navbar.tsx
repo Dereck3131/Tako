@@ -139,28 +139,28 @@ export function Navbar() {
             </span>
           </a>
 
-          {/* Desktop nav links */}
+          {/* Minimal centered nav links on desktop */}
           <nav
             aria-label="Primary"
-            className="hidden items-center gap-7 text-sm font-semibold text-[var(--mute)] md:flex"
+            className="hidden items-center gap-8 text-sm font-medium text-[var(--mute)] md:flex"
           >
             {NAV_LINKS.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="inline-flex min-h-11 items-center transition-colors duration-150 hover:text-[var(--ink)]"
+                className="inline-flex min-h-10 items-center transition-colors duration-150 hover:text-[var(--ink)]"
               >
                 {link.label}
               </a>
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
               aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-              className="tako-press inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)]"
+              className="tako-press inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)]/70 bg-transparent text-[var(--ink)] transition-colors hover:bg-[var(--surface-alt)] md:h-10 md:w-10"
             >
               {mounted ? (
                 isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />
@@ -171,9 +171,10 @@ export function Navbar() {
 
             <a
               href="#download"
-              className="tako-press inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-full bg-[var(--cta-bg)] px-4 text-sm font-bold text-[var(--cta-ink)]"
+              className="tako-press inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--border)] bg-[var(--surface)]/80 px-4 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--coral)] hover:text-[var(--cta-bg)]"
             >
-              Get Tako
+              <span>Get Tako</span>
+              <span aria-hidden="true">→</span>
             </a>
 
             {/* Mobile bottom-sheet menu trigger */}
@@ -221,7 +222,7 @@ export function Navbar() {
               style={{
                 paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
               }}
-              className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-[var(--border)] bg-[var(--surface)] px-5 pt-3 shadow-2xl"
+              className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-[var(--border)] bg-[var(--surface)] px-5 pt-3 shadow-2xl"
             >
               {/* Drag handle pill */}
               <div

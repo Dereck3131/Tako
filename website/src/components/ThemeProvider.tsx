@@ -7,7 +7,7 @@ function ThemeColorSync() {
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
-    const color = resolvedTheme === 'dark' ? '#1B1424' : '#FAFAF7';
+    const color = resolvedTheme === 'dark' ? '#150D20' : '#FAFAF7';
     let meta = document.querySelector('meta[name="theme-color"]:not([media])');
     if (!meta) {
       meta = document.createElement('meta');

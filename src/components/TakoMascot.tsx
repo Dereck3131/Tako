@@ -16,6 +16,7 @@ import Animated, {
 import Svg, { Circle, Ellipse, G, Path, Rect, Text as SvgText } from 'react-native-svg';
 
 import { useTakoTheme } from '@/context/ThemeContext';
+import { playSound } from '@/lib/sounds';
 import type { TakoState } from '@/types/tako';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
@@ -191,7 +192,7 @@ export function TakoMascot({
       confettiProgress.value = 0;
     }
 
-    if (activeState === 'think') {
+    if (activeState === 'think' || activeState === 'confused') {
       thinkProgress.value = withRepeat(
         withSequence(
           withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
@@ -251,6 +252,7 @@ export function TakoMascot({
 
   const handlePress = () => {
     if (!interactive) return;
+    playSound('boop');
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
@@ -540,6 +542,15 @@ export function TakoMascot({
                 <ThinkDot cx={130} cy={-26} r={6.5} phase={0.4} progress={thinkProgress} />
               </>
             )}
+
+            {/* Confused question marks */}
+            {activeState === 'confused' && (
+              <>
+                <ConfusedMark x={-6} y={14} fontSize={18} phase={0} progress={thinkProgress} />
+                <ConfusedMark x={112} y={-2} fontSize={20} phase={0.33} progress={thinkProgress} />
+                <ConfusedMark x={126} y={32} fontSize={15} phase={0.66} progress={thinkProgress} />
+              </>
+            )}
           </AnimatedG>
 
           {/* Sleeping Zzz */}
@@ -642,6 +653,38 @@ function ThinkDot({
   });
 
   return <AnimatedCircle cx={cx} cy={cy} r={r} fill="#B9A5E8" animatedProps={animatedProps} />;
+}
+
+function ConfusedMark({
+  x,
+  y,
+  fontSize,
+  phase,
+  progress,
+}: {
+  x: number;
+  y: number;
+  fontSize: number;
+  phase: number;
+  progress: SharedValue<number>;
+}) {
+  const animatedProps = useAnimatedProps(() => {
+    const t = (progress.value + phase) % 1;
+    const opacity = 0.55 + 0.45 * Math.sin(t * Math.PI);
+    const dy = -4 * Math.sin(t * Math.PI);
+    return {
+      opacity,
+      transform: [{ translateY: dy }],
+    };
+  });
+
+  return (
+    <AnimatedG animatedProps={animatedProps}>
+      <SvgText x={x} y={y} fontSize={fontSize} fontWeight="800" fill="#B9A5E8">
+        ?
+      </SvgText>
+    </AnimatedG>
+  );
 }
 
 function SleepZ({

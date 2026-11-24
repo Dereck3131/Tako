@@ -6,12 +6,14 @@ export type TakoState =
   | 'coins'
   | 'peek'
   | 'sleep'
-  | 'sad';
+  | 'sad'
+  | 'confused';
 
 export interface Profile {
   id: string;
   display_name: string;
   avatar_color: string;
+  avatar_url?: string | null;
   payment_handle: string | null;
   created_at: string;
 }
@@ -68,4 +70,16 @@ export interface SimplifiedDebt {
   from: GroupMember;
   to: GroupMember;
   amountCents: number;
+}
+
+export interface Reminder {
+  id: string;
+  group_id: string;
+  from_user_id: string;
+  to_member_id: string;
+  to_user_id: string | null;
+  amount_cents: number;
+  message: string | null;
+  dismissed_at: string | null;
+  created_at: string;
 }

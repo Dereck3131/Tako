@@ -16,13 +16,17 @@ export const TakoColors = {
     // Semantic
     coral: '#FF7A8A',
     coralDeep: '#F0627A',
-    coralAccent: '#E5405E',
+    coralAccent: '#D92D4B',
+    ctaBg: '#D92D4B',
+    ctaInk: '#FFFFFF',
     accent: '#FF7A8A',
     destructive: '#D92D4B',
     destructiveSoft: '#FDE8EC',
     coralSoft: '#FFE8EC',
     teal: '#2EC4B6',
     tealSoft: '#E2F8F5',
+    amber: '#B45309',
+    amberSoft: '#FEF3C7',
     gold: '#FFC857',
     goldSoft: '#FFF5DA',
     lavender: '#B9A5E8',
@@ -45,12 +49,16 @@ export const TakoColors = {
     coral: '#FF7A8A',
     coralDeep: '#F0627A',
     coralAccent: '#FF6B84',
+    ctaBg: '#E5405E',
+    ctaInk: '#FFFFFF',
     accent: '#FF7A8A',
     destructive: '#FF5C77',
     destructiveSoft: '#3D1E2C',
     coralSoft: '#3D2234',
     teal: '#2EC4B6',
     tealSoft: '#19353B',
+    amber: '#FBBF24',
+    amberSoft: '#3D2E14',
     gold: '#FFC857',
     goldSoft: '#3A2F1C',
     lavender: '#B9A5E8',
@@ -117,6 +125,22 @@ export const Radii = {
   xl: 28,
   pill: 999,
 } as const;
+
+export function getCardElevation(isDark: boolean) {
+  if (isDark) return {};
+  return (
+    Platform.select({
+      ios: {
+        shadowColor: '#2B1B3D',
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: { elevation: 1 },
+      web: { boxShadow: '0 2px 8px rgba(43, 27, 61, 0.04)' },
+    }) ?? {}
+  );
+}
 
 export function formatPeso(cents: number): string {
   const abs = Math.abs(cents) / 100;

@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   Platform,
@@ -13,23 +14,33 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SplitRowSkeleton } from '@/components/Skeleton';
-import { TakoMascot } from '@/components/TakoMascot';
-import { Radii, TakoFonts, formatPeso } from '@/constants/theme';
+import { Radii, TakoFonts, formatPeso, getCardElevation } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useTakoTheme } from '@/context/ThemeContext';
-import { supabase } from '@/lib/supabase';
-import type { Expense, Group, GroupMember, Settlement } from '@/types/tako';
+import { fetchAndCacheSnapshot } from '@/lib/offlineSync';
+import { fetchAllReminders } from '@/lib/takoData';
+import type { Expense } from '@/types/tako';
 
-interface ActivityItem {
+interface FeedItem {
   id: string;
-  groupId: string;
-  icon: 'person-add-outline' | 'checkmark-outline' | 'receipt-outline';
+  groupId?: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
   iconBg: 'teal' | 'coral' | 'lavender';
   title: string;
   subtitle: string;
   amountText?: string;
-  amountPositive?: boolean;
-  createdAt: string;
+  section: 'TODAY' | 'YESTERDAY';
+}
+
+interface AlertItem {
+  id: string;
+  groupId?: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  iconBg: 'teal' | 'coral' | 'lavender';
+  title: string;
+  subtitle: string;
+  unread?: boolean;
+  section: 'NEW' | 'EARLIER';
 }
 
 function formatRelativeTime(iso: string): string {
@@ -57,51 +68,84 @@ export default function ActivityScreen() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const params = useLocalSearchParams<{ view?: string }>();
 
-  const [items, setItems] = useState<ActivityItem[]>([]);
+  const [overrideMode, setMode] = useState<'activity' | 'alerts' | null>(null);
+  const mode: 'activity' | 'alerts' =
+    overrideMode ?? (params.view === 'alerts' ? 'alerts' : 'activity');
+  const [activityItems, setActivityItems] = useState<FeedItem[]>([]);
+  const [alertItems, setAlertItems] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadActivity = useCallback(async () => {
-    if (!user) return;
-    const { data: groupsData } = await supabase.from('groups').select('*');
-    const groups = (groupsData ?? []) as Group[];
+    if (!user) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
+    const [{ snapshot }, reminders] = await Promise.all([
+      fetchAndCacheSnapshot(user.id),
+      fetchAllReminders(user.id),
+    ]);
+    const { groups, members, expenses, settlements } = snapshot;
+
     if (groups.length === 0) {
-      setItems([]);
+      setActivityItems([]);
+      setAlertItems([]);
       setLoading(false);
       setRefreshing(false);
       return;
     }
 
     const groupMap = new Map(groups.map((g) => [g.id, g]));
-    const groupIds = groups.map((g) => g.id);
-
-    const [membersRes, expensesRes, settlementsRes] = await Promise.all([
-      supabase.from('group_members').select('*').in('group_id', groupIds),
-      supabase.from('expenses').select('*').in('group_id', groupIds).order('created_at', { ascending: false }).limit(30),
-      supabase.from('settlements').select('*').in('group_id', groupIds).order('created_at', { ascending: false }).limit(30),
-    ]);
-
-    const members = (membersRes.data ?? []) as GroupMember[];
     const memberMap = new Map(members.map((m) => [m.id, m]));
-    const expenses = (expensesRes.data ?? []) as Expense[];
-    const settlements = (settlementsRes.data ?? []) as Settlement[];
 
-    const feed: ActivityItem[] = [];
+    const liveFeed: (FeedItem & { ts: number })[] = [];
+    const liveAlerts: (AlertItem & { ts: number })[] = [];
 
-    for (const exp of expenses) {
-      const grp = groupMap.get(exp.group_id);
-      const payer = memberMap.get(exp.paid_by_member_id);
-      feed.push({
-        id: `exp-${exp.id}`,
-        groupId: exp.group_id,
-        icon: 'receipt-outline',
+    for (const rem of reminders) {
+      const grp = groupMap.get(rem.group_id);
+      const today = isToday(rem.created_at);
+      const isUnread = !rem.dismissed_at;
+      liveAlerts.push({
+        id: `al-rem-${rem.id}`,
+        groupId: rem.group_id,
+        icon: 'notifications-outline',
         iconBg: 'coral',
-        title: `${exp.title} added`,
-        subtitle: `${grp?.name ?? 'Split'} · ${payer?.name ?? 'Someone'} · ${formatRelativeTime(exp.created_at)}`,
-        amountText: formatPeso(exp.amount_cents),
-        amountPositive: payer?.user_id === user.id,
-        createdAt: exp.created_at,
+        title: rem.message || `Reminder: ${formatPeso(rem.amount_cents)} due`,
+        subtitle: `${grp?.name ?? 'Split'} · ${formatRelativeTime(rem.created_at)}`,
+        unread: isUnread,
+        section: isUnread && today ? 'NEW' : 'EARLIER',
+        ts: new Date(rem.created_at).getTime(),
+      });
+    }
+
+    for (const m of members) {
+      if (m.user_id === user.id) continue;
+      const grp = groupMap.get(m.group_id);
+      const today = isToday(m.created_at);
+      liveFeed.push({
+        id: `mem-${m.id}`,
+        groupId: m.group_id,
+        icon: 'person-outline',
+        iconBg: 'lavender',
+        title: `${m.name} joined ${grp?.name ?? 'split'}`,
+        subtitle: formatRelativeTime(m.created_at),
+        section: today ? 'TODAY' : 'YESTERDAY',
+        ts: new Date(m.created_at).getTime(),
+      });
+      liveAlerts.push({
+        id: `al-mem-${m.id}`,
+        groupId: m.group_id,
+        icon: 'person-outline',
+        iconBg: 'lavender',
+        title: `${m.name} joined ${grp?.name ?? 'split'}`,
+        subtitle: formatRelativeTime(m.created_at),
+        unread: today,
+        section: today ? 'NEW' : 'EARLIER',
+        ts: new Date(m.created_at).getTime(),
       });
     }
 
@@ -111,25 +155,73 @@ export default function ActivityScreen() {
       const to = memberMap.get(st.to_member_id);
       const iPaid = from?.user_id === user.id;
       const iReceived = to?.user_id === user.id;
-      feed.push({
+      const today = isToday(st.created_at);
+      const notePrefix = st.note ? `${st.note} · ` : '';
+      liveFeed.push({
         id: `st-${st.id}`,
         groupId: st.group_id,
         icon: 'checkmark-outline',
-        iconBg: iPaid ? 'teal' : 'coral',
+        iconBg: 'teal',
         title: iReceived
-          ? `${from?.name ?? 'Someone'} paid you`
+          ? `${from?.name ?? 'Friend'} paid you`
           : iPaid
             ? `You settled ${grp?.name ?? 'split'}`
-            : `${from?.name ?? 'Someone'} paid ${to?.name ?? 'Someone'}`,
+            : `${from?.name ?? 'Friend'} paid ${to?.name ?? 'Friend'}`,
+        subtitle: iPaid
+          ? `${notePrefix}${formatRelativeTime(st.created_at)}`
+          : `${grp?.name ?? 'Split'} · ${notePrefix}${formatRelativeTime(st.created_at)}`,
+        amountText: `${iPaid ? '−' : '+'}${formatPeso(st.amount_cents)}`,
+        section: today ? 'TODAY' : 'YESTERDAY',
+        ts: new Date(st.created_at).getTime(),
+      });
+      liveAlerts.push({
+        id: `al-st-${st.id}`,
+        groupId: st.group_id,
+        icon: 'checkmark-outline',
+        iconBg: 'teal',
+        title: iReceived
+          ? `${from?.name ?? 'Friend'} paid you ${formatPeso(st.amount_cents)}`
+          : `${grp?.name ?? 'Split'} settled (${formatPeso(st.amount_cents)})`,
         subtitle: `${grp?.name ?? 'Split'} · ${formatRelativeTime(st.created_at)}`,
-        amountText: `${iPaid ? '-' : '+'}${formatPeso(st.amount_cents)}`,
-        amountPositive: !iPaid,
-        createdAt: st.created_at,
+        unread: today,
+        section: today ? 'NEW' : 'EARLIER',
+        ts: new Date(st.created_at).getTime(),
       });
     }
 
-    feed.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    setItems(feed);
+    // Group repeated expense items per split into one clean summary row
+    const expensesByGroup = new Map<string, Expense[]>();
+    for (const exp of expenses) {
+      const arr = expensesByGroup.get(exp.group_id) ?? [];
+      arr.push(exp);
+      expensesByGroup.set(exp.group_id, arr);
+    }
+
+    for (const [gid, grpExpenses] of expensesByGroup.entries()) {
+      const grp = groupMap.get(gid);
+      const latest = grpExpenses[0];
+      const today = isToday(latest.created_at);
+      const totalAdded = grpExpenses.reduce((s, e) => s + e.amount_cents, 0);
+      liveFeed.push({
+        id: `exp-grp-${gid}`,
+        groupId: gid,
+        icon: 'receipt-outline',
+        iconBg: 'coral',
+        title: `${grp?.name ?? latest.title} updated`,
+        subtitle:
+          grpExpenses.length === 1
+            ? `${formatRelativeTime(latest.created_at)} · ${latest.title}`
+            : `${formatRelativeTime(latest.created_at)} · ${grpExpenses.length} items added`,
+        amountText: formatPeso(totalAdded),
+        section: today ? 'TODAY' : 'YESTERDAY',
+        ts: new Date(latest.created_at).getTime(),
+      });
+    }
+
+    liveFeed.sort((a, b) => b.ts - a.ts);
+    liveAlerts.sort((a, b) => b.ts - a.ts);
+    setActivityItems(liveFeed);
+    setAlertItems(liveAlerts);
     setLoading(false);
     setRefreshing(false);
   }, [user]);
@@ -140,72 +232,29 @@ export default function ActivityScreen() {
     }, [loadActivity])
   );
 
-  const todayItems = items.filter((i) => isToday(i.createdAt));
-  const earlierItems = items.filter((i) => !isToday(i.createdAt));
-
-  const renderSection = (label: string, rows: ActivityItem[]) => {
-    if (rows.length === 0) return null;
-    return (
-      <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
-          {label}
-        </Text>
-        <View
-          style={[
-            styles.card,
-            { backgroundColor: palette.surface, borderColor: palette.border },
-          ]}>
-          {rows.map((row, idx) => {
-            const bg =
-              row.iconBg === 'teal'
-                ? palette.tealSoft
-                : row.iconBg === 'lavender'
-                  ? palette.lavenderSoft
-                  : palette.coralSoft;
-            return (
-              <Pressable
-                key={row.id}
-                onPress={() => router.push(`/group/${row.groupId}`)}
-                style={[
-                  styles.row,
-                  idx < rows.length - 1 && {
-                    borderBottomWidth: 1,
-                    borderBottomColor: palette.border,
-                  },
-                ]}>
-                <View style={[styles.iconBox, { backgroundColor: bg }]}>
-                  <Ionicons name={row.icon} size={18} color={palette.ink} />
-                </View>
-
-                <View style={styles.rowInfo}>
-                  <Text
-                    style={[styles.rowTitle, { color: palette.ink, fontFamily: TakoFonts.bold }]}
-                    numberOfLines={1}>
-                    {row.title}
-                  </Text>
-                  <Text
-                    style={[styles.rowSub, { color: palette.mute, fontFamily: TakoFonts.regular }]}
-                    numberOfLines={1}>
-                    {row.subtitle}
-                  </Text>
-                </View>
-
-                {row.amountText && (
-                  <Text
-                    style={[
-                      styles.rowAmt,
-                      { color: palette.ink, fontFamily: TakoFonts.black },
-                    ]}>
-                    {row.amountText}
-                  </Text>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-    );
+  const handleMarkAllRead = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    setAlertItems((prev) => prev.map((a) => ({ ...a, unread: false })));
   };
+
+  const unreadCount = alertItems.filter((a) => a.unread).length;
+
+  const cardShadow = getCardElevation(isDark);
+
+  const getIconBg = (bg: 'teal' | 'coral' | 'lavender') =>
+    bg === 'teal'
+      ? palette.tealSoft
+      : bg === 'lavender'
+        ? palette.lavenderSoft
+        : palette.coralSoft;
+
+  const todayRows = activityItems.filter((i) => i.section === 'TODAY');
+  const yesterdayRows = activityItems.filter((i) => i.section === 'YESTERDAY');
+
+  const newAlertRows = alertItems.filter((a) => a.section === 'NEW');
+  const earlierAlertRows = alertItems.filter((a) => a.section === 'EARLIER');
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top']}>
@@ -224,9 +273,45 @@ export default function ActivityScreen() {
             tintColor={palette.coralAccent}
           />
         }>
-        <Text style={[styles.pageTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-          Activity
-        </Text>
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <Text style={[styles.pageTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
+            {mode === 'alerts' ? 'Alerts' : 'Activity'}
+          </Text>
+
+          <View style={styles.headerRight}>
+            {mode === 'alerts' ? (
+              <>
+                <Pressable onPress={handleMarkAllRead} hitSlop={10}>
+                  <Text style={[styles.markRead, { color: palette.coralAccent, fontFamily: TakoFonts.bold }]}>
+                    Mark all read
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setMode('activity')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Back to Activity"
+                  style={[styles.modePill, { backgroundColor: palette.chip }]}>
+                  <Ionicons name="time-outline" size={16} color={palette.ink} />
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                onPress={() => router.push('/alerts')}
+                accessibilityRole="button"
+                accessibilityLabel="Open Alerts"
+                style={[styles.modePill, { backgroundColor: palette.surface, borderColor: palette.border, borderWidth: 1 }]}>
+                <Ionicons name="notifications-outline" size={17} color={palette.ink} />
+                <Text style={[styles.modePillText, { color: palette.ink, fontFamily: TakoFonts.bold }]}>
+                  Alerts
+                </Text>
+                {unreadCount > 0 && (
+                  <View style={[styles.unreadDot, { backgroundColor: palette.coral }]} />
+                )}
+              </Pressable>
+            )}
+          </View>
+        </View>
 
         {loading ? (
           <View style={styles.skeletonList}>
@@ -234,62 +319,234 @@ export default function ActivityScreen() {
             <SplitRowSkeleton />
             <SplitRowSkeleton />
           </View>
-        ) : items.length === 0 ? (
-          <View
-            style={[
-              styles.emptyCard,
-              { backgroundColor: palette.surface, borderColor: palette.border },
-              !isDark && styles.lightShadow,
-            ]}>
-            <TakoMascot state="think" size={110} interactive />
-            <Text style={[styles.emptyTitle, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-              No activity yet
-            </Text>
-            <Text style={[styles.emptyText, { color: palette.mute, fontFamily: TakoFonts.regular }]}>
-              Expenses and settlements from your splits will appear here, like:
-            </Text>
-
+        ) : mode === 'activity' ? (
+          activityItems.length === 0 ? (
             <View
               style={[
-                styles.exampleRow,
-                { backgroundColor: palette.surfaceAlt, borderColor: palette.border },
+                styles.card,
+                { backgroundColor: palette.surface, borderColor: palette.border, padding: 24 },
+                cardShadow,
               ]}>
-              <View style={[styles.iconBox, { backgroundColor: palette.coralSoft }]}>
-                <Ionicons name="receipt-outline" size={18} color={palette.ink} />
-              </View>
-              <View style={styles.rowInfo}>
-                <Text style={[styles.rowTitle, { color: palette.ink, fontFamily: TakoFonts.bold }]} numberOfLines={1}>
-                  Ramen Ya dinner added
-                </Text>
-                <Text style={[styles.rowSub, { color: palette.mute, fontFamily: TakoFonts.regular }]} numberOfLines={1}>
-                  Barkada Dinner · You · Just now
-                </Text>
-              </View>
-              <Text style={[styles.rowAmt, { color: palette.ink, fontFamily: TakoFonts.black }]}>
-                ₱1,200
+              <Text style={{ color: palette.mute, fontFamily: TakoFonts.regular, textAlign: 'center', fontSize: 14 }}>
+                No activity yet. Create or join a split to see updates here.
               </Text>
             </View>
-
-            <Pressable
-              onPress={() => router.push('/group/new-split')}
-              accessibilityRole="button"
-              accessibilityLabel="Create a split"
-              style={({ pressed }) => [
-                styles.emptyCta,
-                { backgroundColor: palette.coral },
-                pressed && { opacity: 0.9 },
-              ]}>
-              <Ionicons name="add" size={18} color={palette.plum} />
-              <Text style={[styles.emptyCtaText, { color: palette.plum, fontFamily: TakoFonts.bold }]}>
-                Create a split
-              </Text>
-            </Pressable>
-          </View>
-        ) : (
+          ) : (
           <>
-            {renderSection('TODAY', todayItems)}
-            {renderSection('EARLIER', earlierItems)}
+            {todayRows.length > 0 && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionLabel, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
+                  TODAY
+                </Text>
+                <View
+                  style={[
+                    styles.card,
+                    { backgroundColor: palette.surface, borderColor: palette.border },
+                    cardShadow,
+                  ]}>
+                  {todayRows.map((row, idx) => (
+                    <Pressable
+                      key={row.id}
+                      onPress={() => row.groupId && router.push(`/group/${row.groupId}`)}
+                      style={[
+                        styles.row,
+                        idx < todayRows.length - 1 && {
+                          borderBottomWidth: 1,
+                          borderBottomColor: palette.border,
+                        },
+                      ]}>
+                      <View style={[styles.iconBox, { backgroundColor: getIconBg(row.iconBg) }]}>
+                        <Ionicons name={row.icon} size={18} color={palette.ink} />
+                      </View>
+                      <View style={styles.rowInfo}>
+                        <Text
+                          style={[styles.rowTitle, { color: palette.ink, fontFamily: TakoFonts.bold }]}
+                          numberOfLines={1}>
+                          {row.title}
+                        </Text>
+                        <Text
+                          style={[styles.rowSub, { color: palette.mute, fontFamily: TakoFonts.regular }]}
+                          numberOfLines={1}>
+                          {row.subtitle}
+                        </Text>
+                      </View>
+                      {row.amountText && (
+                        <Text
+                          style={[
+                            styles.rowAmt,
+                            { color: palette.ink, fontFamily: TakoFonts.black },
+                          ]}>
+                          {row.amountText}
+                        </Text>
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {yesterdayRows.length > 0 && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionLabel, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
+                  YESTERDAY
+                </Text>
+                <View
+                  style={[
+                    styles.card,
+                    { backgroundColor: palette.surface, borderColor: palette.border },
+                    cardShadow,
+                  ]}>
+                  {yesterdayRows.map((row, idx) => (
+                    <Pressable
+                      key={row.id}
+                      onPress={() => row.groupId && router.push(`/group/${row.groupId}`)}
+                      style={[
+                        styles.row,
+                        idx < yesterdayRows.length - 1 && {
+                          borderBottomWidth: 1,
+                          borderBottomColor: palette.border,
+                        },
+                      ]}>
+                      <View style={[styles.iconBox, { backgroundColor: getIconBg(row.iconBg) }]}>
+                        <Ionicons name={row.icon} size={18} color={palette.ink} />
+                      </View>
+                      <View style={styles.rowInfo}>
+                        <Text
+                          style={[styles.rowTitle, { color: palette.ink, fontFamily: TakoFonts.bold }]}
+                          numberOfLines={1}>
+                          {row.title}
+                        </Text>
+                        <Text
+                          style={[styles.rowSub, { color: palette.mute, fontFamily: TakoFonts.regular }]}
+                          numberOfLines={1}>
+                          {row.subtitle}
+                        </Text>
+                      </View>
+                      {row.amountText && (
+                        <Text
+                          style={[
+                            styles.rowAmt,
+                            { color: palette.ink, fontFamily: TakoFonts.black },
+                          ]}>
+                          {row.amountText}
+                        </Text>
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
           </>
+          )
+        ) : (
+          alertItems.length === 0 ? (
+            <View
+              style={[
+                styles.card,
+                { backgroundColor: palette.surface, borderColor: palette.border, padding: 24 },
+                cardShadow,
+              ]}>
+              <Text style={{ color: palette.mute, fontFamily: TakoFonts.regular, textAlign: 'center', fontSize: 14 }}>
+                No alerts yet.
+              </Text>
+            </View>
+          ) : (
+          <>
+            {newAlertRows.length > 0 && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionLabel, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
+                  NEW
+                </Text>
+                <View
+                  style={[
+                    styles.card,
+                    { backgroundColor: palette.surface, borderColor: palette.border },
+                    cardShadow,
+                  ]}>
+                  {newAlertRows.map((row, idx) => (
+                    <Pressable
+                      key={row.id}
+                      onPress={() => {
+                        setAlertItems((prev) =>
+                          prev.map((a) => (a.id === row.id ? { ...a, unread: false } : a))
+                        );
+                        if (row.groupId) router.push(`/group/${row.groupId}`);
+                      }}
+                      style={[
+                        styles.row,
+                        idx < newAlertRows.length - 1 && {
+                          borderBottomWidth: 1,
+                          borderBottomColor: palette.border,
+                        },
+                      ]}>
+                      <View style={[styles.iconBox, { backgroundColor: getIconBg(row.iconBg) }]}>
+                        <Ionicons name={row.icon} size={18} color={palette.ink} />
+                      </View>
+                      <View style={styles.rowInfo}>
+                        <Text
+                          style={[styles.rowTitle, { color: palette.ink, fontFamily: TakoFonts.bold }]}
+                          numberOfLines={1}>
+                          {row.title}
+                        </Text>
+                        <Text
+                          style={[styles.rowSub, { color: palette.mute, fontFamily: TakoFonts.regular }]}
+                          numberOfLines={1}>
+                          {row.subtitle}
+                        </Text>
+                      </View>
+                      {row.unread && (
+                        <View style={[styles.unreadDot, { backgroundColor: palette.coral }]} />
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {earlierAlertRows.length > 0 && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionLabel, { color: palette.mute, fontFamily: TakoFonts.bold }]}>
+                  EARLIER
+                </Text>
+                <View
+                  style={[
+                    styles.card,
+                    { backgroundColor: palette.surface, borderColor: palette.border },
+                    cardShadow,
+                  ]}>
+                  {earlierAlertRows.map((row, idx) => (
+                    <Pressable
+                      key={row.id}
+                      onPress={() => row.groupId && router.push(`/group/${row.groupId}`)}
+                      style={[
+                        styles.row,
+                        idx < earlierAlertRows.length - 1 && {
+                          borderBottomWidth: 1,
+                          borderBottomColor: palette.border,
+                        },
+                      ]}>
+                      <View style={[styles.iconBox, { backgroundColor: getIconBg(row.iconBg) }]}>
+                        <Ionicons name={row.icon} size={18} color={palette.ink} />
+                      </View>
+                      <View style={styles.rowInfo}>
+                        <Text
+                          style={[styles.rowTitle, { color: palette.ink, fontFamily: TakoFonts.bold }]}
+                          numberOfLines={1}>
+                          {row.title}
+                        </Text>
+                        <Text
+                          style={[styles.rowSub, { color: palette.mute, fontFamily: TakoFonts.regular }]}
+                          numberOfLines={1}>
+                          {row.subtitle}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+          </>
+          )
         )}
       </ScrollView>
     </SafeAreaView>
@@ -304,65 +561,41 @@ const styles = StyleSheet.create({
     paddingBottom: 112,
     gap: 18,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   pageTitle: {
     fontSize: 30,
     letterSpacing: -0.6,
   },
-  center: {
-    paddingVertical: 56,
-    alignItems: 'center',
-  },
-  emptyCard: {
-    borderRadius: Radii.xl,
-    borderWidth: 1,
-    padding: 24,
+  headerRight: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  lightShadow: Platform.select({
-    ios: {
-      shadowColor: '#2B1B3D',
-      shadowOpacity: 0.06,
-      shadowRadius: 10,
-      shadowOffset: { width: 0, height: 3 },
-    },
-    android: { elevation: 2 },
-    web: { boxShadow: '0 2px 10px rgba(43, 27, 61, 0.06)' },
-  }),
-  skeletonList: {
-    gap: 12,
+  markRead: {
+    fontSize: 13,
   },
-  emptyTitle: {
-    fontSize: 17,
-  },
-  emptyText: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  exampleRow: {
+  modePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: Radii.lg,
-    borderWidth: 1,
-    width: '100%',
-    marginTop: 4,
-    opacity: 0.85,
-  },
-  emptyCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     gap: 6,
-    marginTop: 8,
-    paddingHorizontal: 22,
-    minHeight: 46,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: Radii.pill,
   },
-  emptyCtaText: {
-    fontSize: 15,
+  modePillText: {
+    fontSize: 12,
+  },
+  unreadDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  skeletonList: {
+    gap: 12,
   },
   section: {
     gap: 8,

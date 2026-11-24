@@ -29,12 +29,20 @@ const SCREEN_ALTS: Record<AppScreenName, string> = {
   profile: 'Tako app Profile screen with theme and account settings',
 };
 
+const AVAILABLE_PNG_SCREENS = new Set<AppScreenName>([
+  'splits-home',
+  'new-split',
+  'scan-to-join',
+  'activity',
+  'profile',
+]);
+
 /**
  * Loads the real app screenshot from `/public/screens/{screen}-{theme}.png`.
  * If the PNG hasn't been dropped in yet, renders a faithful live HTML preview of that screen.
  */
 export function AppScreen({ screen, theme, priority = false, alt }: AppScreenProps) {
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState(!AVAILABLE_PNG_SCREENS.has(screen));
   const src = `/screens/${screen}-${theme}.png`;
 
   if (!failed) {

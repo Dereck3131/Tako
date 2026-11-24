@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Nunito, Plus_Jakarta_Sans } from 'next/font/google';
+import { Caveat, Nunito, Plus_Jakarta_Sans } from 'next/font/google';
 import React from 'react';
 
 import { ThemeProvider } from '@/components/ThemeProvider';
@@ -21,13 +21,21 @@ const jakarta = Plus_Jakarta_Sans({
   display: 'swap',
 });
 
+const caveat = Caveat({
+  subsets: ['latin'],
+  weight: ['600', '700'],
+  variable: '--font-caveat',
+  display: 'swap',
+});
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#FAFAF7' },
-    { media: '(prefers-color-scheme: dark)', color: '#1B1424' },
+    { media: '(prefers-color-scheme: dark)', color: '#150D20' },
   ],
 };
 
@@ -81,7 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${nunito.variable} ${jakarta.variable}`}
+      className={`${nunito.variable} ${jakarta.variable} ${caveat.variable}`}
     >
       <body className="min-h-[100dvh] antialiased">
         <noscript>
