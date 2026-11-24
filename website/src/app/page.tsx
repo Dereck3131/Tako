@@ -15,6 +15,9 @@ const HowItWorksSection = dynamic(() =>
 const FeaturesSection = dynamic(() =>
   import('@/components/FeaturesSection').then((m) => m.FeaturesSection)
 );
+const BadgesSection = dynamic(() =>
+  import('@/components/BadgesSection').then((m) => m.BadgesSection)
+);
 const ThemeShowcaseSection = dynamic(() =>
   import('@/components/ThemeShowcaseSection').then((m) => m.ThemeShowcaseSection)
 );
@@ -37,6 +40,7 @@ export default function HomePage() {
         <ReceiptDivider topClass="bg-[var(--bg)]" fillColor="var(--cream-block)" />
         <FeaturesSection />
         <ReceiptDivider topClass="bg-[var(--cream-block)]" fillColor="var(--bg)" />
+        <BadgesSection />
         <ThemeShowcaseSection />
         <FaqSection />
         <ReceiptDivider topClass="bg-[var(--bg)]" fillColor="#150C20" />

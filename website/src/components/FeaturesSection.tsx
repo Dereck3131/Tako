@@ -479,7 +479,10 @@ export function FeaturesSection() {
                   left: `${(arm.padX / 1000) * 100}%`,
                   top: `${(arm.padY / 560) * 100}%`,
                 }}
-                className="absolute z-20 -translate-x-1/2 -translate-y-1/2"
+                className={clsx(
+                  'absolute -translate-x-1/2 -translate-y-1/2',
+                  isActive ? 'z-40' : 'z-20'
+                )}
               >
                 <motion.button
                   ref={(el) => {
@@ -542,6 +545,7 @@ export function FeaturesSection() {
                 transition={{ type: 'spring', duration: 0.34, bounce: 0.16 }}
                 className={clsx(
                   'absolute z-30 w-[268px] xl:w-[292px] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left shadow-[var(--card-shadow)]',
+                  !openId && 'pointer-events-none',
                   activeArm.side === 'left' ? 'left-0 origin-right' : 'right-0 origin-left',
                   activeArm.verticalSlot === 'top' ? 'top-2' : 'bottom-2'
                 )}
