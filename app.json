@@ -8,7 +8,6 @@
     "scheme": "tako",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.tako.app"
     },
     "android": {
@@ -63,6 +62,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/361fa9af-0fcf-4860-adc6-0ae8f4e8cd80"
     },
     "extra": {
       "router": {
