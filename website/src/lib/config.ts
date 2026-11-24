@@ -7,20 +7,18 @@ export const SITE_CONFIG = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://tako.app',
   author: 'Frederick',
   links: {
-    // TODO: Replace with your real GitHub, Facebook, and privacy policy URLs
-    github: 'https://github.com/TODO-your-username',
+    github: 'https://github.com/Dereck3131/Tako',
     facebook: 'https://facebook.com/TODO-your-page',
     privacy: '#privacy-todo',
   },
 } as const;
 
 export const APK_CONFIG = {
-  // Set NEXT_PUBLIC_APK_URL in Vercel or .env.local to your EAS / direct APK URL
+  // Set NEXT_PUBLIC_APK_URL in Vercel or .env.local to override the default GitHub Releases APK URL
   url:
     process.env.NEXT_PUBLIC_APK_URL ||
-    'https://expo.dev/artifacts/eas/TODO-replace-with-tako-apk.apk',
+    'https://github.com/Dereck3131/Tako/releases/download/v1.0.0/tako-v1.0.0.apk',
   version: '1.0.0',
-  // TODO: Update with exact APK size after running `eas build -p android --profile production`
-  sizeLabel: '~28 MB',
+  sizeLabel: '128 MB',
   platformLabel: 'Android 8.0+',
 } as const;
